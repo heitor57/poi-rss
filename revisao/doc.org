@@ -1,0 +1,487 @@
+#+TITLE: Revisão literária de RS para POI
+#+LANGUAGE: br
+#+OPTIONS: html-postamble:nil
+# +SETUPFILE: ./org-html-themes/setup/theme-bigblow.setup
+# +INFOJS_OPT: view:info toc:nil
+#+BEGIN_SRC emacs-lisp :exports none
+;C-c -
+(org-ctrl-c-minus); cycle list, itemize, enumerate
+#+END_SRC
+
+#+BEGIN_EXPORT html
+<!-- <script type="text/javascript"> -->
+<!-- setTimeout(function() { -->
+<!--   location.reload(); -->
+<!-- }, 300000); -->
+<!-- </script> -->
+#+END_EXPORT
+
+* Artigos
+** Mais relevantes
+Anos para busca: 2017,2018,2019
+
+Conferências para busca: RecSys, SIGIR, ICKM, WSDM, WWW
+
+nan -> sem conferencia
+
+2019
+
+#+tblname: art2019
+| Effective Knowledge Based Recommender System for Tailored Multiple Point of Interest Recommendation                                | IJWP                    |
+| R2SIGTP: a Novel Real-Time Recommendation System with Integration of Geography and Temporal Preference for Next Point-of-Interest  | WWW                     |
+| Spatiotemporal Representation Learning for Translation-Based POI Recommendation                                                    | TOIS                    |
+| An Attentive Spatio-Temporal Neural Model for Successive Point of Interest Recommendation                                          | PAKDD                   |
+| Mix geographical information into local collaborative ranking for POI recommendation                                               | WWW                     |
+| Adversarial point-of-interest recommendation                                                                                       | WWW                     |
+| On successive point-of-interest recommendation                                                                                     | WWW                     |
+| Personalized POI recommendation based on check-in data and geographical-regional influence                                         | ICMLSC                  |
+| Fused matrix factorization with multi-tag, social and geographical influences for POI recommendation                               | WWW                     |
+| Protecting multi-party privacy in location-aware social point-of-interest recommendation                                           | WWW                     |
+| An adaptive point-of-interest recommendation method for location-based social networks based on user activity and spatial features | Knowledge-Based Systems |
+| A Joint Two-Phase Time-Sensitive Regularized Collaborative Ranking Model for Point of Interest Recommendation                      | TKDE                    |
+| An Attention-based Spatiotemporal LSTM Network for Next POI Recommendation                                                         | TSC                     |
+| Leveraging multi-aspect time-related influence in location recommendation                                                          | WWW                     |
+
+ #+BEGIN_SRC emacs-lisp :var list=art2019 :exports none :eval no
+   (while (not (null list))
+     (doi-utils-add-entry-from-crossref-query (car (car list)) "./doc.bib")
+     (setq list (cdr list)))
+ #+END_SRC
+
+ #+RESULTS:
+
+2018
+
+#+tblname: art2018
+| Points-of-interest recommendation based on convolution matrix factorization                                                         | Applied intelligence                       |
+| Exploiting POI-Specific Geographical Influence for Point-of-Interest Recommendation                                                 | IJCAI                                      |
+| Content-Aware Hierarchical Point-of-Interest Embedding Model for Successive POI Recommendation.                                     | IJCAI                                      |
+| Aggregated temporal tensor factorization model for point-of-interest recommendation                                                 | Neural Processing Letters                  |
+| Integrating spatial and temporal contexts into a factorization model for POI recommendation                                         | IJGIS                                      |
+| Personalized trip recommendation for tourists based on user interests, points of interest visit durations and visit recency         | Knowledge and Information Systems          |
+| Exploiting Human Mobility Patterns for Point-of-Interest Recommendation                                                             | WSDM                                       |
+| Point-of-Interest Recommendation: Exploiting Self-Attentive Autoencoders with Neighbor-Aware Influence                              | CIKM                                       |
+| A personalized point-of-interest recommendation model via fusion of geo-social information                                          | Neurocomputing                             |
+| RecNet: a deep neural network for personalized POI recommendation in location-based social networks                                 | IJGIS                                      |
+| Exploiting Spatial and Temporal for Point of Interest Recommendation                                                                | Complexity                                 |
+| Where to Go Next: A Spatio-temporal LSTM model for Next POI Recommendation                                                          | nan                                        |
+| A novel recommendation system in location-based social networks using distributed ELM                                               | Memetic Computing                          |
+| Context-Aware Group Recommendation for Point-of-Interests                                                                           | IEEE Access                                |
+| Next Point-of-Interest Recommendation with Temporal and Multi-level Context Attention                                               | ICDM                                       |
+| Adaptive Trip Recommendation System: Balancing Travelers among POIs with MapReduce                                                  | BigData Congress                           |
+| Personalized context-aware point of interest recommendation                                                                         | TOIS                                       |
+| Preference aware travel route recommendation with temporal influence                                                                | LocalRec                                   |
+| A self-adaptive point-of-interest recommendation algorithm based on a multi-order Markov model                                      | FGCS                                       |
+| Harnessing a generalised user behaviour model for next-POI recommendation                                                           | RecSys                                     |
+| Scalable Content-Aware Collaborative Filtering for Location Recommendation                                                          | TKDE                                       |
+| Coupled poisson factorization integrated with user/item metadata for modeling popular and sparse ratings in scalable recommendation | AAAI                                       |
+| Location Regularization-Based POI Recommendation in Location-Based Social Networks                                                  | information                                |
+| Spatial-Temporal Distance Metric Embedding for Time-Specific POI Recommendation                                                     | IEEE Access                                |
+| Time-aware metric embedding with asymmetric projection for successive POI recommendation                                            | WWW                                        |
+| A Generative Model Approach for Geo-Social Group Recommendation                                                                     | Journal of Computer Science and Technology |
+| POI recommendation of location-based social networks using tensor factorization                                                     | nan                                        |
+| Personalized Next Point-of-Interest Recommendation via Latent Behavior Patterns Inference                                           | nan                                        |
+| Improving POI Recommendation via Dynamic Tensor Completion                                                                          | Scientific Programming                     |
+| CLoSe: Contextualized Location Sequence Recommender                                                                                 | RecSys                                     |
+| Top-k Route Search through Submodularity Modeling of Recurrent POI Features                                                         | SIGIR                                      |
+
+
+ #+BEGIN_SRC emacs-lisp :var list=art2018 :exports none :eval no
+   (while (not (null list))
+     (doi-utils-add-entry-from-crossref-query (car (car list)) "./doc.bib")
+     (setq list (cdr list)))
+ #+END_SRC
+
+ #+RESULTS:
+
+
+2017
+
+#+tblname: art2017
+| A reliable point of interest recommendation based on trust relevancy between users                                                | Wireless Personal Communications             |
+| CTF-ARA: An adaptive method for POI recommendation based on check-in and temporal features                                        | Knowledge-Based Systems                      |
+| A temporal-aware POI recommendation system using context-aware tensor decomposition and weighted HITS                             | Neurocomputing                               |
+| Partition-based collaborative tensor factorization for POI recommendation                                                         | Journal of Automatica Sinica                 |
+| Geo-teaser: Geo-temporal sequential embedding rank for point-of-interest recommendation                                           | WWW                                          |
+| What your images reveal: Exploiting visual contents for point-of-interest recommendation                                          | WWW                                          |
+| An experimental evaluation of point-of-interest recommendation in location-based social networks                                  | VLDB                                         |
+| Aspect-aware Point-of-Interest Recommendation with Geo-Social Influence                                                           | UMAP                                         |
+| Probabilistic Social Sequential Model for Tour Recommendation                                                                     | WSDM                                         |
+| Bridging Collaborative Filtering and Semi-Supervised Learning: A Neural Approach for POI Recommendation                           | SIGKDD                                       |
+| A General Model for Out-of-town Region Recommendation                                                                             | WWW                                          |
+| Exploiting Hierarchical Structures for POI Recommendation                                                                         | ICDM                                         |
+| Learning Recency and Inferring Associations in Location Based Social Network for Emotion Induced Point-of-Interest Recommendation | Journal of Information Science & Engineering |
+| Spatial-aware hierarchical collaborative deep learning for POI recommendation                                                     | TKDE                                         |
+| Context-aware probabilistic matrix factorization modeling for point-of-interest recommendation                                    | Neurocomputing                               |
+| Personalized location recommendation by aggregating multiple recommenders in diversity                                            | GeoInformatica                               |
+| Current location-based next POI recommendation                                                                                    | WI                                           |
+| Tour recommendation for groups                                                                                                    | DMKD                                         |
+| Geographical Diversification in POI Recommendation: Toward Improved Coverage on Interested Areas                                  | RecSys                                       |
+
+ #+BEGIN_SRC emacs-lisp :var list=art2017 :exports none :eval no
+   (while (not (null list))
+     (doi-utils-add-entry-from-crossref-query (car (car list)) "./doc.bib")
+     (setq list (cdr list)))
+ #+END_SRC
+
+ #+RESULTS:
+
+
+** Artigos mais importantes/Filtragem de relevância
+
+Para o trabalho atual não são todos artigos que irão ser importantes logo uma filtragem será feita.
+
+Abaixo um resumo de cada artigo seŕa feito para coletar as principais características de cada artigo individualmente.
+
+2019
+
+- cite:vijayakumar19_effec_knowl_based_recom_system: Multiple POIs rec sys. lista de viagem. heat map de locais ja visitados. pois mais relevantes são pegos para recomendação. Hybrid collaborative filtering. Check-in, LSBN. Temporal.
+- cite:jiao19_r2sig: não achei o pdf. mobile acho q n faz dif
+- cite:qian19_spatiot_repres_learn_trans_based_poi_recom: espaçotemporal foco, spatiotemporal context-aware. joint effect of time and location.  translation-based recommender framework (STA) model third-order relationship among users. 
+- cite:doan19_atten_spatio_tempor_neural_model: sem acesso ao pdf, resumo. deep Long Short Term Memory recurrent neural network model. successive recomendation problem.
+- cite:liu19_mix_geogr_infor_into_local: sem acesso ao pdf. local collaborative ranking (LCR). MG-LCR.
+- cite:zhou19_adver_point_inter_recom: why users prefer certain pois. user latent preference. Adversarial POI Recommendation. APOIR. Adversarial machine learning = AMD
+- cite:lu18_succes_point_of_inter_recom: successive poi rec. geo influence, regions influence. UGSE-LR. Pagerank model successive transitions among POIs. User preference, regional influence and successive transition. RNN PEU-RNN. 2 trabalhos em um só, depois é preciso ver sobre isso. Feature-Based Recommendation System.
+- cite:song19_person_poi:  improved user-based CF and geographical-regional influence.  user-POI matrix by normalized check-in frequencies. we find that each user's check-in POIs can be divided into several regions. integrate geographical influence with the regional feature to produce recommendation. 
+- cite:zhang18_fused_matrix_factor_with_multi: LBSNs contain a special three layers network structure based on relevance of location information in the physical world. mine the internal correlations between different layers and to analze users’ preference on locations. social, geographical influence. MF model
+- cite:wang18_protec_multi_party_privac_locat: Focado em privacidade, importante porém não vai para a tabela.
+- cite:si19_adapt_point_of_inter_recom:  lack adaptability when making recommendations for users with different preferences. adaptive POI recommendation method by combining user activity and spatial features. extract three-dimensional user activity, time-based POI popularity and distance features using a probabilistic statistical analysis method from historical check-in datasets on LBSNs. user-activity clustering algorithm based in fuzzy c-means unsupervised learning. Gaussian kernel density estimation algorithm.
+- cite:aliannejadi19_joint_two_phase_time_sensit: collaborative ranking (CR) for recommendation. temporal information for POI recommendation using CR. CR algorithm that incorporates the geographical influence of POIs and is regularized based on the variance of POIs popularity and users activities over time. Esse algoritmo explora também a parte social pois existe um fator de pois populares o qual vejo como um fator social.
+- cite:huang19_atten_based_spatiot_lstm_networ: next poi. spatiotemporal. RNN. spatiotemporal long and short-term memory (ST-LSTM) network.
+- cite:hosseini18_lever_multi_aspec_time_relat: exploit granularity of time. probabilistic generative model, named after Multi-aspect Time-related Influence (MATI). also algorithm based in Expectation Maximization (EM). User’s temporal multivariate orientation.
+
+Antes do artigo  cite:si19_adapt_point_of_inter_recom não existia a coluna User Pref. depois deve ser verificado as implicações disso.
+
+Expansão da tabela 4 do artigo "An Experimental Evaluation of Point-of-interest Recommendation in Location-based Social Networks".
+
+| Article                                                | POI rec.   | Time-aware | Next POI   | In-/Out-of-town | Others     | Link-based | CF         | Factorization | Probabilistic | Hybrid     | Others | User Pref. | Geographical | Social     | Textual | Categorical | Sequential | Temporal   | Certo?  |
+| cite:vijayakumar19_effec_knowl_based_recom_system      |            |            |            |                 | \checkmark |            |            |               |               | \checkmark |        |            | \checkmark   |            |         |             |            | \checkmark | talvez  |
+| cite:qian19_spatiot_repres_learn_trans_based_poi_recom | \checkmark |            |            |                 |            |            |            |               |               |            | STA    |            | \checkmark   | \checkmark |         |             |            | \checkmark | *talvez |
+| cite:doan19_atten_spatio_tempor_neural_model           |            |            |            |                 | \checkmark |            |            |               |               |            | RNN    |            | \checkmark   |            |         |             | \checkmark | \checkmark |         |
+| cite:liu19_mix_geogr_infor_into_local                  | \checkmark |            |            |                 |            |            |            |               |               |            |        |            | \checkmark   |            |         |             |            |            | nao     |
+| cite:zhou19_adver_point_inter_recom                    | \checkmark |            |            |                 |            |            |            |               |               |            | AML    |            | \checkmark   | \checkmark |         |             |            |            | acho    |
+| cite:lu18_succes_point_of_inter_recom                  |            |            |            |                 | \checkmark | \checkmark |            |               |               |            | RNN    |            | \checkmark   |            |         |             | \checkmark |            | talvez  |
+| cite:song19_person_poi                                 | \checkmark |            |            |                 |            |            | \checkmark |               |               |            |        |            | \checkmark   |            |         |             |            |            | acho    |
+| cite:zhang18_fused_matrix_factor_with_multi            | \checkmark |            |            |                 |            |            |            | \checkmark    |               |            |        |            | \checkmark   | \checkmark |         |             |            |            | sim     |
+| cite:si19_adapt_point_of_inter_recom                   | \checkmark |            |            |                 |            |            | \checkmark |               |               |            | ML     | \checkmark | \checkmark   |            |         |             |            |            | verif   |
+| cite:aliannejadi19_joint_two_phase_time_sensit         | \checkmark |            |            |                 |            |            | \checkmark |               |               |            |        |            | \checkmark   | \checkmark |         |             |            |            |         |
+| cite:huang19_atten_based_spatiot_lstm_networ           |            |            | \checkmark |                 |            |            |            |               |               |            | LSTM   |            | \checkmark   |            |         |             |            | \checkmark | sim     |
+| cite:hosseini18_lever_multi_aspec_time_relat           | \checkmark |            |            |                 |            |            |            |               | \checkmark    |            |        | \checkmark |              |            |         |             |            | \checkmark | verif   |
+
+
+
+2018
+
+- cite:xing17_point_of_inter_recom_based: joint convolution matrix factorization model. Review Geographical Social (ReGS). captures geographical influences and user social relations. CNN and PMF. explore User preference?
+- cite:wang18_exploit_poi_specif_geogr_influen: exploit POI-specific geographical influence. leitura do pdf. model user preference. stochastic gradient ascent (SGA). mini-batch. objective function.
+- cite:chang18_conten_aware_hierar_point_inter: successive POI Recommendation. CAPE. content-aware. text content that provides characteristics of a POI. Objective function. ML.
+- cite:zhao17_aggreg_tempor_tensor_factor_model: temporal characteristics of user mobility in LBSNs can be summarized in three aspects: periodicity, consecutiveness, and non-uniformness. Aggregated Temporal Tensor Factorization (ATTF). capture the three temporal features together, as well as at different time scales. temporal tensor factorization method to model the check-in activity.
+- cite:cai17_integ_spatial_tempor_contex_into: MF. Feature-Space Separated Factorization Model (FSS-FM). spatial and temporal contexts
+- cite:lim17_person_trip_recom_touris_based: propose an algorithm called PersTour for recommending personalized tours using POI popularity and user interest preferences. Time-based???? 
+- cite:yao18_exploit_human_mobil_patter_point_inter_recom: timing effects: we need to examine whether the POI fits a user»s availability. novel method which incorporates the degree of temporal matching between users and POIs into personalized POI recommendations. Temporal Matching Poisson Factorization Model (TM-PFM) to profile the popularity of POIs, model the regularity of users, and incorporate the temporal matching between. Use MF.
+
+
+
+no 3 artigo deu inicio ao ato de botar nome em outros
+
+| Article                                                 | POI rec.   | Time-aware | Next POI | In-/Out-of-town | Others           | Link-based | CF | Factorization | Probabilistic | Hybrid | Others | User Pref. | Geographical | Social     | Textual    | Categorical | Sequential | Temporal   | Certo? |
+| cite:xing17_point_of_inter_recom_based                  | \checkmark |            |          |                 |                  |            |    | \checkmark    | \checkmark    |        | CNN    |            | \checkmark   | \checkmark |            |             |            |            | talvez |
+| cite:wang18_exploit_poi_specif_geogr_influen            | \checkmark |            |          |                 |                  |            |    |               |               |        | SGA    | \checkmark | \checkmark   |            |            |             |            |            | talvez |
+| cite:chang18_conten_aware_hierar_point_inter            |            |            |          |                 | (Suc.)\checkmark |            |    |               |               |        | GD/ML  |            | \checkmark   |            | \checkmark |             |            |            | talvez |
+| cite:zhao17_aggreg_tempor_tensor_factor_model           | \checkmark |            |          |                 |                  |            |    | \checkmark    |               |        | TF     |            |              |            |            |             |            | \checkmark | talvez |
+| cite:cai17_integ_spatial_tempor_contex_into             | \checkmark |            |          |                 |                  |            |    | \checkmark    |               |        |        |            | \checkmark   |            |            |             |            | \checkmark | sim    |
+| cite:lim17_person_trip_recom_touris_based               |            |            |          |                 | (Tour)\checkmark |            |    |               |               |        |        | \checkmark | \checkmark   |            |            |             |            |            | nao    |
+| cite:yao18_exploit_human_mobil_patter_point_inter_recom | \checkmark |            |          |                 |                  |            |    | \checkmark    | \checkmark    |        | PFM    |            |              |            |            |             |            | \checkmark | nao    |
+|                                                         |            |            |          |                 |                  |            |    |               |               |        |        |            |              |            |            |             |            |            |        |
+
+
+
+
+
+# #+ATTR_HTML: :style margin-left: auto; margin-right: auto;
+# https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Sanzio_01_Pythagoras.jpg/800px-Sanzio_01_Pythagoras.jpg]]
+
+* Buscas
+
+
+Anos para busca: 2017,2018,2019
+
+Conferências para busca: RecSys, SIGIR, ICKM, WSDM, WWW
+
+** 2019
+
+*** ACM
+não ocorreu até então. <2019-07-23 Tue>
+
+artigos que podem ser interessantes pelo título:
+
+Short papers:
+
+- User-Centered Evaluation of Strategies for Recommending Sequences of Points of Interest to Groups
+
+Long papers:
+
+empty
+
+*** WWW
+
+- R2SIGTP: a Novel Real-Time Recommendation System with Integration of Geography and Temporal Preference for Next Point-of-Interest
+
+
+*** Outros
+
+
+** 2018
+*** ACM
+artigos que podem ser interessantes pelo título:
+
+Short papers:
+
+- CLoSe: Contextualized Location Sequence Recommender
+- Harnessing A Generalised User Behaviour Model for Next-POI Recommendation
+
+Long papers:
+
+empty
+
+
+
+
+** 2017
+*** ACM
+artigos que podem ser interessantes pelo título:
+
+Short papers:
+
+- Geographical Diversification in POI Recommendation: Toward Improved Coverage on Interested Areas 
+
+Long papers:
+
+empty
+
+
+
+
+
+
+
+
+* Artigo "An Experimental Evaluation of Point-of-interest Recommendation in Location-based Social Networks"
+Nome de cada artigo para cada modelo:
+
+- Exploring temporal effects for location recommendation on location-based social networks
+- Exploiting geographical neighborhood characteristics for location recommendation
+- GeoMF: joint geographical modeling and matrix factorization for point-of-interest recommendation
+- Rank-geofm: A ranking based geographical factorization method for point of interest recommendation
+- Point-of-interest recommendations: Learning potential check-ins from friends
+- Fused matrix factorization with geographical and social influence in location-based social networks
+- A general geographical probabilistic factor model for point of interest recommendation
+- Location recommendation in location-based social networks using user check-in data
+- Exploiting geographical influence for collaborative point-of-interest recommendation
+- igslr: personalized geo-social location recommendation: a kernel density estimation approach
+- Lore: Exploiting sequential influence for location recommendations
+- Geosoca: Exploiting geographical, social and categorical correlations for point-of-interest recommendations
+
+
+Modelos:
+
+- MF Models
+- LRT
+- IRenMF
+- GeoMF
+- RankGeoFM
+- ASMF
+
+
+- Poisson Factor Models
+- MGMPFM
+- GeoPFM
+
+
+- Link-based Models
+- LFBCA
+
+
+- Hybrid Models
+- USG
+- iGSLR
+- LORE
+- GeoSoCa
+
+** Matrix factorization models
+*** LRT
+É um modelo de MF time-enhanced. Baseado no fato de que o comportamento do usuario muda com o tempo. Cada usuario tem fatores latentes diferentes para cada intervalo de tempo. A recomendação é feita com base em todos fatores latentes.
+
+/Temporal-influence/
+
+Para modelar as preferencias dos usuarios para diferentes intervalos de tempos o modelo LRT fatora a matriz de check-in $C^(t)$ para cada intervalo de tempo $t$ separadamente, tal que $t \in \{0,1,\dots,23\}$ é uma hora em um dia. Para a função objetivo um termo regularizador é adicionado pela intuição de que usuarios interesados em intervalos de tempos iguais são iguais. O termo é formalizado como: 
+
+
+
+
+
+* Não utilizado
+  Não deu bons resultados, logo foi utilizado outro método para busca pelos principais artigos.
+** Selecionando e filtrando os artigos pelo título
+ Aqui irá ser feito uma filtragem de todos artigos para os que pelo título parecem serem melhores de analisados. Depois títulos erroneamente filtrados podem voltar para a base.
+
+ ✓ Aprovado
+
+ ✗ Recusado
+
+ ? Não decidido
+
+*** Matrix factorization
+
+ 1. GeoMF: joint geographical modeling and matrix factorization for point-of-interest recommendation ✓
+ 2. Content-aware point of interest recommendation on location-based social networks ✗
+ 3. Fused matrix factorization with geographical and social influence in location-based social networks ✓
+ 4. Rank-geofm: A ranking based geographical factorization method for point of interest recommendation ✓
+ 5. Learning geographical preferences for point-of-interest recommendation ? PMF, não sei se entra ainda, 2013
+ 6. POI recommendation: towards fused matrix factorization with geographical and temporal influences ? 2015 GeoMF-TD, sem conteudo pdf
+ 7. Matrix factorization techniques for context aware recommendation ✗
+ 8. A survey of point-of-interest recommendation in location-based social networks ✗
+ 9. Context-aware probabilistic matrix factorization modeling for point-of-interest recommendation ✗
+ 10. Context-aware point-of-interest recommendation using tensor factorization with social regularization ✓ / Context-aware point of interest recommendation using tensor factorization ?
+ 11. What your images reveal: Exploiting visual contents for point-of-interest recommendation ✗
+ 12. STELLAR: spatial-temporal latent ranking for successive point-of-interest recommendation ✗
+ 13. Context-aware points of interest suggestion with dynamic weather data management ✗
+ 14. Unified point-of-interest recommendation with temporal interval assessment ?
+ 15. Schedule a rich sentimental travel via sentimental POI mining and recommendation
+ 16. Bridging collaborative filtering and semi-supervised learning: a neural approach for poi recommendation
+ 17. POI recommendation through cross-region collaborative filtering
+ 18. A temporal-aware POI recommendation system using context-aware tensor decomposition and weighted HITS
+ 19. Learning graph-based poi embedding for location-based recommendation
+ 20. Partition-based collaborative tensor factorization for POI recommendation
+ 21. Collaborative filtering meets mobile recommendation: A user-centered approach
+ 22. Personalized point-of-interest recommendation by mining users' preference transition
+ 23. Point-of-interest recommendation in location based social networks with topic and location awareness
+ 24. Where you like to go next: Successive point-of-interest recommendation
+ 25. STS: A Context-Aware Mobile Recommender System for Places of Interest.
+ 26. Geotecs: exploiting geographical, temporal, categorical and social aspects for personalized poi recommendation
+ 27. Point-of-interest recommender systems: A separate-space perspective
+ 28. Joint modeling of users' interests and mobility patterns for point-of-interest recommendation
+ 29. Inferring a personalized next point-of-interest recommendation model with latent behavior patterns
+ 30. Social topic modeling for point-of-interest recommendation in location-based social networks
+
+** Busca no google scholar
+   Aqui só é feito a busca no scholar e os resultados são botados ai.
+
+   Primeiro é feito a query, o resultado da query é botado como uma lista.
+
+
+*** Matrix factorization
+ Query: recommender system poi matrix factorization
+
+ #+NAME: mfarticles
+ 1. GeoMF: joint geographical modeling and matrix factorization for point-of-interest recommendation
+ 2. Content-aware point of interest recommendation on location-based social networks
+ 3. Fused matrix factorization with geographical and social influence in location-based social networks
+ 4. Rank-geofm: A ranking based geographical factorization method for point of interest recommendation
+ 5. Learning geographical preferences for point-of-interest recommendation
+ 6. POI recommendation: towards fused matrix factorization with geographical and temporal influences
+ 7. Matrix factorization techniques for context aware recommendation
+ 8. A survey of point-of-interest recommendation in location-based social networks
+ 9. Context-aware probabilistic matrix factorization modeling for point-of-interest recommendation
+ 10. Context-aware point-of-interest recommendation using tensor factorization with social regularization
+ 11. What your images reveal: Exploiting visual contents for point-of-interest recommendation
+ 12. STELLAR: spatial-temporal latent ranking for successive point-of-interest recommendation
+ 13. Context-aware points of interest suggestion with dynamic weather data management
+ 14. Unified point-of-interest recommendation with temporal interval assessment
+ 15. Schedule a rich sentimental travel via sentimental POI mining and recommendation
+ 16. Bridging collaborative filtering and semi-supervised learning: a neural approach for poi recommendation
+ 17. POI recommendation through cross-region collaborative filtering
+ 18. A temporal-aware POI recommendation system using context-aware tensor decomposition and weighted HITS
+ 19. Learning graph-based poi embedding for location-based recommendation
+ 20. Partition-based collaborative tensor factorization for POI recommendation
+ 21. Collaborative filtering meets mobile recommendation: A user-centered approach
+ 22. Personalized point-of-interest recommendation by mining users' preference transition
+ 23. Point-of-interest recommendation in location based social networks with topic and location awareness
+ 24. Where you like to go next: Successive point-of-interest recommendation
+ 25. STS: A Context-Aware Mobile Recommender System for Places of Interest.
+ 26. Geotecs: exploiting geographical, temporal, categorical and social aspects for personalized poi recommendation
+ 27. Point-of-interest recommender systems: A separate-space perspective
+ 28. Joint modeling of users' interests and mobility patterns for point-of-interest recommendation
+ 29. Inferring a personalized next point-of-interest recommendation model with latent behavior patterns
+ 30. Social topic modeling for point-of-interest recommendation in location-based social networks
+
+ #+BEGIN_SRC emacs-lisp :var list=mfarticles
+					   ;(mapcar 'insert list)
+   (while (not (null list))
+     (doi-utils-add-entry-from-crossref-query (car (car list)) "./doc.bib")
+     (setq list (cdr list)))
+ #+END_SRC
+
+ #+RESULTS:
+
+*** Content-based filtering
+ Query: recommender system poi content-based filtering
+
+ 1. Author topic model-based collaborative filtering for personalized POI recommendations
+ 2. A hybrid recommender system for context-aware recommendations of mobile applications
+ 3. Using location for personalized POI recommendations in mobile environments
+ 4. Mobile recommender systems in tourism
+ 5. Exploiting geographical influence for collaborative point-of-interest recommendation
+ 6. A web-based pervasive recommendation system for mobile tourist guides
+ 7. Dynamic particle swarm optimization for personalized recommender system based on electroencephalography feedback.
+ 8. A hybrid context aware system for tourist guidance based on collaborative filtering
+ 9. Personalization method for tourist point of interest (POI) recommendation
+ 10. [PDF] Context and intention-awareness in pois recommender systems
+
+ Query: recommender system poi content-based
+
+ 1. A web-based pervasive recommendation system for mobile tourist guides
+ 2. Mobile recommender systems in tourism
+ 3. A hybrid recommender system for context-aware recommendations of mobile applications
+ 4. Using location for personalized POI recommendations in mobile environments
+ 5. Author topic model-based collaborative filtering for personalized POI recommendations
+ 6. Location-adapted music recommendation using tags
+ 7. A mobile tourism recommender system
+ 8. Dynamic particle swarm optimization for personalized recommender system based on electroencephalography feedback.
+ 9. Exploiting geographical influence for collaborative point-of-interest recommendation
+ 10. A context-aware mobile recommender system based on location and trajectory
+
+*** Collaborative filtering
+
+ Query: recommender system poi collaborative filtering
+
+ 1. Exploiting geographical influence for collaborative point-of-interest recommendation
+ 2. Using location for personalized POI recommendations in mobile environments
+ 3. Author topic model-based collaborative filtering for personalized POI recommendations
+ 4. Bridging collaborative filtering and semi-supervised learning: a neural approach for poi recommendation
+ 5. Mobile recommender systems in tourism
+ 6. A hybrid recommender system for context-aware recommendations of mobile applications
+ 7. POI recommendation through cross-region collaborative filtering
+ 8. Using context-aware collaborative filtering for POI recommendations in mobile guides
+ 9. A hybrid context aware system for tourist guidance based on collaborative filtering
+ 10. Location-based recommendation system
+ 11. A web-based pervasive recommendation system for mobile tourist guides
+ 12. Content-aware point of interest recommendation on location-based social networks
+ 13. A mobile tourism recommender system
+ 14. Personalization method for tourist point of interest (POI) recommendation
+ 15. [PDF] Using trajectories for collaborative filtering-based POI recommendation.
+ 16. Collaborative location and activity recommendations with GPS history data
+ 17. A mobile 3D-GIS hybrid recommender system for tourism
+ 18. Context-aware intelligent recommendation system for tourism
+ 19. Travel recommendation via author topic model based collaborative filtering
+ 20. Collaborative filtering meets mobile recommendation: A user-centered approach
+
+*** Link-Based
+
+ Query: recommender system poi link-based link based
+
+ 1. Maps: A multi aspect personalized poi recommender system
+ 2. An experimental evaluation of point-of-interest recommendation in location-based social networks
+ 3. Knowledge-based identification of music suited for places of interest
+ 4. Location-recommendation-aware virtual network embedding in energy-efficient optical-wireless hybrid networks supporting 5G models
+ 5. Swarm intelligence clustering ensemble based point of interest recommendation for social cyber-physical systems
+ 6. Privacy aspects of recommender systems
+ 7. A hybrid quantum-induced swarm intelligence clustering for the urban trip recommendation in smart city
+ 8. A weighted multi-attribute method for matching user-generated points of interest
+ 9. Context-aware and multilingual information extraction for a tourist recommender system
+ 10. Recommender systems: Models and techniques
+
+* End
+End
+bibliographystyle:plain
+bibliography:doc.bib

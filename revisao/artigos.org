@@ -1,0 +1,81 @@
+#+TITLE: Artigos buscados
+#+OPTIONS: html-postamble:nil
+
+Anos para busca: 2017,2018,2019
+
+Conferências para busca: RecSys, SIGIR, ICKM, WSDM, WWW
+
+"nan" = sem conferencia
+
+2019
+
+| Effective Knowledge Based Recommender System for Tailored Multiple Point of Interest Recommendation                                | IJWP                    |
+| R2SIGTP: a Novel Real-Time Recommendation System with Integration of Geography and Temporal Preference for Next Point-of-Interest  | WWW                     |
+| Spatiotemporal Representation Learning for Translation-Based POI Recommendation                                                    | TOIS                    |
+| An Attentive Spatio-Temporal Neural Model for Successive Point of Interest Recommendation                                          | PAKDD                   |
+| Mix geographical information into local collaborative ranking for POI recommendation                                               | WWW                     |
+| Adversarial point-of-interest recommendation                                                                                       | WWW                     |
+| On successive point-of-interest recommendation                                                                                     | WWW                     |
+| Personalized POI recommendation based on check-in data and geographical-regional influence                                         | ICMLSC                  |
+| Fused matrix factorization with multi-tag, social and geographical influences for POI recommendation                               | WWW                     |
+| Protecting multi-party privacy in location-aware social point-of-interest recommendation                                           | WWW                     |
+| An adaptive point-of-interest recommendation method for location-based social networks based on user activity and spatial features | Knowledge-Based Systems |
+| A Joint Two-Phase Time-Sensitive Regularized Collaborative Ranking Model for Point of Interest Recommendation                      | TKDE                    |
+| An Attention-based Spatiotemporal LSTM Network for Next POI Recommendation                                                         | TSC                     |
+| Leveraging multi-aspect time-related influence in location recommendation                                                          | WWW                     |
+
+2018
+
+| Points-of-interest recommendation based on convolution matrix factorization                                                         | Applied intelligence                       |
+| Exploiting POI-Specific Geographical Influence for Point-of-Interest Recommendation                                                 | IJCAI                                      |
+| Content-Aware Hierarchical Point-of-Interest Embedding Model for Successive POI Recommendation.                                     | IJCAI                                      |
+| Aggregated temporal tensor factorization model for point-of-interest recommendation                                                 | Neural Processing Letters                  |
+| Integrating spatial and temporal contexts into a factorization model for POI recommendation                                         | IJGIS                                      |
+| Personalized trip recommendation for tourists based on user interests, points of interest visit durations and visit recency         | Knowledge and Information Systems          |
+| Exploiting Human Mobility Patterns for Point-of-Interest Recommendation                                                             | WSDM                                       |
+| Point-of-Interest Recommendation: Exploiting Self-Attentive Autoencoders with Neighbor-Aware Influence                              | CIKM                                       |
+| A personalized point-of-interest recommendation model via fusion of geo-social information                                          | Neurocomputing                             |
+| RecNet: a deep neural network for personalized POI recommendation in location-based social networks                                 | IJGIS                                      |
+| Exploiting Spatial and Temporal for Point of Interest Recommendation                                                                | Complexity                                 |
+| Where to Go Next: A Spatio-temporal LSTM model for Next POI Recommendation                                                          | nan                                        |
+| A novel recommendation system in location-based social networks using distributed ELM                                               | Memetic Computing                          |
+| Context-Aware Group Recommendation for Point-of-Interests                                                                           | IEEE Access                                |
+| Next Point-of-Interest Recommendation with Temporal and Multi-level Context Attention                                               | ICDM                                       |
+| Adaptive Trip Recommendation System: Balancing Travelers among POIs with MapReduce                                                  | BigData Congress                           |
+| Personalized context-aware point of interest recommendation                                                                         | TOIS                                       |
+| Preference aware travel route recommendation with temporal influence                                                                | LocalRec                                   |
+| A self-adaptive point-of-interest recommendation algorithm based on a multi-order Markov model                                      | FGCS                                       |
+| Harnessing a generalised user behaviour model for next-POI recommendation                                                           | RecSys                                     |
+| Scalable Content-Aware Collaborative Filtering for Location Recommendation                                                          | TKDE                                       |
+| Coupled poisson factorization integrated with user/item metadata for modeling popular and sparse ratings in scalable recommendation | AAAI                                       |
+| Location Regularization-Based POI Recommendation in Location-Based Social Networks                                                  | information                                |
+| Spatial-Temporal Distance Metric Embedding for Time-Specific POI Recommendation                                                     | IEEE Access                                |
+| Time-aware metric embedding with asymmetric projection for successive POI recommendation                                            | WWW                                        |
+| A Generative Model Approach for Geo-Social Group Recommendation                                                                     | Journal of Computer Science and Technology |
+| POI recommendation of location-based social networks using tensor factorization                                                     | nan                                        |
+| Personalized Next Point-of-Interest Recommendation via Latent Behavior Patterns Inference                                           | nan                                        |
+| Improving POI Recommendation via Dynamic Tensor Completion                                                                          | Scientific Programming                     |
+| CLoSe: Contextualized Location Sequence Recommender                                                                                 | RecSys                                     |
+| Top-k Route Search through Submodularity Modeling of Recurrent POI Features                                                         | SIGIR                                      |
+
+2017
+
+| A reliable point of interest recommendation based on trust relevancy between users                                                | Wireless Personal Communications             |
+| CTF-ARA: An adaptive method for POI recommendation based on check-in and temporal features                                        | Knowledge-Based Systems                      |
+| A temporal-aware POI recommendation system using context-aware tensor decomposition and weighted HITS                             | Neurocomputing                               |
+| Partition-based collaborative tensor factorization for POI recommendation                                                         | Journal of Automatica Sinica                 |
+| Geo-teaser: Geo-temporal sequential embedding rank for point-of-interest recommendation                                           | WWW                                          |
+| What your images reveal: Exploiting visual contents for point-of-interest recommendation                                          | WWW                                          |
+| An experimental evaluation of point-of-interest recommendation in location-based social networks                                  | VLDB                                         |
+| Aspect-aware Point-of-Interest Recommendation with Geo-Social Influence                                                           | UMAP                                         |
+| Probabilistic Social Sequential Model for Tour Recommendation                                                                     | WSDM                                         |
+| Bridging Collaborative Filtering and Semi-Supervised Learning: A Neural Approach for POI Recommendation                           | SIGKDD                                       |
+| A General Model for Out-of-town Region Recommendation                                                                             | WWW                                          |
+| Exploiting Hierarchical Structures for POI Recommendation                                                                         | ICDM                                         |
+| Learning Recency and Inferring Associations in Location Based Social Network for Emotion Induced Point-of-Interest Recommendation | Journal of Information Science & Engineering |
+| Spatial-aware hierarchical collaborative deep learning for POI recommendation                                                     | TKDE                                         |
+| Context-aware probabilistic matrix factorization modeling for point-of-interest recommendation                                    | Neurocomputing                               |
+| Personalized location recommendation by aggregating multiple recommenders in diversity                                            | GeoInformatica                               |
+| Current location-based next POI recommendation                                                                                    | WI                                           |
+| Tour recommendation for groups                                                                                                    | DMKD                                         |
+| Geographical Diversification in POI Recommendation: Toward Improved Coverage on Interested Areas                                  | RecSys                                       |
