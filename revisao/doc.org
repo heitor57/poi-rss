@@ -203,7 +203,7 @@ Expansão da tabela 4 do artigo "An Experimental Evaluation of Point-of-interest
 - cite:DBLP:journals/corr/abs-1805-06316: next POI. user latent behavior. third-rank tensor. categorical influence, spatial preference on poi. Markov chain, bayesian personalized ranking (BPR) -> optimization criterion.
 - cite:liao18_improv_poi_recom_via_dynam_tensor_compl: Dynamic Tensor Completion. predict POI by utilizing a completion algorithm based on fast low-rank tensor + pigeon-inspired heuristic algorithm
 - cite:baral18_close: contextually coherent POI sequences. RNN, Long-short term memory (LSTM). personalized user preferences.
-- cite:liang18_top_route_searc_submod_model: 
+- cite:liang18_top_route_searc_submod_model: limited cost budget = Requirement-aware Recommendation. 
 
 no 3 artigo deu inicio ao ato de botar nome em outros
 
@@ -237,11 +237,68 @@ no 3 artigo deu inicio ao ato de botar nome em outros
 | cite:DBLP:journals/corr/abs-1805-06316                        |            |             | \checkmark |                 |                     |            |            | \checkmark    |               |        | TF/T       | \checkmark        | \checkmark   |            |             | \checkmark  |             |            |            |
 | cite:liao18_improv_poi_recom_via_dynam_tensor_compl           | \checkmark |             |            |                 |                     |            |            | \checkmark    |               |        | TF/T       |                   |              |            |             | \checkmark  | \checkmark  | \checkmark | nao/talvez |
 | cite:baral18_close                                            |            |             |            |                 | (ContSeq)\checkmark |            |            |               |               |        | LSTM/RNN   | \checkmark        |              |            |             |             |             |            | nao        |
-|                                                               |            |             |            |                 |                     |            |            |               |               |        |            |                   |              |            |             |             |             |            |            |
+| cite:liang18_top_route_searc_submod_model                     |            |             |            |                 | (Req.)\checkmark    |            |            |               |               |        |            |                   | \checkmark   |            |             |             |             |            | nao        |
 
 
 
-time-aware e o uso da informação
+2017
+
+- cite:logesh17_reliab_point_inter_recom_based: trust enhancement in social networks. social pertinent trust walker (SPTW). matrix factorization.
+- cite:si17_ctf_ara: existing POI recommendation methods have not considered the effect of diversity features in check-in data. adaptive POI recommendation method (called CTF-ARA) by combining check-in and temporal features with user-based collaborative filtering. K-means algorithm to divide the users into active users and inactive users.
+- cite:ying17_tempor_aware_poi_recom_system: temporal-aware. two components: context-aware tensor decomposition (CTD) for user preferences modelling and weighted HITS (Hypertext Induced Topic Search)-based POI rating (WHBPR).
+- cite:luan17_partit_based_collab_tensor_factor_poi_recom: collaborative tensor factorization (CTF). nao supera st.art.
+- cite:zhao18_geo_teaser: Geo-Temporal sequential embedding rank (Geo-Teaser). temporal state
+- cite:wang17_what_your_images_reveal: image explore. PMF. Primeiro.
+- cite:liu17_exper_evaluat_point_of_inter: evaluation of all alg. state. of art. with year < 2017. not included
+- cite:guo17_aspec_point_inter_recom_geo_social_influen: geo,social. textual, pref . Aspect-aware Geo-Social infuence Graph (AGSG). PPR
+- cite:rakesh17_probab_social_sequen_model_tour_recom: tour rec. probabilistic. category pref, social, travel transitions, popularity of the venue.
+- cite:yang17_bridg_collab_filter_semi_super_learn: Collaborative Filtering. Semi-Supervised Learning. Neural Approach. user preference. PACE (Preference And Context Embedding).
+- cite:pham17_gener_model_out_region_recom: out-of-town. region recommendation. geo information. influence between pois. line-based method. first work on out-of-town region rec.
+- cite:zhao17_exploit_hierar_struc_poi_recom: Exploiting Hierarchical Structures. users content and spatial preferences exhibit hierarchical structures. hierarchical geographical matrix factorization model (HGMF).
+- cite:logesh2017learning: exploit emotion of the user.
+- cite:yin17_spatial_aware_hierar_collab_deep: Spatial-aware hierarchical collaborative deep learning.
+- cite:ren17_contex_aware_probab_matrix_factor: context-aware PMF. TGSC-PMF. textual information, geographical information, social information, categorical information and popularity information. Latent Dirichlet Allocation (LDA) <- Natural language processing.
+- cite:lu17_person_locat_recom_by_aggreg: aggregating multiple recommenders in diversity.
+- cite:oppokhonov17_curren_poi: next poi. Current Location-based. sequence info. social. temporal
+- cite:anagnostopoulos16_tour_recom_group: tour rec. for groups. NP HARD. APX-hard.
+- cite:han17_geogr_diver_poi_recom: proportional geographical diversification.
+
+| Article                                                 | POI rec.   | Time-aware | Next POI   | In-/Out-of-town | Others               | Link-based | CF         | Factorization | Probabilistic | Hybrid      | Others  | User Pref.  | Geographical | Social     | Textual    | Categorical | Sequential | Temporal   | Certo?     | Sem PDF |
+| cite:logesh17_reliab_point_inter_recom_based            | \checkmark |            |            |                 |                      |            |            | \checkmark    |               |             |         |             |              | \checkmark |            |             |            |            | marc       |         |
+| cite:si17_ctf_ara                                       | \checkmark |            |            |                 |                      |            | \checkmark |               |               |             |         |             | \checkmark   |            |            |             |            | \checkmark | marc       |         |
+| cite:ying17_tempor_aware_poi_recom_system               |            | \checkmark |            |                 |                      | \checkmark |            | \checkmark    |               |             | TF      | \checkmark  |              |            | \checkmark |             |            |            | marc/nao   |         |
+| cite:luan17_partit_based_collab_tensor_factor_poi_recom | \checkmark | \checkmark |            |                 |                      |            | \checkmark | \checkmark    |               |             | TF/CTF  |             | \checkmark   |            |            | \checkmark  |            | \checkmark | marc/nao   | f       |
+| cite:zhao18_geo_teaser                                  | \checkmark |            |            |                 |                      |            |            |               |               |             |         |             | \checkmark   |            |            |             | \checkmark | \checkmark | marc       | t       |
+| cite:wang17_what_your_images_reveal                     | \checkmark |            |            |                 |                      |            | \checkmark | \checkmark    | \checkmark    |             |         | image       |              |            |            |             |            |            |            | f       |
+| cite:guo17_aspec_point_inter_recom_geo_social_influen   | \checkmark |            |            |                 |                      |            |            |               |               |             |         | \checkmark  | \checkmark   | \checkmark | \checkmark |             |            |            | talvez     | f       |
+| cite:rakesh17_probab_social_sequen_model_tour_recom     |            |            | \checkmark |                 | Tour\checkmark       |            |            |               | \checkmark    |             |         |             | \checkmark   | \checkmark |            | \checkmark  |            |            | sim        |         |
+| cite:yang17_bridg_collab_filter_semi_super_learn        | \checkmark |            |            |                 |                      |            | \checkmark |               |               |             |         | \checkmark  | \checkmark   | \checkmark |            |             |            |            | sim/talvez | f       |
+| cite:pham17_gener_model_out_region_recom                |            |            |            | \checkmark      |                      |            |            |               | \checkmark    |             |         |             | \checkmark   |            |            |             |            |            | sim/talvez | f       |
+| cite:zhao17_exploit_hierar_struc_poi_recom              | \checkmark |            |            |                 |                      |            |            | \checkmark    |               |             |         | \checkmark  | \checkmark   |            |            |             |            |            | sim        | t       |
+| cite:logesh2017learning                                 | \checkmark |            |            |                 |                      |            |            |               |               | ?\checkmark |         | E\checkmark | \checkmark   |            |            |             |            |            | talvez     | t       |
+| cite:yin17_spatial_aware_hierar_collab_deep             | \checkmark |            |            |                 |                      |            | \checkmark |               |               |             | DL      | \checkmark  | \checkmark   | \checkmark |            |             |            |            | sim        | f       |
+| cite:ren17_contex_aware_probab_matrix_factor            | \checkmark |            |            |                 |                      |            |            | \checkmark    | \checkmark    |             |         |             | \checkmark   | \checkmark | \checkmark | \checkmark  |            |            |            | t       |
+| cite:lu17_person_locat_recom_by_aggreg                  | \checkmark |            |            |                 |                      |            | \checkmark | \checkmark    | \checkmark    |             |         | \checkmark  | \checkmark   | \checkmark |            | \checkmark  |            | \checkmark |            | f       |
+| cite:oppokhonov17_curren_poi                            |            |            | \checkmark |                 |                      |            | \checkmark |               |               |             |         |             | \checkmark   | \checkmark |            |             | \checkmark | \checkmark | sim        | f       |
+| cite:anagnostopoulos16_tour_recom_group                 |            |            | \checkmark |                 | Tour,Group\checkmark |            |            |               |               |             | ?Greedy | \checkmark  | \checkmark   | \checkmark |            |             |            |            | talvez/nao | f       |
+| cite:han17_geogr_diver_poi_recom                        | \checkmark |            |            |                 |                      |            |            |               |               |             | ?       |             | \checkmark   |            |            |             |            |            | nao        | f       |
+
+
+
+* Notas imporantes
+
+- Alguns time-aware podem ter sido classificados como POI rec. erroneamente.
+- nao foi feito uma coluna para utilização de dados sendo como imagem. ????problemas
+- existe algum artigo falando que usa informação social porem err.????? talvez. Errado somente se a popularidade de um poi não for uma info social.
+- Desconsidere //a informação social se diferencia dependendo do alvo de recomendação (grupo ou individuo). Para um grupo as informações do grupo somente não são consideradas sociais.
+
+| elementos de "Certo?" | Significado                                                                                       |
+| marc                  | So foi analisado as caracteristicas mais marcnates do trabalho, ou seja, pode haver falhas ainda. |
+| nao                   | Nao a garantia das classificações estarem corretas ou esta faltando explorar mais.                |
+| sim                   | A classificação representa o artigo.                                                              |
+| talvez                | Existe um grau baixo de incerteza na classificação do artigo.                                     |
+
+Elementos podem ser compinados para gerar feedback com mais granularidade.
 
 bibliographystyle:plain
 bibliography:doc.bib
