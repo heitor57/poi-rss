@@ -22,6 +22,15 @@ Problemas
 - usuarios podem ter amigos que nao existem.
 - esparsidade é pelo total de usuarios de cada cidade?? \checkmark
 
+As principais características dos pois disponiveis são: $<latitude,longitude,stars,categories,address,hours,is_open>$
+
+
+Tipos de informações sociais disponiveis do usuario:
+- fans
+- friends
+- compliments...
+- votos useful, funny, cool
+
 #+TBLNAME: tab:arqcampo
 #+CAPTION: Arquivos e campo.
 #+ATTR_LATEX: :align |l|l|p{12cm}|
@@ -180,12 +189,12 @@ Numero de POIs em cada cidade.
 #+BEGIN_SRC sql :exports both :results output :engine mysql :dbuser heitor :dbpassword "123" :database yelp :results verbatim
 -- numero de pois em cada cidade
  -- SELECT DISTINCT u.user_id,b.business_id,b.city FROM user AS u,tip AS t,business AS b WHERE u.user_id = t.user_id AND t.business_id=b.business_id;
-    SELECT city,COUNT(*) FROM business GROUP BY city;
+    SELECT city,COUNT(city) FROM business GROUP BY city;
 #+END_SRC
 
 #+RESULTS:
 #+begin_example
-city	COUNT(*)
+city	COUNT(city)
 	1
 110 Las Vegas	1
 AGINCOURT	2
@@ -1254,6 +1263,4 @@ Yorkville	1
 Youngtown	65
 Zephyr	1
 #+end_example
-
-
 
