@@ -1,6 +1,8 @@
 #+TITLE: Revisão literária de RS para POI
-#+LANGUAGE: br
+#+LANGUAGE: pt
 #+OPTIONS: html-postamble:nil
+#+LATEX_HEADER: \usepackage[top=0.5cm,bottom=1.5cm,left=2cm,right=2cm]{geometry}
+#+LATEX_HEADER: \usepackage[brazil]{babel}
 # +SETUPFILE: ./org-html-themes/setup/theme-bigblow.setup
 # +INFOJS_OPT: view:info toc:nil
 
@@ -25,9 +27,9 @@ Conferências para busca: RecSys, SIGIR, ICKM, WSDM, WWW
 
 nan -> sem conferencia
 
-2019
-
 #+tblname: art2019
+#+CAPTION: 2019.
+#+ATTR_LATEX: :environment longtable :align |p{12cm}|l|
 | Effective Knowledge Based Recommender System for Tailored Multiple Point of Interest Recommendation                                | IJWP                    |
 | R2SIGTP: a Novel Real-Time Recommendation System with Integration of Geography and Temporal Preference for Next Point-of-Interest  | WWW                     |
 | Spatiotemporal Representation Learning for Translation-Based POI Recommendation                                                    | TOIS                    |
@@ -51,9 +53,9 @@ nan -> sem conferencia
 
  #+RESULTS:
 
-2018
-
 #+tblname: art2018
+#+CAPTION: 2018.
+#+ATTR_LATEX: :environment longtable :align |p{12cm}|l|
 | Points-of-interest recommendation based on convolution matrix factorization                                                         | Applied intelligence                       |
 | Exploiting POI-Specific Geographical Influence for Point-of-Interest Recommendation                                                 | IJCAI                                      |
 | Content-Aware Hierarchical Point-of-Interest Embedding Model for Successive POI Recommendation.                                     | IJCAI                                      |
@@ -96,9 +98,9 @@ nan -> sem conferencia
  #+RESULTS:
 
 
-2017
-
 #+tblname: art2017
+#+CAPTION: 2017.
+#+ATTR_LATEX: :environment longtable :align |p{12cm}|l|
 | A reliable point of interest recommendation based on trust relevancy between users                                                | Wireless Personal Communications             |
 | CTF-ARA: An adaptive method for POI recommendation based on check-in and temporal features                                        | Knowledge-Based Systems                      |
 | A temporal-aware POI recommendation system using context-aware tensor decomposition and weighted HITS                             | Neurocomputing                               |
@@ -137,7 +139,7 @@ Abaixo um resumo de cada artigo seŕa feito para coletar as principais caracter�
 2019
 
 - cite:vijayakumar19_effec_knowl_based_recom_system: Multiple POIs rec sys. lista de viagem. heat map de locais ja visitados. pois mais relevantes são pegos para recomendação. Hybrid collaborative filtering. Check-in, LSBN. Temporal.
-- cite:jiao19_r2sig: não achei o pdf. mobile acho q n faz dif
+- cite:jiao19_r2sig: não achei o pdf. mobile acho q n faz diferença.
 - cite:qian19_spatiot_repres_learn_trans_based_poi_recom: espaçotemporal foco, spatiotemporal context-aware. joint effect of time and location.  translation-based recommender framework (STA) model third-order relationship among users. 
 - cite:doan19_atten_spatio_tempor_neural_model: sem acesso ao pdf, resumo. deep Long Short Term Memory recurrent neural network model. successive recomendation problem.
 - cite:liu19_mix_geogr_infor_into_local: sem acesso ao pdf. local collaborative ranking (LCR). MG-LCR.
@@ -155,7 +157,6 @@ Antes do artigo  cite:si19_adapt_point_of_inter_recom não existia a coluna User
 
 Expansão da tabela 4 do artigo "An Experimental Evaluation of Point-of-interest Recommendation in Location-based Social Networks".
 
-| Article                                                | POI rec.   | Time-aware | Next POI   | In-/Out-of-town | Others     | Link-based | CF         | Factorization | Probabilistic | Hybrid     | Others | User Pref. | Geographical | Social     | Textual | Categorical | Sequential | Temporal   | Certo?  |
 | cite:vijayakumar19_effec_knowl_based_recom_system      |            |            |            |                 | \checkmark |            |            |               |               | \checkmark |        |            | \checkmark   |            |         |             |            | \checkmark | talvez  |
 | cite:qian19_spatiot_repres_learn_trans_based_poi_recom | \checkmark |            |            |                 |            |            |            |               |               |            | STA    |            | \checkmark   | \checkmark |         |             |            | \checkmark | *talvez |
 | cite:doan19_atten_spatio_tempor_neural_model           |            |            |            |                 | \checkmark |            |            |               |               |            | RNN    |            | \checkmark   |            |         |             | \checkmark | \checkmark |         |
@@ -168,7 +169,6 @@ Expansão da tabela 4 do artigo "An Experimental Evaluation of Point-of-interest
 | cite:aliannejadi19_joint_two_phase_time_sensit         | \checkmark |            |            |                 |            |            | \checkmark |               |               |            |        |            | \checkmark   | \checkmark |         |             |            |            |         |
 | cite:huang19_atten_based_spatiot_lstm_networ           |            |            | \checkmark |                 |            |            |            |               |               |            | LSTM   |            | \checkmark   |            |         |             |            | \checkmark | sim     |
 | cite:hosseini18_lever_multi_aspec_time_relat           | \checkmark |            |            |                 |            |            |            |               | \checkmark    |            |        | \checkmark |              |            |         |             |            | \checkmark | verif   |
-
 
 
 2018
