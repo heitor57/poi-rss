@@ -1,7 +1,7 @@
 #+TITLE: Revisão literária de RS para POI
 #+LANGUAGE: pt
 #+OPTIONS: html-postamble:nil
-#+LATEX_HEADER: \usepackage[top=0.5cm,bottom=1.5cm,left=0cm,right=2cm]{geometry}
+#+LATEX_HEADER: \usepackage[top=0.5cm,bottom=1.5cm,left=1cm,right=1cm]{geometry}
 #+LATEX_HEADER: \usepackage[brazil]{babel}
 # +SETUPFILE: ./org-html-themes/setup/theme-bigblow.setup
 # +INFOJS_OPT: view:info toc:nil
@@ -292,8 +292,9 @@ no 3 artigo deu inicio ao ato de botar nome em outros
 - nao foi feito uma coluna para utilização de dados sendo como imagem. ????problemas
 - existe algum artigo falando que usa informação social porem err.????? talvez. Errado somente se a popularidade de um poi não for uma info social.
 - Desconsidere //a informação social se diferencia dependendo do alvo de recomendação (grupo ou individuo). Para um grupo as informações do grupo somente não são consideradas sociais.
-
+#+ATTR_LATEX: :align |l|l|
 | elementos de "Certo?" | Significado                                                                                       |
+|-----------------------+---------------------------------------------------------------------------------------------------|
 | marc                  | So foi analisado as caracteristicas mais marcnates do trabalho, ou seja, pode haver falhas ainda. |
 | nao                   | Nao a garantia das classificações estarem corretas ou esta faltando explorar mais.                |
 | sim                   | A classificação representa o artigo.                                                              |
@@ -304,6 +305,7 @@ Elementos podem ser compinados para gerar feedback com mais granularidade.
 * Resultado final
 
 #+TBLNAME: tabelabusca
+#+ATTR_LATEX: :environment longtable :align |p{10cm}|l|l|
 | Article                                                                                                                             | Journal                                      | Year |
 | Effective Knowledge Based Recommender System for Tailored Multiple Point of Interest Recommendation                                 | IJWP                                         | 2019 |
 | R2SIGTP: a Novel Real-Time Recommendation System with Integration of Geography and Temporal Preference for Next Point-of-Interest   | WWW                                          | 2019 |
@@ -370,8 +372,12 @@ Elementos podem ser compinados para gerar feedback com mais granularidade.
 | Tour recommendation for groups                                                                                                      | DMKD                                         | 2017 |
 | Geographical Diversification in POI Recommendation: Toward Improved Coverage on Interested Areas                                    | RecSys                                       | 2017 |
 
-#+CAPTION: Metodos(Alguns campos redundantes devido ao contexto de cada artigo).
+
+
+#+CAPTION: Métodos(Alguns campos redundantes devido ao contexto de cada artigo).
+#+ATTR_LATEX: :align |l|l|
 | Abbreviation | Full name                               |
+|--------------+-----------------------------------------|
 | STA          | translation-based recommender framework |
 | ML           | Machine learning                        |
 | RNN          | Recurrent neural network                |
@@ -397,7 +403,7 @@ Elementos podem ser compinados para gerar feedback com mais granularidade.
 #+END_EXPORT
 #+TBLNAME: tabelarevisao
 #+ATTR_LATEX: :environment longtable :align |p{0.7cm}|p{0.28cm}|p{0.5cm}|p{0.4cm}|p{0.45cm}|p{0.6cm}|p{0.4cm}|p{0.15cm}|p{0.4cm}|p{0.4cm}|p{0.6cm}|p{1.2cm}|p{0.5cm}|p{0.7cm}|p{0.6cm}|p{0.7cm}|p{0.6cm}|p{0.5cm}|p{1cm}|p{1cm}|
-| Article                                                       | POI rec.   | Time-aware  | Next POI   | In-/Out-of-town | Others               | Link-based | CF         | Factorization | Probabilistic | Hybrid      | Others     | User Pref.        | Geographical | Social     | Textual     | Categorical | Sequential  | Temporal   | Certo?     |
+| Article                                                       | POI rec.   | Time-aware  | Next POI   | In-/Out-of-town | Others               | Link-based | CF         | Factorization | Probabilistic | Hybrid      | Method     | User Pref.        | Geographical | Social     | Textual     | Categorical | Sequential  | Temporal   | Certo?     |
 | cite:vijayakumar19_effec_knowl_based_recom_system             |            |             |            |                 | \checkmark           |            |            |               |               | \checkmark  |            |                   | \checkmark   |            |             |             |             | \checkmark | talvez     |
 | cite:qian19_spatiot_repres_learn_trans_based_poi_recom        | \checkmark |             |            |                 |                      |            |            |               |               |             | STA        |                   | \checkmark   | \checkmark |             |             |             | \checkmark | *talvez    |
 | cite:doan19_atten_spatio_tempor_neural_model                  |            |             |            |                 | \checkmark           |            |            |               |               |             | RNN        |                   | \checkmark   |            |             |             | \checkmark  | \checkmark |            |
