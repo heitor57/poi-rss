@@ -477,6 +477,7 @@ Elementos podem ser compinados para gerar feedback com mais granularidade.
 
 #+BEGIN_EXPORT latex
 }
+%\rotatebox[origin=c]{90}{Text}
 #+END_EXPORT
 
 
