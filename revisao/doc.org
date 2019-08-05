@@ -1,10 +1,12 @@
 #+TITLE: Revisão literária de RS para POI
 #+LANGUAGE: pt
-#+OPTIONS: html-postamble:nil
+#+OPTIONS: html-postamble:nil ^:nil
 #+LATEX_HEADER: \usepackage[top=0.5cm,bottom=1.5cm,left=1cm,right=1cm]{geometry}
 #+LATEX_HEADER: \usepackage[brazil]{babel}
 # +SETUPFILE: ./org-html-themes/setup/theme-bigblow.setup
 # +INFOJS_OPT: view:info toc:nil
+#+LATEX_HEADER: \usepackage{array,multirow,graphicx}
+#+LATEX_HEADER: \usepackage{float}
 
 #+BEGIN_SRC emacs-lisp :exports none
 ;C-c -
@@ -476,6 +478,7 @@ Elementos podem ser compinados para gerar feedback com mais granularidade.
 #+BEGIN_EXPORT latex
 }
 #+END_EXPORT
+
 
 bibliographystyle:plain
 bibliography:doc.bib
