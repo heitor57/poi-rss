@@ -1,7 +1,7 @@
 #+TITLE: Revisão literária de RS para POI
 #+LANGUAGE: pt
 #+OPTIONS: html-postamble:nil
-#+LATEX_HEADER: \usepackage[top=0.5cm,bottom=1.5cm,left=2cm,right=2cm]{geometry}
+#+LATEX_HEADER: \usepackage[top=0.5cm,bottom=1.5cm,left=0cm,right=2cm]{geometry}
 #+LATEX_HEADER: \usepackage[brazil]{babel}
 # +SETUPFILE: ./org-html-themes/setup/theme-bigblow.setup
 # +INFOJS_OPT: view:info toc:nil
@@ -157,6 +157,7 @@ Antes do artigo  cite:si19_adapt_point_of_inter_recom não existia a coluna User
 
 Expansão da tabela 4 do artigo "An Experimental Evaluation of Point-of-interest Recommendation in Location-based Social Networks".
 
+| Article                                                | POI rec.   | Time-aware | Next POI   | In-/Out-of-town | Others     | Link-based | CF         | Factorization | Probabilistic | Hybrid     | Others | User Pref. | Geographical | Social     | Textual | Categorical | Sequential | Temporal   | Certo?  |
 | cite:vijayakumar19_effec_knowl_based_recom_system      |            |            |            |                 | \checkmark |            |            |               |               | \checkmark |        |            | \checkmark   |            |         |             |            | \checkmark | talvez  |
 | cite:qian19_spatiot_repres_learn_trans_based_poi_recom | \checkmark |            |            |                 |            |            |            |               |               |            | STA    |            | \checkmark   | \checkmark |         |             |            | \checkmark | *talvez |
 | cite:doan19_atten_spatio_tempor_neural_model           |            |            |            |                 | \checkmark |            |            |               |               |            | RNN    |            | \checkmark   |            |         |             | \checkmark | \checkmark |         |
@@ -369,9 +370,33 @@ Elementos podem ser compinados para gerar feedback com mais granularidade.
 | Tour recommendation for groups                                                                                                      | DMKD                                         | 2017 |
 | Geographical Diversification in POI Recommendation: Toward Improved Coverage on Interested Areas                                    | RecSys                                       | 2017 |
 
+#+CAPTION: Metodos(Alguns campos redundantes devido ao contexto de cada artigo).
+| Abbreviation | Full name                               |
+| STA          | translation-based recommender framework |
+| ML           | Machine learning                        |
+| RNN          | Recurrent neural network                |
+| AML          | Adversarial machine learning            |
+| LSTM         | Long short-term memory (RNN)            |
+| CNN          | Convolutional neural network            |
+| SGA          | Stochastic gradient descent             |
+| GD           | Gradient descent                        |
+| TF           | Tensor factorization                    |
+| PFM          | Probabilistic factor model              |
+| DL           | Deep learning                           |
+| SVR          | Support vector regression               |
+| DNN          | Deep neural network                     |
+| Markov,Mark  | Markov Chain                            |
+| IRL          | Inverse reinforcement learning          |
+| CPF          | Coupled poisson factorization           |
+| T            | Tensor                                  |
+| CTF          | Collaborative tensor factorization      |
 
-
+#+BEGIN_EXPORT latex
+{
+\tiny
+#+END_EXPORT
 #+TBLNAME: tabelarevisao
+#+ATTR_LATEX: :environment longtable :align |p{0.7cm}|p{0.28cm}|p{0.5cm}|p{0.4cm}|p{0.45cm}|p{0.6cm}|p{0.4cm}|p{0.15cm}|p{0.4cm}|p{0.4cm}|p{0.6cm}|p{0.5cm}|p{1cm}|p{0.7cm}|p{0.6cm}|p{0.7cm}|p{0.6cm}|p{0.5cm}|p{1cm}|p{1cm}|p{1cm}|
 | Article                                                       | POI rec.   | Time-aware  | Next POI   | In-/Out-of-town | Others               | Link-based | CF         | Factorization | Probabilistic | Hybrid      | Others     | User Pref.        | Geographical | Social     | Textual     | Categorical | Sequential  | Temporal   | Certo?     | Sem PDF |
 | cite:vijayakumar19_effec_knowl_based_recom_system             |            |             |            |                 | \checkmark           |            |            |               |               | \checkmark  |            |                   | \checkmark   |            |             |             |             | \checkmark | talvez     |         |
 | cite:qian19_spatiot_repres_learn_trans_based_poi_recom        | \checkmark |             |            |                 |                      |            |            |               |               |             | STA        |                   | \checkmark   | \checkmark |             |             |             | \checkmark | *talvez    |         |
@@ -387,7 +412,7 @@ Elementos podem ser compinados para gerar feedback com mais granularidade.
 | cite:hosseini18_lever_multi_aspec_time_relat                  | \checkmark |             |            |                 |                      |            |            |               | \checkmark    |             |            | \checkmark        |              |            |             |             |             | \checkmark | verif      |         |
 | cite:xing17_point_of_inter_recom_based                        | \checkmark |             |            |                 |                      |            |            | \checkmark    | \checkmark    |             | CNN        |                   | \checkmark   | \checkmark |             |             |             |            | talvez     |         |
 | cite:wang18_exploit_poi_specif_geogr_influen                  | \checkmark |             |            |                 |                      |            |            |               |               |             | SGA        | \checkmark        | \checkmark   |            |             |             |             |            | talvez     |         |
-| cite:chang18_conten_aware_hierar_point_inter                  |            |             | \checkmark |                 |                      |            |            |               |               |             | GD/ML      |                   | \checkmark   |            | \checkmark  |             |             |            | talvez     |         |
+| cite:chang18_conten_aware_hierar_point_inter                  |            |             | \checkmark |                 |                      |            |            |               |               |             | GD         |                   | \checkmark   |            | \checkmark  |             |             |            | talvez     |         |
 | cite:zhao17_aggreg_tempor_tensor_factor_model                 | \checkmark |             |            |                 |                      |            |            | \checkmark    |               |             | TF         |                   |              |            |             |             |             | \checkmark | talvez     |         |
 | cite:cai17_integ_spatial_tempor_contex_into                   | \checkmark |             |            |                 |                      |            |            | \checkmark    |               |             |            |                   | \checkmark   |            |             |             |             | \checkmark | sim        |         |
 | cite:lim17_person_trip_recom_touris_based                     |            |             |            |                 | (Tour)\checkmark     |            |            |               |               |             |            | \checkmark        | \checkmark   |            |             |             |             |            | nao        |         |
@@ -433,6 +458,10 @@ Elementos podem ser compinados para gerar feedback com mais granularidade.
 | cite:oppokhonov17_curren_poi                                  |            |             | \checkmark |                 |                      |            | \checkmark |               |               |             |            |                   | \checkmark   | \checkmark |             |             | \checkmark  | \checkmark | sim        | f       |
 | cite:anagnostopoulos16_tour_recom_group                       |            |             | \checkmark |                 | Tour,Group\checkmark |            |            |               |               |             | ?Greedy    | \checkmark        | \checkmark   | \checkmark |             |             |             |            | talvez/nao | f       |
 | cite:han17_geogr_diver_poi_recom                              | \checkmark |             |            |                 |                      |            |            |               |               |             | ?          |                   | \checkmark   |            |             |             |             |            | nao        | f       |
+
+#+BEGIN_EXPORT latex
+}
+#+END_EXPORT
 
 bibliographystyle:plain
 bibliography:doc.bib
