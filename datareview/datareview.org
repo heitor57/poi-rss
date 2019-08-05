@@ -1,0 +1,104 @@
+#+TITLE: Caracterização dos dados
+#+SUBTITLE: Yelp Dataset Challenge 2019
+#+DATE: 5 de Agosto de 2019
+#+AUTHOR: Heitor L. Werneck
+#+LANGUAGE: pt
+#+OPTIONS: toc:nil ^:nil
+#+LATEX_HEADER: \usepackage[top=0.5cm,bottom=1.5cm,left=2cm,right=2cm]{geometry}
+#+LATEX_HEADER: \usepackage[brazil]{babel}
+#+latex_class_options: [9pt]
+#+PROPERTY: header-args :eval never-export
+
+A tabela [[tab:arqcampo]] mostra os campos e suas respectivas descrições em cada arquivo/objeto.
+
+Os objetos tem um relacionamento logo dentre as possibilidades de bancos NoSQL, bancos relacionais tradicionais. O escolhido foi banco relacional mas um banco graph based seria interessante pela caracteristica schema-less do problema mas é mais complicado.
+
+Em trabalhos futuros poderia ser usado um banco NoSQL graph based.(vide Neo4j)
+
+Problemas
+
+- par de amigos com redundancia. tabela friend.
+
+
+#+TBLNAME: tab:arqcampo
+#+CAPTION: Arquivos e campo.
+#+ATTR_LATEX: :align |l|l|p{12cm}|
+|----------------+--------------------+-------------------------------------------------------------------------------------------------------------|
+| Arquivo/Objeto | Campo              | Descrição                                                                                                   |
+|----------------+--------------------+-------------------------------------------------------------------------------------------------------------|
+| business.json  | business_id        | string, 22 character unique string business id                                                              |
+| business.json  | name               | string, the business's name                                                                                 |
+| business.json  | address            | string, the full address of the business                                                                    |
+| business.json  | city               | string, the city                                                                                            |
+| business.json  | state              | string, 2 character state code, if applicable                                                               |
+| business.json  | postal code        | string, the postal code                                                                                     |
+| business.json  | latitude           | float, latitude                                                                                             |
+| business.json  | longitude          | float, longitude                                                                                            |
+| business.json  | stars              | float, star rating, rounded to half-stars                                                                   |
+| business.json  | review_count       | integer, number of reviews                                                                                  |
+| business.json  | is_open            | integer, 0 or 1 for closed or open, respectively                                                            |
+| business.json  | attributes         | object, business attributes to values. note: some attribute values might be objects                         |
+| business.json  | categories         | an array of strings of business categories                                                                  |
+| business.json  | hours              | an object of key day to value hours, hours are using a 24hr clock                                           |
+| review.json    | review_id          | string, 22 character unique review id                                                                       |
+| review.json    | user_id            | string, 22 character unique user id, maps to the user in user.json                                          |
+| review.json    | business_id        | string, 22 character business id, maps to business in business.json                                         |
+| review.json    | stars              | integer, star rating                                                                                        |
+| review.json    | date               | string, date formatted YYYY-MM-DD                                                                           |
+| review.json    | text               | string, the review itself                                                                                   |
+| review.json    | useful             | integer, number of useful votes received                                                                    |
+| review.json    | funny              | integer, number of funny votes received                                                                     |
+| review.json    | cool               | integer, number of cool votes received                                                                      |
+| user.json      | user_id            | string, 22 character unique user id, maps to the user in user.json                                          |
+| user.json      | name               | string, the user's first name                                                                               |
+| user.json      | review_count       | integer, the number of reviews they've written                                                              |
+| user.json      | yelping_since      | string, when the user joined Yelp, formatted like YYYY-MM-DD                                                |
+| user.json      | friends            | array of strings, an array of the user's friend as user_ids                                                 |
+| user.json      | useful             | integer, number of useful votes sent by the user                                                            |
+| user.json      | funny              | integer, number of funny votes sent by the user                                                             |
+| user.json      | cool               | integer, number of cool votes sent by the user                                                              |
+| user.json      | fans               | integer, number of fans the user has                                                                        |
+| user.json      | elite              | array of integers, the years the user was elite                                                             |
+| user.json      | average_stars      | float, average rating of all reviews                                                                        |
+| user.json      | compliment_hot     | integer, number of hot compliments received by the user                                                     |
+| user.json      | compliment_more    | integer, number of more compliments received by the user                                                    |
+| user.json      | compliment_profile | integer, number of profile compliments received by the user                                                 |
+| user.json      | compliment_cute    | integer, number of cute compliments received by the user                                                    |
+| user.json      | compliment_list    | integer, number of list compliments received by the user                                                    |
+| user.json      | compliment_note    | integer, number of note compliments received by the user                                                    |
+| user.json      | compliment_plain   | integer, number of plain compliments received by the user                                                   |
+| user.json      | compliment_cool    | integer, number of cool compliments received by the user                                                    |
+| user.json      | compliment_funny   | integer, number of funny compliments received by the user                                                   |
+| user.json      | compliment_writer  | integer, number of writer compliments received by the user                                                  |
+| user.json      | compliment_photos  | integer, number of photo compliments received by the user                                                   |
+| checkin.json   | business_id        | string, 22 character business id, maps to business in business.json                                         |
+| checkin.json   | date               | string which is a comma-separated list of timestamps for each checkin, each with format YYYY-MM-DD HH:MM:SS |
+| tip.json       | text               | string, text of the tip                                                                                     |
+| tip.json       | date               | string, when the tip was written, formatted like YYYY-MM-DD                                                 |
+| tip.json       | compliment_count   | integer, how many compliments it has                                                                        |
+| tip.json       | business_id        | string, 22 character business id, maps to business in business.json                                         |
+| tip.json       | user_id            | string, 22 character unique user id, maps to the user in user.json                                          |
+| photo.json     | photo_id           | string, 22 character unique photo id                                                                        |
+| photo.json     | business_id        | string, 22 character business id, maps to business in business.json                                         |
+| photo.json     | caption            | string, the photo caption, if any                                                                           |
+| photo.json     | label              | string, the category the photo belongs to, if any                                                           |
+|----------------+--------------------+-------------------------------------------------------------------------------------------------------------|
+
+
+#+BEGIN_SRC python :exports both :results output
+  f=open("business.json")
+  import json
+  businessdataset=[]
+  for line in f:
+      businessdataset.append(json.loads(line))
+  cities = set()
+
+  for business in businessdataset:
+      cities.add(business["city"])
+
+  print("Número de cidades: " + str(len(cities)))
+#+END_SRC
+
+#+RESULTS:
+: Número de cidades: 1204
+
