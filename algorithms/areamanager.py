@@ -1,7 +1,7 @@
 import math
 import numpy as np
 def delimiter_area(case):
-    if case == 1:
+    if case == "lasvegas":
         print('Area selected: Las Vegas')
         city = "LasVegas"
         area = {}
@@ -10,7 +10,7 @@ def delimiter_area(case):
         area['initial_latitude'] = 36.123935
         area['initial_longitude'] = -115.427600
         area['final_longitude'] = -115.048827
-    elif case == 2: 
+    elif case == "phoenix": 
         print('Area selected: Phoenix')
         city = "Phoenix"
         area = {}
@@ -20,7 +20,7 @@ def delimiter_area(case):
         area['initial_longitude'] = -112.606674
         area['final_longitude'] = -111.381699
     #34.995653, -81.034521 35.400766, -80.651372
-    elif case == 3: 
+    elif case == "charlotte": 
         print('Area selected: Charlotte')
         city = "Charlotte"
         area = {}
@@ -29,7 +29,7 @@ def delimiter_area(case):
         area['initial_latitude'] = 34.995653
         area['initial_longitude'] = -81.034521
         area['final_longitude'] = -80.651372
-    elif case == 4:
+    elif case == "madison":
         print('Area selected: Madison')
         city = "Madison"
         area = {}
