@@ -1,0 +1,93 @@
+#+OPTIONS: ^:nil toc:nil
+#+TITLE: Hipóteses para parâmetros do GeoCat
+#+DATE: \today
+#+AUTHOR: Heitor L. Werneck
+#+LANGUAGE: pt
+#+OPTIONS: toc:nil ^:nil
+#+LATEX_HEADER: \usepackage[top=0.5cm,bottom=1.5cm,left=2cm,right=2cm]{geometry}
+#+LATEX_HEADER: \usepackage[brazil]{babel}
+#+LATEX_HEADER: \usepackage{ntheorem}
+#+latex_class_options: [9pt]
+#+PROPERTY: header-args :eval never-export
+
+
+#+BEGIN_EXPORT latex
+\theoremseparator{:}
+\newtheorem{hyp}{Hypothesis}
+#+END_EXPORT
+* GeoCat parâmetros e métricas
+
+Obs: As definições não são precisas.
+
+| Métrica        | Informações utilizadas na implementação GeoCat                                 |
+|----------------+--------------------------------------------------------------------------------|
+| ILD            | Distância dos itens recomendados entre si com base nas categorias.             |
+| Genre Coverage | Quantidade de categorias relevantes para o usuário e na lista de recomendação. |
+| PR             | Log check-in dos usuários.                                                     |
+
+
+- GeoSoca/VisitProbability/AdapKernEsti: SENSIVITY_PARAMETER(\alpha) \in $[0,1]$, where \alpha = 0.5 achieves good results. "the larger the parameter \alpha, the more sensitive the local bandwidth $h_i$ will be to the pilot estimation $\tilde{f}_{Geo}(l_i|u)$"
+- GeoDiv/PR: Activity districts are defined by $AD_u=\{a\in A | d_{u,a} \geq th_f\}$ where $th_f$ is a constant, normally equals to 0.9. "If $th_f$ is too large, only one sub-area is selected. On other hand, if $th_f$ is too small, all the sub-areas in the city are selected."
+- GeoCat: \beta defines the tradeoff between categoric and geographical diversify. \lambda defines the weight to diversification. $(\beta=0.75,\lambda=0.75)$ achieves the best result in most cities, this show that most people like's more geographical diversification.
+
+* Usuários
+
+Substitua Yelp por qualquer outro serviço de recomendação de POI na mesma linha que o Yelp.
+
+#+BEGIN_EXPORT latex
+\begin{hyp}
+yelping\_since é o ano que o usuário começou a utilizar o Yelp. Quanto mais tempo o usuário utilizou o Yelp, mais ele quer diversificação.
+\end{hyp}
+
+\begin{hyp}
+Quanto mais tempo a pessoa utiliza o Yelp mais ela quer diversificação geografica.(algoritmo com overfitting? talvez)
+\end{hyp}
+
+\begin{hyp}
+Quanto mais amigos em lugares distintos mais zonas de atividade são possiveis ou diversificação geografica.
+\end{hyp}
+
+
+\begin{hyp}
+Uma pessoa elite busca mais diversificação.
+\end{hyp}
+
+\begin{hyp}
+compliments mostram um grau de preferência do usuário por diversificação.
+\end{hyp}
+
+
+
+
+
+#+END_EXPORT
+
+* Check-in
+
+#+BEGIN_EXPORT latex
+\begin{hyp}
+O número de visitas de um usuário dividido pelo número de POIs diferentes visitados pelo mesmo define uma preferência por diversificação.
+\end{hyp}
+
+\begin{hyp}
+A distância entre sequências de check-ins define uma preferência por diversificação geografica.
+\end{hyp}
+
+\begin{hyp}
+Quanto mais distribuido igualmente os check-ins categoricamente o usuário irá querer mais diversificação na lista.(Peso ILD>Peso Genre Coverage)
+\end{hyp}
+
+\begin{hyp}
+\end{hyp}
+
+#+END_EXPORT
+
+* Categorias
+
+#+BEGIN_EXPORT latex
+
+\begin{hyp}
+subareas com muitas categorias diferentes são mais uteis que o oposto.
+\end{hyp}
+
+#+END_EXPORT
