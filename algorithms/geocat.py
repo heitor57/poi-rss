@@ -1,0 +1,183 @@
+### ILD
+import numpy as np
+import pandas as pd
+import networkx as nx
+import areamanager
+import math
+
+def category_manipulation_utils():
+    df_categories=pd.read_json("../data/categories.json")
+
+    # dicionário alias title 2 way
+    dict_alias_title=dict()
+    for index, row in df_categories.iterrows():
+        dict_alias_title[row['alias']]=row['title']
+        dict_alias_title[row['title']]=row['alias']
+
+
+    category_tree= nx.DiGraph()
+    for index, row in df_categories.iterrows():
+        if not row['parents']:
+            category_tree.add_edge(row['alias'],'root') # root node if no parents
+        else:
+            for parent_label in row['parents']:
+                category_tree.add_edge(row['alias'],parent_label)
+
+    undirected_category_tree=category_tree.to_undirected()
+    # dict alias depth
+    dict_alias_depth=dict()
+    for index, row in df_categories.iterrows():
+        dict_alias_depth[row['alias']]=nx.shortest_path_length(category_tree,row['alias'],'root')
+
+    df_categories=None
+    
+    return dict_alias_title,category_tree,dict_alias_depth
+
+def category_dis_sim(category1,category2,undirected_category_tree):
+    dissim=0.0
+    spd=nx.shortest_path_length(undirected_category_tree,category1,category2)
+    sim = 1.0 / (1.0 + spd)
+    dissim=1.0-sim
+    return dissim
+    
+
+def min_dist_to_list_cat(business,rec_list,dict_alias_title,undirected_category_tree):
+    
+    min_dissim=1.0
+    rec_list_size=len(rec_list)
+    if rec_list_size==0:
+        min_dissim=1.0
+    else:
+        for index,row in rec_list.iterrows():
+            local_min_distance=1
+            cur_distance=0
+            for category1 in business['categories']:
+                for category2 in row['categories']:
+                    cur_distance=category_dis_sim(
+                        dict_alias_title[category1],
+                        dict_alias_title[category2],undirected_category_tree)
+                    #print(category1,category2,cur_distance,local_min_distance)
+                    local_min_distance=min(local_min_distance,cur_distance)
+            min_dissim=min(min_dissim,local_min_distance)
+    return min_dissim
+        
+def objective_ild(business,rec_list,dict_alias_title,undirected_category_tree):
+    # /*(1-_cfg._divWeight) * relevance + */_cfg._divWeight * diversity; where _cfg._divWeight = 0.9
+    ret_val= 0.0
+    diversity=0.0
+    diversity=min_dist_to_list_cat(business,rec_list,dict_alias_title,undirected_category_tree)
+    ret_val = diversity #+ (1-div_weight)*relevance
+    return ret_val
+
+### Genre Coverage
+
+
+def relevant_categories_to_the_user(df_user_review):
+    df_user_review=df_user_review.copy()
+    # number of visits in pois
+    df_user_review['Count']=df_user_review.groupby(['business_id','user_id'])['user_id'].transform('count')
+    # merge to get mean poi visits, a column with Count and another with diffpoisvisited
+    df_mean_poi_visits=pd.merge(\
+    df_user_review[['user_id','Count']].groupby('user_id').sum().reset_index(level=0),\
+    df_user_review[['user_id','business_id']].groupby('user_id').count().reset_index(level=0).rename(columns={"business_id":"diffpoisvisited"}),\
+    on='user_id')
+    
+    df_mean_poi_visits['meanpoivisits']=df_mean_poi_visits['Count']/df_mean_poi_visits['diffpoisvisited']
+    mean_poi_visits=df_mean_poi_visits['meanpoivisits'].iloc[0]
+    # print(mean_poi_visits)
+    
+    # Relevant categories
+    relevant_categories = set()    
+    for index,row in df_user_review.iterrows():
+        # Check if poi is relevant
+        if row['Count'] > mean_poi_visits:
+            # add relevant categories
+            for category in row['categories']:
+                relevant_categories.add(category)
+            #print(row['business_id'])
+    return relevant_categories
+    #print(relevant_pois)
+    
+
+def objective_genre_coverage(poi,rec_list,df_user_review):
+    relevant_categories=relevant_categories_to_the_user(df_user_review)
+    count_equal=0
+    categories_in_rec_list=set()
+    
+    for index, row in rec_list.iterrows():
+        for category in row['categories']:
+            categories_in_rec_list.add(category)
+    
+    for category in poi['categories']:
+        categories_in_rec_list.add(category)
+    
+    #print(categories_in_rec_list)
+    
+    for cat1 in relevant_categories:
+        for cat2 in poi['categories']:
+            if cat1 == cat2:
+                #print(cat1)
+                count_equal=count_equal+1
+    return count_equal/len(relevant_categories)
+
+### PR
+
+def haversine(lat1, lon1, lat2, lon2):
+    # deg to rad
+    lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])
+    dlon = lon2-lon1
+    dlat = lat2-lat1
+    a = np.sin(dlat/2)**2 + np.cos(lat1)*np.cos(lat2)*np.sin(dlon/2)**2
+    c = 2*np.arcsin(np.sqrt(a))
+    r = 6371 # km
+    return c*r
+
+def poi_distance_from_pois(poi,df_poi):
+    return haversine(poi['latitude'],poi['longitude'],df_poi['latitude'],df_poi['longitude'])
+
+def poi_neighbors(poi,df_poi,distance_km):
+    return df_poi[poi_distance_from_pois(poi,df_poi)<distance_km]
+
+def update_geo_cov(poi,df_user_review,rec_list_size,business_cover):
+    user_log_size=len(df_user_review)
+    neighbors=poi_neighbors(poi,df_user_review,0.1)
+    num_neighbors=len(neighbors)
+    vl=1
+    COVER_OF_POI=user_log_size/rec_list_size
+    accumulated_cover=0
+    # Cover calc
+    if num_neighbors<1:
+        accumulated_cover=accumulated_cover+COVER_OF_POI
+    else:
+        cover_of_neighbor=COVER_OF_POI/num_neighbors
+        for business_id in neighbors['business_id']:
+            business_cover[business_id]=business_cover[business_id]+cover_of_neighbor
+    accumulated_cover=accumulated_cover/user_log_size
+    # end PR and DP
+    DP=(accumulated_cover**2)/2
+    
+    for business_id in df_user_review['business_id']:
+        if vl>=business_cover[business_id]:
+            DP=DP+(vl-business_cover[business_id])**2    
+    DP_IDEAL=user_log_size+0.5
+    PR=1-DP/(DP_IDEAL)
+    
+    return PR
+
+### Geo-Cat
+def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover,current_proportionality,div_geo_cat_weight,div_weight,dict_alias_title,undirected_category_tree):
+    ild_div=objective_ild(poi,rec_list,dict_alias_title,undirected_category_tree)
+    gc_div=0
+    try:
+        gc_div=objective_genre_coverage(poi,rec_list,df_user_review)
+    except Exception as e:
+        #print(e)
+        pass
+        
+    delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy())-current_proportionality)
+    if delta_proportionality<0:
+        delta_proportionality=0
+    div_cat = gc_div+ild_div/rec_list_size
+    div_geo = delta_proportionality
+    div=div_geo_cat_weight*div_geo+(1-div_geo_cat_weight)*div_cat
+    return (poi['score']**(1-div_weight))*(div**div_weight)
