@@ -4,6 +4,9 @@ import pandas as pd
 import networkx as nx
 import areamanager
 import math
+import geo_utils
+
+NEIGHBOR_DISTANCE=0.5# km
 
 def category_manipulation_utils():
     df_categories=pd.read_json("../data/categories.json")
@@ -90,7 +93,7 @@ def relevant_categories_to_the_user(df_user_review):
     relevant_categories = set()    
     for index,row in df_user_review.iterrows():
         # Check if poi is relevant
-        if row['Count'] > mean_poi_visits:
+        if row['Count'] >= mean_poi_visits:
             # add relevant categories
             for category in row['categories']:
                 relevant_categories.add(category)
@@ -122,25 +125,16 @@ def objective_genre_coverage(poi,rec_list,df_user_review):
 
 ### PR
 
-def haversine(lat1, lon1, lat2, lon2):
-    # deg to rad
-    lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])
-    dlon = lon2-lon1
-    dlat = lat2-lat1
-    a = np.sin(dlat/2)**2 + np.cos(lat1)*np.cos(lat2)*np.sin(dlon/2)**2
-    c = 2*np.arcsin(np.sqrt(a))
-    r = 6371 # km
-    return c*r
 
 def poi_distance_from_pois(poi,df_poi):
-    return haversine(poi['latitude'],poi['longitude'],df_poi['latitude'],df_poi['longitude'])
+    return geo_utils.mercator(poi['latitude'],poi['longitude'],df_poi['latitude'],df_poi['longitude'])
 
 def poi_neighbors(poi,df_poi,distance_km):
     return df_poi[poi_distance_from_pois(poi,df_poi)<distance_km]
 
 def update_geo_cov(poi,df_user_review,rec_list_size,business_cover):
     user_log_size=len(df_user_review)
-    neighbors=poi_neighbors(poi,df_user_review,0.1)
+    neighbors=poi_neighbors(poi,df_user_review,NEIGHBOR_DISTANCE)
     num_neighbors=len(neighbors)
     vl=1
     COVER_OF_POI=user_log_size/rec_list_size
