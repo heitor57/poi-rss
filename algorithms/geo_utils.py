@@ -12,9 +12,11 @@ def haversine(lat1, lon1, lat2, lon2):
 
 VERY_SMALL_DEGREE = 0.00001
 def mercator(lat1,lon1,lat2,lon2):
+    # using lat2 and lon2 as numpy array to gain performance
     #if abs(lat1 - lat2) < VERY_SMALL_DEGREE and abs(lon1 - lon2) < VERY_SMALL_DEGREE:
     #    return 0.0
-    
+
+
     theta = lon1 - lon2
     dist = np.sin(np.radians(lat1)) * np.sin(np.radians(lat2)) + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.cos(np.radians(theta))
     dist = np.arccos(dist)
@@ -22,4 +24,10 @@ def mercator(lat1,lon1,lat2,lon2):
     dist = dist * 60 * 1.1515
     
     dist = dist * 1.609344
+    
+    if np.size(dist)>1:
+        dist[(np.absolute(lat1 - lat2) < VERY_SMALL_DEGREE) & (np.absolute(lon1 - lon2) < VERY_SMALL_DEGREE)]=0
+    else:
+        if abs(lat1 - lat2) < VERY_SMALL_DEGREE and abs(lon1 - lon2) < VERY_SMALL_DEGREE:
+            return np.float64(0)
     return dist
