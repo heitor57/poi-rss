@@ -127,7 +127,7 @@ def objective_genre_coverage(poi,rec_list,df_user_review):
 
 
 def poi_distance_from_pois(poi,df_poi):
-    return geo_utils.mercator(poi['latitude'],poi['longitude'],df_poi['latitude'],df_poi['longitude'])
+    return geo_utils.haversine(poi['latitude'],poi['longitude'],df_poi['latitude'],df_poi['longitude'])
 
 def poi_neighbors(poi,df_poi,distance_km):
     return df_poi[poi_distance_from_pois(poi,df_poi)<distance_km]
