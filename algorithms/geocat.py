@@ -5,8 +5,19 @@ import networkx as nx
 import areamanager
 import math
 import geo_utils
-
+import timeit
 NEIGHBOR_DISTANCE=0.5# km
+
+def category_in_rec_list(rec_list):
+    categories_in_rec_list=set()
+    
+    for index, row in rec_list.iterrows():
+        for category in row['categories']:
+            categories_in_rec_list.add(category)
+    
+#     for category in poi['categories']:
+#         categories_in_rec_list.add(category)
+    return categories_in_rec_list
 
 def category_manipulation_utils():
     df_categories=pd.read_json("../data/categories.json")
@@ -75,44 +86,37 @@ def objective_ild(business,rec_list,dict_alias_title,undirected_category_tree):
 ### Genre Coverage
 
 
-def relevant_categories_to_the_user(df_user_review):
-    df_user_review=df_user_review.copy()
-    # number of visits in pois
-    df_user_review['Count']=df_user_review.groupby(['business_id','user_id'])['user_id'].transform('count')
-    # merge to get mean poi visits, a column with Count and another with diffpoisvisited
-    df_mean_poi_visits=pd.merge(\
-    df_user_review[['user_id','Count']].groupby('user_id').sum().reset_index(level=0),\
-    df_user_review[['user_id','business_id']].groupby('user_id').count().reset_index(level=0).rename(columns={"business_id":"diffpoisvisited"}),\
-    on='user_id')
-    
-    df_mean_poi_visits['meanpoivisits']=df_mean_poi_visits['Count']/df_mean_poi_visits['diffpoisvisited']
-    mean_poi_visits=df_mean_poi_visits['meanpoivisits'].iloc[0]
-    # print(mean_poi_visits)
-    
+def relevant_categories_to_the_user(df_user_checkin):
+
+    df_num_checkins=df_user_checkin.groupby("business_id").count()['date']
+
+    mean_poi_visits=df_num_checkins.mean()
+
+    df_num_checkins=pd.merge(df_user_checkin.reset_index(drop=True).drop_duplicates(subset=['business_id']),df_num_checkins,on='business_id')
+
     # Relevant categories
     relevant_categories = set()    
-    for index,row in df_user_review.iterrows():
+    for index,checkin in df_num_checkins.iterrows():
         # Check if poi is relevant
-        if row['Count'] >= mean_poi_visits:
+        if checkin['date_y'] >= mean_poi_visits:
+            
             # add relevant categories
-            for category in row['categories']:
+            for category in checkin['categories']:
                 relevant_categories.add(category)
-            #print(row['business_id'])
     return relevant_categories
-    #print(relevant_pois)
     
 
-def objective_genre_coverage(poi,rec_list,df_user_review):
-    relevant_categories=relevant_categories_to_the_user(df_user_review)
+def objective_genre_coverage(poi,rec_list,df_user_review,relevant_categories,rec_list_categories):
+    
     count_equal=0
-    categories_in_rec_list=set()
+#     categories_in_rec_list=set()
     
-    for index, row in rec_list.iterrows():
-        for category in row['categories']:
-            categories_in_rec_list.add(category)
+#     for index, row in rec_list.iterrows():
+#         for category in row['categories']:
+#             categories_in_rec_list.add(category)
     
-    for category in poi['categories']:
-        categories_in_rec_list.add(category)
+#     for category in poi['categories']:
+#         categories_in_rec_list.add(category)
     
     #print(categories_in_rec_list)
     
@@ -159,16 +163,21 @@ def update_geo_cov(poi,df_user_review,rec_list_size,business_cover):
     return PR
 
 ### Geo-Cat
-def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover,current_proportionality,div_geo_cat_weight,div_weight,dict_alias_title,undirected_category_tree):
+def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover,current_proportionality,div_geo_cat_weight,div_weight,dict_alias_title,undirected_category_tree,relevant_categories_user,rec_list_categories):
+    
     ild_div=objective_ild(poi,rec_list,dict_alias_title,undirected_category_tree)
     gc_div=0
+    
     try:
-        gc_div=objective_genre_coverage(poi,rec_list,df_user_review)
+        gc_div=objective_genre_coverage(poi,rec_list,df_user_review,relevant_categories_user,rec_list_categories)
     except Exception as e:
         #print(e)
         pass
-        
+    #start = timeit.default_timer()
+
     delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy())-current_proportionality)
+    #stop = timeit.default_timer()
+    #print('Time:', stop - start)
     if delta_proportionality<0:
         delta_proportionality=0
     div_cat = gc_div+ild_div/rec_list_size
