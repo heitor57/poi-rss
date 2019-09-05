@@ -73,6 +73,7 @@ def min_dist_to_list_cat(business,rec_list,dict_alias_title,undirected_category_
                     #print(category1,category2,cur_distance,local_min_distance)
                     local_min_distance=min(local_min_distance,cur_distance)
             min_dissim=min(min_dissim,local_min_distance)
+    
     return min_dissim
         
 def objective_ild(business,rec_list,dict_alias_title,undirected_category_tree):
@@ -136,9 +137,10 @@ def poi_distance_from_pois(poi,df_poi):
 def poi_neighbors(poi,df_poi,distance_km):
     return df_poi[poi_distance_from_pois(poi,df_poi)<distance_km]
 
-def update_geo_cov(poi,df_user_review,rec_list_size,business_cover):
+def update_geo_cov(poi,df_user_review,rec_list_size,business_cover,poi_neighbors):
+    
     user_log_size=len(df_user_review)
-    neighbors=poi_neighbors(poi,df_user_review,NEIGHBOR_DISTANCE)
+    neighbors=poi_neighbors#poi_neighbors(poi,df_user_review,NEIGHBOR_DISTANCE)
     num_neighbors=len(neighbors)
     vl=1
     COVER_OF_POI=user_log_size/rec_list_size
@@ -148,8 +150,9 @@ def update_geo_cov(poi,df_user_review,rec_list_size,business_cover):
         accumulated_cover=accumulated_cover+COVER_OF_POI
     else:
         cover_of_neighbor=COVER_OF_POI/num_neighbors
-        for business_id in neighbors['business_id']:
-            business_cover[business_id]=business_cover[business_id]+cover_of_neighbor
+        for business_id in neighbors:
+            if business_id in business_cover.keys():
+                business_cover[business_id]=business_cover[business_id]+cover_of_neighbor
     accumulated_cover=accumulated_cover/user_log_size
     # end PR and DP
     DP=(accumulated_cover**2)/2
@@ -163,21 +166,23 @@ def update_geo_cov(poi,df_user_review,rec_list_size,business_cover):
     return PR
 
 ### Geo-Cat
-def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover,current_proportionality,div_geo_cat_weight,div_weight,dict_alias_title,undirected_category_tree,relevant_categories_user,rec_list_categories):
-    
+def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover,current_proportionality,div_geo_cat_weight,div_weight,dict_alias_title,undirected_category_tree,relevant_categories_user,rec_list_categories,poi_neighbors):
+#     start = timeit.default_timer()
     ild_div=objective_ild(poi,rec_list,dict_alias_title,undirected_category_tree)
+    #print(ild_div)
     gc_div=0
-    
+#     stop = timeit.default_timer()
+#     print('Time:', stop - start)
     try:
         gc_div=objective_genre_coverage(poi,rec_list,df_user_review,relevant_categories_user,rec_list_categories)
     except Exception as e:
         #print(e)
         pass
-    #start = timeit.default_timer()
+    
 
-    delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy())-current_proportionality)
-    #stop = timeit.default_timer()
-    #print('Time:', stop - start)
+
+    delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy(),poi_neighbors)-current_proportionality)
+
     if delta_proportionality<0:
         delta_proportionality=0
     div_cat = gc_div+ild_div/rec_list_size
