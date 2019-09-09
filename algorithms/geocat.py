@@ -7,7 +7,7 @@ import math
 import geo_utils
 import timeit
 NEIGHBOR_DISTANCE=0.5# km
-
+from IPython.core.debugger import set_trace
 def category_in_rec_list(rec_list):
     categories_in_rec_list=set()
     
@@ -88,13 +88,13 @@ def objective_ild(business,rec_list,dict_alias_title,undirected_category_tree):
 
 
 def relevant_categories_to_the_user(df_user_checkin):
-
+    set_trace()
     df_num_checkins=df_user_checkin.groupby("business_id").count()['date']
 
     mean_poi_visits=df_num_checkins.mean()
 
     df_num_checkins=pd.merge(df_user_checkin.reset_index(drop=True).drop_duplicates(subset=['business_id']),df_num_checkins,on='business_id')
-
+    print(mean_poi_visits)
     # Relevant categories
     relevant_categories = set()    
     for index,checkin in df_num_checkins.iterrows():
@@ -120,22 +120,27 @@ def objective_genre_coverage(poi,rec_list,df_user_review,relevant_categories,rec
 #         categories_in_rec_list.add(category)
     
     #print(categories_in_rec_list)
-    
+
     for cat1 in relevant_categories:
         for cat2 in poi['categories']:
             if cat1 == cat2:
                 #print(cat1)
                 count_equal=count_equal+1
+    set_trace()
     return count_equal/len(relevant_categories)
 
 ### PR
 
 
 def poi_distance_from_pois(poi,df_poi):
+#     result=np.array([])
+#     for index,p in df_poi.iterrows():
+#         result=np.append(result,geo_utils.mercator(poi['latitude'],poi['longitude'],p['latitude'],p['longitude']))
+#     return result
     return geo_utils.haversine(poi['latitude'],poi['longitude'],df_poi['latitude'],df_poi['longitude'])
 
 def poi_neighbors(poi,df_poi,distance_km):
-    return df_poi[poi_distance_from_pois(poi,df_poi)<distance_km]
+    return df_poi[poi_distance_from_pois(poi,df_poi)<=distance_km]
 
 def update_geo_cov(poi,df_user_review,rec_list_size,business_cover,poi_neighbors):
     
@@ -147,22 +152,23 @@ def update_geo_cov(poi,df_user_review,rec_list_size,business_cover,poi_neighbors
     accumulated_cover=0
     # Cover calc
     if num_neighbors<1:
-        accumulated_cover=accumulated_cover+COVER_OF_POI
+        accumulated_cover+=COVER_OF_POI
     else:
         cover_of_neighbor=COVER_OF_POI/num_neighbors
         for business_id in neighbors:
             if business_id in business_cover.keys():
-                business_cover[business_id]=business_cover[business_id]+cover_of_neighbor
-    accumulated_cover=accumulated_cover/user_log_size
+                business_cover[business_id]+=cover_of_neighbor
+    accumulated_cover/=user_log_size
     # end PR and DP
-    DP=(accumulated_cover**2)/2
-    
+
+    DP=0
     for business_id in df_user_review['business_id']:
         if vl>=business_cover[business_id]:
-            DP=DP+(vl-business_cover[business_id])**2    
+            DP+=(vl-business_cover[business_id])**2
+    DP+=(accumulated_cover**2)/2
     DP_IDEAL=user_log_size+0.5
     PR=1-DP/(DP_IDEAL)
-    
+
     return PR
 
 ### Geo-Cat
@@ -172,17 +178,17 @@ def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover
     #print(ild_div)
     gc_div=0
 #     stop = timeit.default_timer()
-#     print('Time:', stop - start)
-    try:
-        gc_div=objective_genre_coverage(poi,rec_list,df_user_review,relevant_categories_user,rec_list_categories)
-    except Exception as e:
-        #print(e)
-        pass
-    
+#     print('Timea:', stop - start)
+#     start = timeit.default_timer()
+    gc_div=objective_genre_coverage(poi,rec_list,df_user_review,relevant_categories_user,rec_list_categories)
 
-
+#     stop = timeit.default_timer()
+#     print('Timeb:', stop - start)
+#     start = timeit.default_timer()
     delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy(),poi_neighbors)-current_proportionality)
-
+    print(gc_div,delta_proportionality)
+#     stop = timeit.default_timer()
+#     print('Timec:', stop - start)
     if delta_proportionality<0:
         delta_proportionality=0
     div_cat = gc_div+ild_div/rec_list_size
