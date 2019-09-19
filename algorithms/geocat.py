@@ -162,7 +162,7 @@ def update_geo_cov(poi,df_user_review,rec_list_size,business_cover,poi_neighbors
     user_log_size=len(df_user_review)
     neighbors=poi_neighbors#poi_neighbors(poi,df_user_review,NEIGHBOR_DISTANCE)
     num_neighbors=len(neighbors)
-    set_trace()
+    #set_trace()
     vl=1
     COVER_OF_POI=user_log_size/rec_list_size
     accumulated_cover=0
