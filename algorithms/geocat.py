@@ -158,9 +158,10 @@ def poi_neighbors(poi,df_poi,distance_km):
     return df_poi[poi_distance_from_pois(poi,df_poi)<=distance_km]
 
 def update_geo_cov(poi,df_user_review,rec_list_size,business_cover,poi_neighbors):
-    
+    set_trace()
     user_log_size=len(df_user_review)
-    neighbors=poi_neighbors#poi_neighbors(poi,df_user_review,NEIGHBOR_DISTANCE)
+    #neighbors=poi_neighbors(poi,df_user_review,0.5)
+    neighbors=df_user_review[df_user_review['business_id'].isin(poi_neighbors.index.tolist())]
     num_neighbors=len(neighbors)
     #set_trace()
     vl=1
@@ -171,9 +172,8 @@ def update_geo_cov(poi,df_user_review,rec_list_size,business_cover,poi_neighbors
         accumulated_cover+=COVER_OF_POI
     else:
         cover_of_neighbor=COVER_OF_POI/num_neighbors
-        for business_id in neighbors:
-            if business_id in business_cover.keys():
-                business_cover[business_id]+=cover_of_neighbor
+        for business_id in neighbors['business_id']:
+            business_cover[business_id]+=cover_of_neighbor
     accumulated_cover/=user_log_size
     # end PR and DP
 
@@ -191,6 +191,7 @@ def update_geo_cov(poi,df_user_review,rec_list_size,business_cover,poi_neighbors
 def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover,current_proportionality,div_geo_cat_weight,div_weight,dict_alias_title,undirected_category_tree,relevant_categories_user,rec_list_categories,poi_neighbors):
 #     start = timeit.default_timer()
     ild_div=objective_ild(poi,rec_list,dict_alias_title,undirected_category_tree)
+
     #print(ild_div)
     gc_div=0
 #     stop = timeit.default_timer()
@@ -202,7 +203,8 @@ def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover
 #     print('Timeb:', stop - start)
 #     start = timeit.default_timer()
     delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy(),poi_neighbors)-current_proportionality)
-    print(gc_div,delta_proportionality)
+    print(ild_div,gc_div,delta_proportionality)
+    ##print(gc_div,delta_proportionality)
 #     stop = timeit.default_timer()
 #     print('Timec:', stop - start)
     if delta_proportionality<0:
@@ -212,13 +214,3 @@ def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover
     div=div_geo_cat_weight*div_geo+(1-div_geo_cat_weight)*div_cat
     return (poi['score']**(1-div_weight))*(div**div_weight)
 
-def get_most_detailed_categories(categories,dict_alias_title,dict_alias_depth):
-    max_height=0
-    for category in categories:
-        max_height = max(dict_alias_depth[dict_alias_title[category]],max_height)
-    new_categories=list()
-    for category in categories:
-        height=dict_alias_depth[dict_alias_title[category]]
-            if(height == max_height):
-                new_categories.append(category)
-    return new_categories
