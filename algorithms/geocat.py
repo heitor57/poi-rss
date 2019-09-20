@@ -211,3 +211,14 @@ def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover
     div_geo = delta_proportionality
     div=div_geo_cat_weight*div_geo+(1-div_geo_cat_weight)*div_cat
     return (poi['score']**(1-div_weight))*(div**div_weight)
+
+def get_most_detailed_categories(categories,dict_alias_title,dict_alias_depth):
+    max_height=0
+    for category in categories:
+        max_height = max(dict_alias_depth[dict_alias_title[category]],max_height)
+    new_categories=list()
+    for category in categories:
+        height=dict_alias_depth[dict_alias_title[category]]
+            if(height == max_height):
+                new_categories.append(category)
+    return new_categories
