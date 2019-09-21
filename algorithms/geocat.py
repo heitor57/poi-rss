@@ -135,9 +135,12 @@ def objective_genre_coverage(poi,rec_list,df_user_review,relevant_categories,rec
 #         categories_in_rec_list.add(category)
     
     #print(categories_in_rec_list)
-
+    categories=set()
+    for index,poi_categories in rec_list['categories'].iteritems():
+        categories.update(poi_categories)
+    categories.update(poi['categories'])
     for cat1 in relevant_categories:
-        for cat2 in poi['categories']:
+        for cat2 in categories:
             if cat1 == cat2:
                 #print(cat1)
                 count_equal=count_equal+1
@@ -158,10 +161,14 @@ def poi_neighbors(poi,df_poi,distance_km):
     return df_poi[poi_distance_from_pois(poi,df_poi)<=distance_km]
 
 def update_geo_cov(poi,df_user_review,rec_list_size,business_cover,poi_neighbors):
-    set_trace()
+    
     user_log_size=len(df_user_review)
     #neighbors=poi_neighbors(poi,df_user_review,0.5)
+#     print("Start")
+#     print(poi_neighbors)
+#     print("End")
     neighbors=df_user_review[df_user_review['business_id'].isin(poi_neighbors.index.tolist())]
+
     num_neighbors=len(neighbors)
     #set_trace()
     vl=1
@@ -172,19 +179,20 @@ def update_geo_cov(poi,df_user_review,rec_list_size,business_cover,poi_neighbors
         accumulated_cover+=COVER_OF_POI
     else:
         cover_of_neighbor=COVER_OF_POI/num_neighbors
-        for business_id in neighbors['business_id']:
-            business_cover[business_id]+=cover_of_neighbor
+        for index,poi in neighbors.iterrows():
+            business_cover[index]+=cover_of_neighbor
     accumulated_cover/=user_log_size
     # end PR and DP
 
     DP=0
-    for business_id in df_user_review['business_id']:
-        if vl>=business_cover[business_id]:
-            DP+=(vl-business_cover[business_id])**2
+    
+    for index,business in df_user_review.iterrows():
+        if vl>=business_cover[index]:
+            DP+=(vl-business_cover[index])**2
     DP+=(accumulated_cover**2)/2
     DP_IDEAL=user_log_size+0.5
     PR=1-DP/(DP_IDEAL)
-
+    
     return PR
 
 ### Geo-Cat
@@ -203,7 +211,7 @@ def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover
 #     print('Timeb:', stop - start)
 #     start = timeit.default_timer()
     delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy(),poi_neighbors)-current_proportionality)
-    print(ild_div,gc_div,delta_proportionality)
+    print(poi.business_id,ild_div,gc_div,delta_proportionality)
     ##print(gc_div,delta_proportionality)
 #     stop = timeit.default_timer()
 #     print('Timec:', stop - start)
