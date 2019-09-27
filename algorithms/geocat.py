@@ -211,10 +211,11 @@ def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover
 #     print('Timeb:', stop - start)
 #     start = timeit.default_timer()
     delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy(),poi_neighbors)-current_proportionality)
-    print(poi.business_id,ild_div,gc_div,delta_proportionality)
+    #print(poi.business_id,ild_div,gc_div,delta_proportionality)
     ##print(gc_div,delta_proportionality)
 #     stop = timeit.default_timer()
 #     print('Timec:', stop - start)
+   # set_trace()
     if delta_proportionality<0:
         delta_proportionality=0
     div_cat = gc_div+ild_div/rec_list_size
