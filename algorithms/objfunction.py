@@ -1,3 +1,4 @@
+import networkx as nx
 def category_dis_sim(category1,category2,undirected_category_tree):
     dissim=0.0
     spd=nx.shortest_path_length(undirected_category_tree,category1,category2)
@@ -25,9 +26,11 @@ def min_dist_to_list_cat(poi_id,pois,poi_cats,undirected_category_tree):
             min_dissim=min(min_dissim,local_min_distance)
     return min_dissim
 
-def gc(poi_id,relevant_cats,poi_cats):
+def gc(poi_id,rec_list,relevant_cats,poi_cats):
 
-    cats=poi_cats[poi_id]
+    cats=set(poi_cats[poi_id])
+    for lid in rec_list:
+        cats.update(poi_cats[lid])
     count_equal=0
     for cat1 in relevant_cats:
         for cat2 in cats:
@@ -81,3 +84,21 @@ def update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover,poi_neighbors):
     PR=1-DP/(DP_IDEAL)
     
     return PR
+
+
+def ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight):
+
+    delta_proportionality=max(0,pr-current_proportionality)
+    
+    #delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy(),poi_neighbors)-current_proportionality)
+    #print(poi.business_id,ild_div,gc_div,delta_proportionality)
+
+    if delta_proportionality<0:
+        delta_proportionality=0
+    div_cat = gc_div+ild_div/rec_list_size
+    div_geo = delta_proportionality
+    div=div_geo_cat_weight*div_geo+(1-div_geo_cat_weight)*div_cat
+    return (score**(1-div_weight))*(div**div_weight)
+    
+    
+    

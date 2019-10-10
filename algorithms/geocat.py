@@ -83,8 +83,8 @@ def min_dist_to_list_cat(business,rec_list,dict_alias_title,undirected_category_
             for category1 in business['categories']:
                 for category2 in row['categories']:
                     cur_distance=category_dis_sim(
-                        dict_alias_title[category1],
-                        dict_alias_title[category2],undirected_category_tree)
+                        category1,
+                        category2,undirected_category_tree)
                     #print(category1,category2,cur_distance,local_min_distance)
                     local_min_distance=min(local_min_distance,cur_distance)
             min_dissim=min(min_dissim,local_min_distance)
@@ -211,7 +211,7 @@ def objective_ILD_GC_PR(poi,df_user_review,rec_list,rec_list_size,business_cover
 #     print('Timeb:', stop - start)
 #     start = timeit.default_timer()
     delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy(),poi_neighbors)-current_proportionality)
-    #print(poi.business_id,ild_div,gc_div,delta_proportionality)
+    print(poi.business_id,ild_div,gc_div,delta_proportionality)
     ##print(gc_div,delta_proportionality)
 #     stop = timeit.default_timer()
 #     print('Timec:', stop - start)
