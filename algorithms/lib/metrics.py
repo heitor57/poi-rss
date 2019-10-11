@@ -1,5 +1,3 @@
-__author__ = 'YidingLiu'
-
 import numpy as np
 import networkx as nx
 
