@@ -39,25 +39,16 @@ def gc(poi_id,rec_list,relevant_cats,poi_cats):
                 count_equal=count_equal+1    
     return count_equal/len(relevant_cats)
 
-def update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover,poi_neighbors):
+def update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover,poi_neighbors,neighbors):
     log_size=len(log_poi_ids)
-    
-    #neighbors=[lid if lid in poi_neighbors[poi_id] for lid in user_pois.nonzero()[0]]
-    neighbors=list()
-    for id_neighbor in poi_neighbors[poi_id]:
-        for i in range(log_size):
-            log_poi_id=log_poi_ids[i]
-            if log_poi_id == id_neighbor:
-                neighbors.append(i)
-    
-        
-    ###user_log_size=len(df_user_review)
-    #neighbors=poi_neighbors(poi,df_user_review,0.5)
-#     print("Start")
-#     print(poi_neighbors)
-#     print("End")
-    ##neighbors=df_user_review[df_user_review['business_id'].isin(poi_neighbors.index.tolist())]
 
+#     neighbors=list()
+#     for id_neighbor in poi_neighbors[poi_id]:
+#         for i in range(log_size):
+#             log_poi_id=log_poi_ids[i]
+#             if log_poi_id == id_neighbor:
+#                 neighbors.append(i)
+    
     num_neighbors=len(neighbors)
     #set_trace()
     vl=1

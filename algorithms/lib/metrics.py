@@ -92,3 +92,53 @@ def gck(uid,training_matrix,poi_cats,predicted):
                 #print(cat1)
                 count_equal=count_equal+1    
     return count_equal/len(relevant_cats)
+
+def prk(user_log,rec_list,poi_neighbors):
+    
+    log_poi_ids=list()
+    poi_cover=list()
+    for lid in user_log.nonzero()[0]:
+        for visits in range(int(user_log[lid])):
+            poi_cover.append(0)
+            log_poi_ids.append(lid)
+            
+    log_size=len(log_poi_ids)
+    rec_list_size=len(rec_list)
+    COVER_OF_POI=log_size/rec_list_size
+    vl=1
+    accumulated_cover=0
+
+    for poi_id in rec_list:
+        
+        neighbors=list()
+        for id_neighbor in poi_neighbors[poi_id]:
+            for i in range(log_size):
+                log_poi_id=log_poi_ids[i]
+                if log_poi_id == id_neighbor:
+                    neighbors.append(i)
+        num_neighbors=len(neighbors)
+        #set_trace()
+        
+        
+        
+        # Cover calc
+        if num_neighbors<1:
+            accumulated_cover+=COVER_OF_POI
+        else:
+            cover_of_neighbor=COVER_OF_POI/num_neighbors
+            for index in neighbors:
+                poi_cover[index]+=cover_of_neighbor
+    accumulated_cover/=log_size
+    # end PR and DP
+
+    DP=0
+
+    for i in range(log_size):
+        lid=i
+        if vl>=poi_cover[lid]:
+            DP+=(vl-poi_cover[lid])**2
+    DP+=(accumulated_cover**2)/2
+    DP_IDEAL=log_size+0.5
+    PR=1-DP/(DP_IDEAL)
+    
+    return PR
