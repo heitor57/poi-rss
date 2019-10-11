@@ -1,3 +1,4 @@
+# Objective functions of the DivGeoCat
 import networkx as nx
 def category_dis_sim(category1,category2,undirected_category_tree):
     dissim=0.0
