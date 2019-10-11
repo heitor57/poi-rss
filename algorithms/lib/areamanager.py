@@ -39,7 +39,13 @@ def delimiter_area(case):
         area['initial_longitude'] = -89.608990
         area['final_longitude'] = -89.179837
     return area
-
+def poi_in_area(area,poi):
+    if (poi['latitude']>=area['initial_latitude']) and\
+                (poi['latitude']<=area['final_latitude'])and\
+                (poi['longitude']>=area['initial_longitude']) and\
+                (poi['longitude']<=area['final_longitude']):
+        return True
+    return False
 def pois_in_area(area,df_business):
     return df_business[(df_business['latitude']>=area['initial_latitude']) &\
                 (df_business['latitude']<=area['final_latitude'])&\
