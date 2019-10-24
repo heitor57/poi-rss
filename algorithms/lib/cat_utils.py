@@ -12,8 +12,8 @@ def get_most_detailed_categories(categories,dict_alias_title,dict_alias_depth):
     return new_categories
 
 
-def cat_structs():
-    df_categories=pd.read_json("../data/categories.json")
+def cat_structs(catfilename):
+    df_categories=pd.read_json(catfilename)#"../data/categories.json"
 
     # dicionário alias title 2 way
 
