@@ -1,6 +1,9 @@
 class experiment_constants:
     CITY="madison" # city source of checkins
-
+    TRAIN_SIZE=0.7
+    N=80
+    K=20
+    METRICS_K=[5,10,20]
 class geocat_constants:
     NEIGHBOR_DISTANCE = 0.5#km
     N = 80# temp list size
