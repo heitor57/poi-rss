@@ -140,3 +140,24 @@ def prk(user_log,rec_list,poi_neighbors):
     PR=1-DP/(DP_IDEAL)
     
     return PR
+
+def epc_pop_list(training_matrix):
+    visits=training_matrix.sum(axis=0)
+    return visits/np.max(visits)
+
+
+def epck(rec_list,actual,uid,pop,epc_numerator,epc_denominator):
+    epc=0
+    local_epc_numerator=0
+    local_epc_denominator=0
+    for i,lid in enumerate(rec_list):
+        if lid in actual:
+            tmpval=np.log(i+2)/np.log(2)
+            local_epc_numerator+=np.log(1-pop[lid])/tmpval
+            local_epc_denominator+=1/tmpval
+    epc_numerator.append(local_epc_numerator)
+    epc_denominator.append(local_epc_denominator)
+    
+    return epc_numerator.sum()/epc_denominator.sum()
+
+
