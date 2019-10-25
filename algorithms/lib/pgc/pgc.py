@@ -7,7 +7,7 @@ import numpy as np
 
 import lib.geo_utils as geo_utils
 import collections
-
+import scipy
 
 def cmean_dist_pois(poi_coos):
     lats=np.array([])
@@ -74,24 +74,30 @@ def geo_div_propensity(users_cmean_dist,cmean_dist_city):
     return norm_prop
 
 
+
+
 def cat_div_std_norm(cats_visits):
     std=np.std(cats_visits)
     if std == 0:
         return 0
     else:
         return std/(np.max(cats_visits)-np.min(cats_visits))
+def cat_div_skew(cats_visits):
+    
+    pass
+    
 
 
-def cat_div_propensity(training_matrix,poi_cats):
+def cat_div_propensity(users_categories_visits,method="cat_div_std_norm"):
+    switcher = {
+        "cat_div_std_norm": cat_div_std_norm,
+        "cat_div_skew": cat_div_skew,
+    }
+    func = switcher.get(method, lambda: "Invalid method")
+    
     values=[]
-    for i in range(training_matrix.shape[0]):
-        cats_visits=collections.defaultdict(int)
-        lids=training_matrix[i].nonzero()[0]
-        for lid in lids:
-            for cat in poi_cats[lid]:
-                cats_visits[cat]+=training_matrix[i,lid]
-        cv=np.array(list(cats_visits.values()))
-        values.append(cat_div_std_norm(cv))
+    for i,cat_visits in enumerate(users_categories_visits):
+        values.append(func(cat_visits))
     return values
 
 

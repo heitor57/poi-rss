@@ -1,5 +1,8 @@
 import pandas as pd
 import networkx as nx
+import collections
+import numpy as np
+
 def get_most_detailed_categories(categories,dict_alias_title,dict_alias_depth):
     max_height=0
     for category in categories:
@@ -54,3 +57,17 @@ def cat_structs(catfilename):
     #len(dict_alias_depth),len(dict_alias_title),len(category_tree)
 
     return dict_alias_title,category_tree,dict_alias_depth
+
+
+def get_users_cat_visits(training_matrix,poi_cats):
+    users_cv=[]
+    for i in range(training_matrix.shape[0]):
+        cats_visits=collections.defaultdict(int)
+        lids=training_matrix[i].nonzero()[0]
+        for lid in lids:
+            for cat in poi_cats[lid]:
+                cats_visits[cat]+=training_matrix[i,lid]
+        cv=np.array(list(cats_visits.values()))
+        users_cv.append(cv)
+    return users_cv
+    
