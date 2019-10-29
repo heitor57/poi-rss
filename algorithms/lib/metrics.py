@@ -141,23 +141,44 @@ def prk(user_log,rec_list,poi_neighbors):
     
     return PR
 
-def epc_pop_list(training_matrix):
-    visits=training_matrix.sum(axis=0)
-    return visits/np.max(visits)
+# def epc_pop_list(training_matrix):
+#     visits=training_matrix.sum(axis=0)
+#     return visits/np.max(visits)
 
 
-def epck(rec_list,actual,uid,pop,epc_numerator,epc_denominator):
-    epc=0
-    local_epc_numerator=0
-    local_epc_denominator=0
+# def old_epck(rec_list,actual,uid,pop,epc_numerator,epc_denominator):
+#     epc=0
+#     local_epc_numerator=0
+#     local_epc_denominator=0
+#     for i,lid in enumerate(rec_list):
+#         if lid in actual:
+#             tmpval=np.log(i+2)/np.log(2)
+#             local_epc_numerator+=np.log(1-pop[lid])/tmpval
+#             local_epc_denominator+=1/tmpval
+#     epc_numerator.append(local_epc_numerator)
+#     epc_denominator.append(local_epc_denominator)
+    
+#     return epc_numerator.sum()/epc_denominator.sum()
+
+def epck(rec_list,actual,uid,training_matrix):
+# ####    print(f"RecListSize:{len(rec_list)}")
+#     C = 1/len(rec_list)
+
+    C_2 = 1.0/len(rec_list)
+#     sum_1=0
+    sum_2=0
+# ####    print("users:",training_matrix.shape[0])
     for i,lid in enumerate(rec_list):
         if lid in actual:
-            tmpval=np.log(i+2)/np.log(2)
-            local_epc_numerator+=np.log(1-pop[lid])/tmpval
-            local_epc_denominator+=1/tmpval
-    epc_numerator.append(local_epc_numerator)
-    epc_denominator.append(local_epc_denominator)
-    
-    return epc_numerator.sum()/epc_denominator.sum()
+#             discount_k=pow(0.85,i)
+#             prob_rel_k=1
+            prob_seen_k=np.count_nonzero(training_matrix[:,lid])/training_matrix.shape[0]
+#             sum_1+=discount_k*prob_rel_k*(1-prob_seen_k)
+            sum_2 += 1-prob_seen_k
+#     EPC_r = C*sum_1
+    EPC=C_2*sum_2
+    return EPC
+
+
 
 
