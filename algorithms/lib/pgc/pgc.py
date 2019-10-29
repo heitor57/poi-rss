@@ -81,7 +81,16 @@ def cat_div_std_norm(cats_visits):
     if std == 0:
         return 0
     else:
-        return std/(np.max(cats_visits)-np.min(cats_visits))
+        return 1-2*std/(np.max(cats_visits)-np.min(cats_visits))
+    
+def cat_div_mad_norm(cats_visits):
+    std=scipy.stats.median_absolute_deviation(cats_visits)
+    if std == 0:
+        return 0
+    else:
+        return 1-std/(np.max(cats_visits)-np.min(cats_visits))
+    
+
 def cat_div_skew(cats_visits):
     
     pass
@@ -92,6 +101,7 @@ def cat_div_propensity(users_categories_visits,method="cat_div_std_norm"):
     switcher = {
         "cat_div_std_norm": cat_div_std_norm,
         "cat_div_skew": cat_div_skew,
+        "cat_div_mad_norm":cat_div_mad_norm,
     }
     func = switcher.get(method, lambda: "Invalid method")
     
