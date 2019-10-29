@@ -93,4 +93,78 @@ def ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_
     return (score**(1-div_weight))*(div**div_weight)
     
     
-    
+def geocat(uid,training_matrix,tmp_rec_list,tmp_score_list,actual,
+          poi_cats,poi_neighbors,K,undirected_category_tree):
+    range_K=range(K)
+    rec_list=[]
+
+    lids=training_matrix[uid].nonzero()[0]
+
+    lid_visits=training_matrix[:,lids].sum(axis=0)
+    mean_visits=lid_visits.mean()
+    relevant_lids=lids[lid_visits>mean_visits]
+    relevant_cats=set()
+    for lid in relevant_lids:
+        relevant_cats.update(poi_cats[lid])
+    # log_size=training_matrix[0,training_matrix[0,:].nonzero()[0]].sum()
+    user_log=training_matrix[uid]
+    #print(mean_visits)
+    log_poi_ids=list()
+    poi_cover=list()
+    for lid in user_log.nonzero()[0]:
+        for visits in range(int(user_log[lid])):
+            poi_cover.append(0)
+            log_poi_ids.append(lid)
+    log_size=len(log_poi_ids)
+    assert user_log[user_log.nonzero()[0]].sum() == len(poi_cover)
+#         print(uid)
+#         print("Count:",cnt)
+    div_geo_cat_weight = 0.75 # beta,this is here because of the work to be done on parameter customization for each user
+    div_weight = 0.5 # lambda, geo vs cat
+    current_proportionality=0
+    final_scores=[]
+
+
+    log_neighbors=dict()
+    for poi_id in tmp_rec_list:
+        neighbors=list()
+        for id_neighbor in poi_neighbors[poi_id]:
+            for i in range(log_size):
+                log_poi_id=log_poi_ids[i]
+                if log_poi_id == id_neighbor:
+                    neighbors.append(i)
+        log_neighbors[poi_id]=neighbors
+
+
+    for i in range_K:
+        #print(i)
+        poi_to_insert=None
+        max_objective_value=-200
+        for j in range(len(tmp_rec_list)):
+            candidate_poi_id=tmp_rec_list[j]
+            candidate_score=tmp_score_list[j]
+            ild_div=min_dist_to_list_cat(candidate_poi_id,rec_list,poi_cats,undirected_category_tree)
+            gc_div=gc(candidate_poi_id,rec_list,relevant_cats,poi_cats)
+            pr=update_geo_cov(candidate_poi_id,log_poi_ids,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id])
+
+            objective_value=ILD_GC_PR(candidate_score,ild_div,gc_div,pr,current_proportionality,K,div_geo_cat_weight,div_weight)
+            #print(candidate_poi_id,ild_div,gc_div,max(0,pr-current_proportionality),objective_value)
+            #print(candidate_poi_id,objective_value)
+
+            if objective_value > max_objective_value:
+                max_objective_value=objective_value
+                poi_to_insert=candidate_poi_id
+            pass
+        if poi_to_insert is not None:
+            #print(poi_to_insert,max_objective_value)
+
+            rm_idx=tmp_rec_list.index(poi_to_insert)
+
+            tmp_rec_list.pop(rm_idx)
+            tmp_score_list.pop(rm_idx)
+            rec_list.append(poi_to_insert)
+            final_scores.append(max_objective_value)
+            # remove from tmp_rec_list
+            current_proportionality=update_geo_cov(poi_to_insert,log_poi_ids,K,poi_cover,poi_neighbors,log_neighbors[poi_to_insert])
+            #print(current_proportionality)
+    return rec_list,final_scores
