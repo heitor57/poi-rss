@@ -11,11 +11,11 @@ class MetricsController:
         else:
             self.metrics={}
             for i in metrics:
-                self.metrics[i]=[]
-    def append_data(self,data):
+                self.metrics[i]={}
+    def append_data(self,uid,data):
         c=0
         for i in self.metrics.keys():
-            self.metrics[i].append(data[c])
+            self.metrics[i][uid]=data[c]
             c+=1
             
     def get_metrics_mean(self):

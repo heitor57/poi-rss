@@ -94,23 +94,44 @@ def cat_div_mad_norm(cats_visits):
 def cat_div_skew(cats_visits):
     
     pass
-    
 
+import lib.geocat.objfunc as geocat
+import lib.cat_utils as cat_utils
+# Cat Hierarchy load
+dict_alias_title,category_tree,dict_alias_depth=cat_utils.cat_structs("../../data/categories.json")
+undirected_category_tree=category_tree.to_undirected()
+
+def cat_div_ld(cats_visits):
+    dis_sum=0
+    for cat1 in cats_visits.keys():
+        for cat2 in cats_visits.keys():
+            if cat1 != cat2:
+                dis_sum+=geocat.category_dis_sim(cat1,cat2,undirected_category_tree)
+    l=len(cats_visits)
+    return dis_sum/(l**2-l)          
+
+from concurrent.futures import ProcessPoolExecutor
 
 def cat_div_propensity(users_categories_visits,method="cat_div_std_norm"):
     switcher = {
         "cat_div_std_norm": cat_div_std_norm,
         "cat_div_skew": cat_div_skew,
         "cat_div_mad_norm":cat_div_mad_norm,
+        "cat_div_ld":cat_div_ld,
     }
     func = switcher.get(method, lambda: "Invalid method")
     
-    values=[]
+    executor = ProcessPoolExecutor()
+    futures=[]
     for i,cat_visits in enumerate(users_categories_visits):
-        values.append(func(cat_visits))
-    return values
+        futures.append(executor.submit(func,cat_visits))
+    results = [future.result() for future in futures]
+    return results
 
 
 
-
+# def tcat_div_propensity(training_matrix,poi_cats):
+#     dis_sum=0
+#     for uid in range(training_matrix.shape[0]):
+#         pass
 

@@ -67,7 +67,8 @@ def get_users_cat_visits(training_matrix,poi_cats):
         for lid in lids:
             for cat in poi_cats[lid]:
                 cats_visits[cat]+=training_matrix[i,lid]
-        cv=np.array(list(cats_visits.values()),dtype=np.int64)
-        users_cv.append(cv)
+        #cv=np.array(list(cats_visits.values()),dtype=np.int64)
+        cats_visits=dict(cats_visits)
+        users_cv.append(cats_visits)
     return users_cv
     
