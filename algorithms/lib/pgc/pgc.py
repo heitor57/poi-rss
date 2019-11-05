@@ -98,7 +98,7 @@ def cat_div_skew(cats_visits):
 import lib.geocat.objfunc as geocat
 import lib.cat_utils as cat_utils
 # Cat Hierarchy load
-dict_alias_title,category_tree,dict_alias_depth=cat_utils.cat_structs("../../data/categories.json")
+dict_alias_title,category_tree,dict_alias_depth=cat_utils.cat_structs("~/recsys/data/categories.json")
 undirected_category_tree=category_tree.to_undirected()
 
 def cat_div_ld(cats_visits):

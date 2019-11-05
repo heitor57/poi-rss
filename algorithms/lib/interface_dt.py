@@ -4,12 +4,20 @@ import pickle
 import npyscreen
 
 def convert_city(CITY):
-    # data_checkin_train = pickle.load(open("../data/checkin/train/"+CITY+".pickle","rb"))
-
+    data_checkin_train = pickle.load(open("../../data/checkin/train/"+CITY+".pickle","rb"))
+    fcheckin_train = open("../../data/checkin/train/"+CITY+".td", 'w')
+    for checkin in data_checkin_train:
+        fcheckin_train.write('::'.join([str(checkin['user_id']),str(checkin['poi_id']),"0","0.0"])+'\n')
+    fcheckin_train.close()
 # #Test load
-    # ground_truth = defaultdict(set)
-    # for checkin in pickle.load(open("../data/checkin/test/"+CITY+".pickle","rb")):
-    #     ground_truth[checkin['user_id']].add(checkin['poi_id'])
+    data_checkin_test = pickle.load(open("../../data/checkin/test/"+CITY+".pickle","rb"))
+        
+    fcheckin_test = open("../../data/checkin/test/"+CITY+".td", 'w')
+
+    for checkin in data_checkin_test:
+        fcheckin_test.write('::'.join([str(checkin['user_id']),str(checkin['poi_id']),"0","0.0"])+'\n')
+
+    fcheckin_test.close()
     #Pois load
     poi_cats = {}
     for poi_id,poi in pickle.load(open("../../data/poi/"+CITY+".pickle","rb")).items():
@@ -30,7 +38,6 @@ class ProcessButton(npyscreen.ButtonPress):
 
 class FormObject(npyscreen.Form):
     def create(self):
-        self.add(npyscreen.TitleText,value='Press Enter in the cities you want to convert',name=' ')
         for city in experiment_constants.CITIES:
             self.add(ProcessButton,name=city)
     def afterEditing(self):

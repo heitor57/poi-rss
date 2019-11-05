@@ -135,7 +135,7 @@ def geocat(uid,training_matrix,tmp_rec_list,tmp_score_list,actual,
                     neighbors.append(i)
         log_neighbors[poi_id]=neighbors
 
-
+    
     for i in range_K:
         #print(i)
         poi_to_insert=None
