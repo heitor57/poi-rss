@@ -28,9 +28,7 @@ def normalize(scores):
         scores = [s / max_score for s in scores]
     return scores
 
-
 class RecRunner:
-    
 
     def __init__(self, base_rec, final_rec, city,
                  base_rec_list_size, final_rec_list_size, data_directory):
@@ -173,8 +171,7 @@ class RecRunner:
         print("usg terminated")
         # dview.map_sync(run_usg,range(user_num))
 
-        result_out = open(self.data_directory+"result/reclist/" +
-                          self.city+"_sigir11_top_" + str(top_k) + ".json", 'w')
+        result_out = open(self.get_base_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
@@ -190,8 +187,7 @@ class RecRunner:
         # results = [future.result() for future in futures]
         results = [futures[i].result() for i in progressbar(range(len(futures)))]
 
-        result_out = open(self.data_directory+"result/reclist/"+self.city +
-                          "_mostpopular_" + str(self.base_rec_list_size) + ".json", 'w')
+        result_out = open(self.get_base_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
@@ -229,7 +225,7 @@ class RecRunner:
             overall_scores = self.user_base_predicted_score[
                 0:self.base_rec_list_size]
             actual = self.ground_truth[uid]
-            start_time = time.time()
+            # start_time = time.time()
 
             predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores, actual,
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree)
@@ -250,24 +246,18 @@ class RecRunner:
                 for uid in self.all_uids]
         # results = [future.result() for future in futures]
         results = [futures[i].result() for i in progressbar(range(len(futures)))]
-        result_out = open(self.data_directory+"result/reclist/"+self.city +
-                        "_geocat_" + str(self.base_rec_list_size) + ".json", 'w')
+        result_out = open(self.get_final_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
 
-
-
     def load_base_predicted(self):
-        result_file = open(self.data_directory+"result/reclist/"+self.city +
-                          "_"+self.base_rec+"_" + str(self.base_rec_list_size) + ".json", 'r')
+        result_file = open(self.get_base_rec_file_name(), 'r')
         for i,line in enumerate(result_file):
             obj=json.loads(line)
             self.user_base_predicted_lid=obj['predicted']
             self.user_base_predicted_score=obj['score']
-            pass
-
-        pass
+    
     def run_base_recommender(self):
         base_recommender=self.BASE_RECOMMENDERS[self.base_rec]
         base_recommender()
@@ -279,4 +269,6 @@ class RecRunner:
             final_recommender()
         else:
             print("User base predicted list is empty")
+        pass
+    def eval_metrics(self):
         pass
