@@ -20,6 +20,8 @@ from usg.UserBasedCF import UserBasedCF
 from usg.FriendBasedCF import FriendBasedCF
 from usg.PowerLaw import PowerLaw
 import geocat.objfunc as gcobjfunc
+import pgc.pgc as pgc
+from scipy.stats import describe
 
 
 def normalize(scores):
@@ -27,7 +29,12 @@ def normalize(scores):
     if not max_score == 0:
         scores = [s / max_score for s in scores]
     return scores
-
+def dict_to_list_gen(d):
+    for k,v in zip(d.keys(),d.values()):
+        yield k
+        yield v
+def dict_to_list(d):
+    return list(dict_to_list_gen(d))
 class RecRunner:
 
     def __init__(self, base_rec, final_rec, city,
@@ -41,14 +48,14 @@ class RecRunner:
             "geocat": self.geocat,
             "persongeocat": self.persongeocat
         }
-        self.BASE_RECOMMENDERS_PARAMETERS = {
-            "mostpopular": [],
-            "usg": ['alpha','beta','eta']
-        }
-        self.FINAL_RECOMMENDERS_PARAMETERS = {
-            "geocat": ['div_weight','div_geo_cat_weight'],
-            "persongeocat": ['div_weight']
-        }
+        # self.BASE_RECOMMENDERS_PARAMETERS = {
+        #     "mostpopular": [],
+        #     "usg": ['alpha','beta','eta']
+        # }
+        # self.FINAL_RECOMMENDERS_PARAMETERS = {
+        #     "geocat": ['div_weight','div_geo_cat_weight'],
+        #     "persongeocat": ['div_weight']
+        # }
         if base_rec not in self.BASE_RECOMMENDERS:
             self.base_rec = next(iter(self.BASE_RECOMMENDERS))
             print(f"Base recommender not detected, using default:{self.base_rec}")
@@ -68,27 +75,70 @@ class RecRunner:
             data_directory += '/'
         self.data_directory = data_directory
         
-        self.base_rec_parameters=base_rec_parameters
-        self.final_rec_parameters=final_rec_parameters
+        # parametros para o metodo base
+        self.set_base_rec_parameters(base_rec_parameters)
+        # parametros para o metodo final
+        self.set_final_rec_parameters(final_rec_parameters)
 
+        # buffers de resultado do metodo base
         self.user_base_predicted_lid={}
         self.user_base_predicted_score={}
+        # buffers de resultado do metodo final
         self.user_final_predicted_lid={}
         self.user_final_predicted_score={}
+        
+    def set_final_rec_parameters(self,parameters):
+        final_parameters=self.get_final_parameters()[self.final_rec]
+        for parameter in parameters.copy():
+            if parameter not in final_parameters:
+                del parameters[parameter]
+        
+        for parameter in final_parameters:
+            if parameter not in parameters:
+                parameters[parameter]=final_parameters[parameter]
+        self.final_rec_parameters=parameters
+    def set_base_rec_parameters(self,parameters):
+        base_parameters=self.get_base_parameters()[self.base_rec]
+        for parameter in parameters.copy():
+            if parameter not in base_parameters:
+                del parameters[parameter]
+        
+        for parameter in base_parameters:
+            if parameter not in parameters:
+                parameters[parameter]=base_parameters[parameter]
+        self.base_rec_parameters=parameters
+    
+    @staticmethod
+    def get_base_parameters():
+        return {
+            "mostpopular": {},
+            "usg": {'alpha':0.1,'beta':0.1,'eta':0.05}
+        }
+    @staticmethod
+    def get_final_parameters():
+        return  {
+            "geocat": {'div_weight':0.5,'div_geo_cat_weight':0.75},
+            "persongeocat": {'div_weight':0.5}
+        }
 
-
-        for parameter in self.BASE_RECOMMENDERS_PARAMETERS[self.base_rec]:
-            # self.base_rec_parameters.
-            print(parameter)
-    def get_base_parameters(self):
-        return ''
-    def get_base_rec_file_name(self,end_str=''):
+    def get_base_rec_name(self):
+        list_parameters=list(map(str,dict_to_list(self.base_rec_parameters)))
+        string="_" if len(list_parameters)>0 else ""
         return self.data_directory+"result/reclist/" +\
-                          f"{self.city}_{self.base_rec}_{self.base_rec_list_size}{end_str}.json"
+                          f"{self.city}_{self.base_rec}_{self.base_rec_list_size}"+\
+                              string+'_'.join(list_parameters)
 
-    def get_final_rec_file_name(self,end_str=''):
-        return self.data_directory+"result/reclist/" +\
-                          f"{self.city}_{self.base_rec}_{self.base_rec_list_size}_{self.final_rec}_{self.final_rec_list_size}{end_str}.json"
+    def get_final_rec_name(self):
+        list_parameters=list(map(str,dict_to_list(self.final_rec_parameters)))
+        string="_" if len(list_parameters)>0 else ""
+        return f"{self.get_base_rec_name()}_{self.final_rec}_{self.final_rec_list_size}"+\
+            string+'_'.join(list_parameters)
+
+    def get_base_rec_file_name(self):
+        return self.get_base_rec_name()+".json"
+
+    def get_final_rec_file_name(self):
+        return self.get_final_rec_name()+".json"
 
     def load_base(self):
         CITY = self.city
@@ -227,7 +277,7 @@ class RecRunner:
             overall_scores = list(reversed(np.sort(pois_score)))[
                 0:self.base_rec_list_size]
 
-            self.user_base_predicted_score[uid]=predicted
+            self.user_base_predicted_lid[uid]=predicted
             self.user_base_predicted_score[uid]=overall_scores
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         return None
@@ -264,9 +314,52 @@ class RecRunner:
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
-    def persongeocat(self):
 
+
+    def run_persongeocat(self,uid):
+        if uid in self.ground_truth:
+            predicted = self.user_base_predicted_lid[
+                0:self.base_rec_list_size]
+            overall_scores = self.user_base_predicted_score[
+                0:self.base_rec_list_size]
+            actual = self.ground_truth[uid]
+            # start_time = time.time()
+
+            predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores, actual,
+                                                         self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
+                                                         0.75,0.5)
+
+            # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
+
+            predicted = np.array(predicted)[list(
+                reversed(np.argsort(overall_scores)))]
+            overall_scores = list(reversed(np.sort(overall_scores)))
+
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
+        return None
+
+    def persongeocat(self):
+        # users_cmean_dist=pgc.cmedian_dist_users(self.training_matrix,self.poi_coos)
+        # users_cmean_dist=np.array(users_cmean_dist)
+        # city_cmean_dist=pgc.cmedian_dist_pois(self.poi_coos)
+        # self.geo_div_prop=pgc.geo_div_propensity(users_cmean_dist,city_cmean_dist)
+
+        
         pass
+
+    # def compute_geo_div_propensity(self):
+    #     users_cmean_dist=pgc.cmedian_dist_users(self.training_matrix,self.poi_coos)
+    #     users_cmean_dist=np.array(users_cmean_dist)
+    #     city_cmean_dist=pgc.cmedian_dist_pois(self.poi_coos)
+    #     print("computing geographical diversification propensity of %d users" %(self.user_num))
+    #     self.geo_div_prop=pgc.geo_div_propensity(users_cmean_dist,city_cmean_dist)
+    #     print(describe(self.geo_div_prop))
+
+    # def compute_cat_div_propensity(self):
+    #     uid_cat_visits=cat_utils.get_users_cat_visits(self.training_matrix,self.poi_cats)
+    #     self.cat_div_prop=np.array(pgc.cat_div_propensity(uid_cat_visits,method='cat_div_ld'))
+    #     print(describe(self.cat_div_prop))
+    
     def load_base_predicted(self):
         result_file = open(self.get_base_rec_file_name(), 'r')
         for i,line in enumerate(result_file):
