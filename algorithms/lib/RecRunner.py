@@ -31,14 +31,24 @@ def normalize(scores):
 class RecRunner:
 
     def __init__(self, base_rec, final_rec, city,
-                 base_rec_list_size, final_rec_list_size, data_directory):
+                 base_rec_list_size, final_rec_list_size, data_directory,
+                 base_rec_parameters={},final_rec_parameters={}):
         self.BASE_RECOMMENDERS = {
             "mostpopular": self.mostpopular,
             "usg": self.usg
         }
         self.FINAL_RECOMMENDERS = {
             "geocat": self.geocat,
-        }   
+            "persongeocat": self.persongeocat
+        }
+        self.BASE_RECOMMENDERS_PARAMETERS = {
+            "mostpopular": [],
+            "usg": ['alpha','beta','eta']
+        }
+        self.FINAL_RECOMMENDERS_PARAMETERS = {
+            "geocat": ['div_weight','div_geo_cat_weight'],
+            "persongeocat": ['div_weight']
+        }
         if base_rec not in self.BASE_RECOMMENDERS:
             self.base_rec = next(iter(self.BASE_RECOMMENDERS))
             print(f"Base recommender not detected, using default:{self.base_rec}")
@@ -57,18 +67,28 @@ class RecRunner:
         if data_directory[-1] != '/':
             data_directory += '/'
         self.data_directory = data_directory
+        
+        self.base_rec_parameters=base_rec_parameters
+        self.final_rec_parameters=final_rec_parameters
 
         self.user_base_predicted_lid={}
         self.user_base_predicted_score={}
         self.user_final_predicted_lid={}
         self.user_final_predicted_score={}
-    def get_base_rec_file_name(self):
-        return self.data_directory+"result/reclist/" +\
-                          f"{self.city}_{self.base_rec}_{self.base_rec_list_size}.json"
 
-    def get_final_rec_file_name(self):
+
+        for parameter in self.BASE_RECOMMENDERS_PARAMETERS[self.base_rec]:
+            # self.base_rec_parameters.
+            print(parameter)
+    def get_base_parameters(self):
+        return ''
+    def get_base_rec_file_name(self,end_str=''):
         return self.data_directory+"result/reclist/" +\
-                          f"{self.city}_{self.base_rec}_{self.base_rec_list_size}_{self.final_rec}_{self.final_rec_list_size}.json"
+                          f"{self.city}_{self.base_rec}_{self.base_rec_list_size}{end_str}.json"
+
+    def get_final_rec_file_name(self,end_str=''):
+        return self.data_directory+"result/reclist/" +\
+                          f"{self.city}_{self.base_rec}_{self.base_rec_list_size}_{self.final_rec}_{self.final_rec_list_size}{end_str}.json"
 
     def load_base(self):
         CITY = self.city
@@ -140,7 +160,7 @@ class RecRunner:
             overall_scores = list(reversed(np.sort(overall_scores)))[
                 :self.base_rec_list_size]
             #actual = ground_truth[uid]
-            print(uid)
+            # print(uid)
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         return None
 
@@ -167,7 +187,7 @@ class RecRunner:
         print("Running usg")
         futures = [executor.submit(
             self.run_usg, U, S, G, uid, alpha, beta) for uid in all_uids]
-        results = [future.result() for future in futures]
+        results = [futures[i].result() for i in progressbar(range(len(futures)))]
         print("usg terminated")
         # dview.map_sync(run_usg,range(user_num))
 
@@ -214,12 +234,6 @@ class RecRunner:
 
     def run_geocat(self, uid):
         if uid in self.ground_truth:
-            #pois_score = self.run_mostpopular(uid)
-            # pois_score = self.user_base_predicted_score[uid]
-            # predicted = list(reversed(np.argsort(pois_score)))[
-            #     0:self.base_rec_list_size]
-            # overall_scores = list(reversed(np.sort(pois_score)))[
-            #     0:self.base_rec_list_size]
             predicted = self.user_base_predicted_lid[
                 0:self.base_rec_list_size]
             overall_scores = self.user_base_predicted_score[
@@ -228,7 +242,8 @@ class RecRunner:
             # start_time = time.time()
 
             predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores, actual,
-                                                         self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree)
+                                                         self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
+                                                         0.75,0.5)
 
             # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
 
@@ -244,13 +259,14 @@ class RecRunner:
 
         futures = [executor.submit(self.run_geocat, uid)
                 for uid in self.all_uids]
-        # results = [future.result() for future in futures]
         results = [futures[i].result() for i in progressbar(range(len(futures)))]
         result_out = open(self.get_final_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
+    def persongeocat(self):
 
+        pass
     def load_base_predicted(self):
         result_file = open(self.get_base_rec_file_name(), 'r')
         for i,line in enumerate(result_file):
