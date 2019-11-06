@@ -1,8 +1,8 @@
-import os
-import sys
-module_path = os.path.abspath(os.path.join('.'))
-if module_path not in sys.path:
-    sys.path.append(module_path)
+# import os
+# import sys
+# module_path = os.path.abspath(os.path.join('.'))
+# if module_path not in sys.path:
+#     sys.path.append(module_path)
 # print(sys.path)
 
 from abc import ABC, abstractmethod
@@ -13,6 +13,7 @@ import json
 import time
 
 import numpy as np
+from progressbar import progressbar
 
 import cat_utils
 from usg.UserBasedCF import UserBasedCF
@@ -29,16 +30,17 @@ def normalize(scores):
 
 
 class RecRunner:
-    BASE_RECOMMENDERS = {
-        "mostpopular": mostpopular,
-        "usg": usg
-    }
-    FINAL_RECOMMENDERS = {
-        "geocat": geocat,
-    }
+    
 
     def __init__(self, base_rec, final_rec, city,
                  base_rec_list_size, final_rec_list_size, data_directory):
+        self.BASE_RECOMMENDERS = {
+            "mostpopular": self.mostpopular,
+            "usg": self.usg
+        }
+        self.FINAL_RECOMMENDERS = {
+            "geocat": self.geocat,
+        }   
         if base_rec not in self.BASE_RECOMMENDERS:
             self.base_rec = next(iter(self.BASE_RECOMMENDERS))
             print(f"Base recommender not detected, using default:{self.base_rec}")
@@ -57,6 +59,18 @@ class RecRunner:
         if data_directory[-1] != '/':
             data_directory += '/'
         self.data_directory = data_directory
+
+        self.user_base_predicted_lid={}
+        self.user_base_predicted_score={}
+        self.user_final_predicted_lid={}
+        self.user_final_predicted_score={}
+    def get_base_rec_file_name(self):
+        return self.data_directory+"result/reclist/" +\
+                          f"{self.city}_{self.base_rec}_{self.base_rec_list_size}.json"
+
+    def get_final_rec_file_name(self):
+        return self.data_directory+"result/reclist/" +\
+                          f"{self.city}_{self.base_rec}_{self.base_rec_list_size}_{self.final_rec}_{self.final_rec_list_size}.json"
 
     def load_base(self):
         CITY = self.city
@@ -84,7 +98,8 @@ class RecRunner:
         user_num = len(self.social_relations)
         poi_num = len(self.poi_coos)
         user_num, poi_num
-
+        self.user_num=user_num
+        self.poi_num=poi_num
         # Cat Hierarchy load
         self.dict_alias_title, self.category_tree, self.dict_alias_depth = cat_utils.cat_structs(
             self.data_directory+"categories.json")
@@ -128,7 +143,7 @@ class RecRunner:
                 :self.base_rec_list_size]
             #actual = ground_truth[uid]
             print(uid)
-            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'scores': list(map(float, overall_scores))})+"\n"
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         return None
 
     def usg(self):
@@ -172,7 +187,8 @@ class RecRunner:
 
         futures = [executor.submit(self.run_mostpopular, uid)
                    for uid in self.all_uids]
-        results = [future.result() for future in futures]
+        # results = [future.result() for future in futures]
+        results = [futures[i].result() for i in progressbar(range(len(futures)))]
 
         result_out = open(self.data_directory+"result/reclist/"+self.city +
                           "_mostpopular_" + str(self.base_rec_list_size) + ".json", 'w')
@@ -182,58 +198,85 @@ class RecRunner:
 
     def run_mostpopular(self, uid):
         if uid in self.ground_truth:
-            poi_indexes = set(list(range(self.training_matrix.shape[1])))
+            poi_indexes = set(list(range(self.poi_num)))
             visited_indexes = set(self.training_matrix[uid].nonzero()[0])
             not_visited_indexes = poi_indexes-visited_indexes
             not_visited_indexes = np.array(list(not_visited_indexes))
             poi_visits_nu = np.count_nonzero(self.training_matrix, axis=0)
-            pois_score = poi_visits_nu/self.training_matrix.shape[0]
+            pois_score = poi_visits_nu/self.user_num
             for i in visited_indexes:
                 pois_score[i] = 0
             predicted = list(reversed(np.argsort(pois_score)))[
                 0:self.base_rec_list_size]
             overall_scores = list(reversed(np.sort(pois_score)))[
                 0:self.base_rec_list_size]
-            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'scores': list(map(float, overall_scores))})+"\n"
+
+            self.user_base_predicted_score[uid]=predicted
+            self.user_base_predicted_score[uid]=overall_scores
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         return None
 
     def run_geocat(self, uid):
         if uid in self.ground_truth:
-            pois_score = self.run_mostpopular(uid)
-            predicted = list(reversed(np.argsort(pois_score)))[
+            #pois_score = self.run_mostpopular(uid)
+            # pois_score = self.user_base_predicted_score[uid]
+            # predicted = list(reversed(np.argsort(pois_score)))[
+            #     0:self.base_rec_list_size]
+            # overall_scores = list(reversed(np.sort(pois_score)))[
+            #     0:self.base_rec_list_size]
+            predicted = self.user_base_predicted_lid[
                 0:self.base_rec_list_size]
-            overall_scores = list(reversed(np.sort(pois_score)))[
+            overall_scores = self.user_base_predicted_score[
                 0:self.base_rec_list_size]
-
             actual = self.ground_truth[uid]
             start_time = time.time()
 
             predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores, actual,
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree)
 
-            print("uid → %d, time → %fs" % (uid, time.time()-start_time))
+            # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
 
             predicted = np.array(predicted)[list(
                 reversed(np.argsort(overall_scores)))]
             overall_scores = list(reversed(np.sort(overall_scores)))
 
-            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'scores': list(map(float, overall_scores))})+"\n"
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         return None
 
     def geocat(self):
-
         executor = ProcessPoolExecutor()
 
         futures = [executor.submit(self.run_geocat, uid)
-                   for uid in self.all_uids]
-        results = [future.result() for future in futures]
-
+                for uid in self.all_uids]
+        # results = [future.result() for future in futures]
+        results = [futures[i].result() for i in progressbar(range(len(futures)))]
         result_out = open(self.data_directory+"result/reclist/"+self.city +
-                          "_geocat_" + str(self.base_rec_list_size) + ".json", 'w')
+                        "_geocat_" + str(self.base_rec_list_size) + ".json", 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
 
-    def run_base_recommender(self):
 
+
+    def load_base_predicted(self):
+        result_file = open(self.data_directory+"result/reclist/"+self.city +
+                          "_"+self.base_rec+"_" + str(self.base_rec_list_size) + ".json", 'r')
+        for i,line in enumerate(result_file):
+            obj=json.loads(line)
+            self.user_base_predicted_lid=obj['predicted']
+            self.user_base_predicted_score=obj['score']
+            pass
+
+        pass
+    def run_base_recommender(self):
+        base_recommender=self.BASE_RECOMMENDERS[self.base_rec]
+        base_recommender()
+
+
+    def run_final_recommender(self):
+        final_recommender=self.FINAL_RECOMMENDERS[self.final_rec]
+        if len(self.user_base_predicted_lid)>0:
+            final_recommender()
+        else:
+            print("User base predicted list is empty")
         pass
