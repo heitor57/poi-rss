@@ -14,14 +14,17 @@ import time
 
 import numpy as np
 from progressbar import progressbar
+from scipy.stats import describe
+import matplotlib.pyplot as plt
 
 import cat_utils
 from usg.UserBasedCF import UserBasedCF
 from usg.FriendBasedCF import FriendBasedCF
 from usg.PowerLaw import PowerLaw
 import geocat.objfunc as gcobjfunc
-import pgc.pgc as pgc
-from scipy.stats import describe
+from pgc.GeoDivPropensity import GeoDivPropensity
+from pgc.CatDivPropensity import CatDivPropensity
+
 
 
 def normalize(scores):
@@ -293,7 +296,7 @@ class RecRunner:
 
             predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores, actual,
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
-                                                         0.75,0.5)
+                                                         self.final_rec_parameters['div_geo_cat_weight'],self.final_rec_parameters['div_weight'])
 
             # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
 
@@ -324,10 +327,15 @@ class RecRunner:
                 0:self.base_rec_list_size]
             actual = self.ground_truth[uid]
             # start_time = time.time()
-
-            predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores, actual,
+            if self.geo_div_propensity[uid] == 0 and self.cat_div_propensity[uid] == 0:
+                predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores, actual,
+                                                self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
+                                                0,0)
+            else:
+                div_geo_cat_weight=(self.geo_div_propensity[uid])/(self.geo_div_propensity[uid]+self.cat_div_propensity[uid])
+                predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores, actual,
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
-                                                         0.75,0.5)
+                                                         div_geo_cat_weight,self.final_rec_parameters['div_weight'])
 
             # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
 
@@ -339,26 +347,33 @@ class RecRunner:
         return None
 
     def persongeocat(self):
-        # users_cmean_dist=pgc.cmedian_dist_users(self.training_matrix,self.poi_coos)
-        # users_cmean_dist=np.array(users_cmean_dist)
-        # city_cmean_dist=pgc.cmedian_dist_pois(self.poi_coos)
-        # self.geo_div_prop=pgc.geo_div_propensity(users_cmean_dist,city_cmean_dist)
-
+        print("Computing geographic diversification propensity")
+        pgeo_div_runner=GeoDivPropensity(self.training_matrix,self.poi_coos)
+        self.geo_div_propensity= pgeo_div_runner.geo_div_walk()
+        #print(geo_div_propensity)
         
-        pass
 
-    # def compute_geo_div_propensity(self):
-    #     users_cmean_dist=pgc.cmedian_dist_users(self.training_matrix,self.poi_coos)
-    #     users_cmean_dist=np.array(users_cmean_dist)
-    #     city_cmean_dist=pgc.cmedian_dist_pois(self.poi_coos)
-    #     print("computing geographical diversification propensity of %d users" %(self.user_num))
-    #     self.geo_div_prop=pgc.geo_div_propensity(users_cmean_dist,city_cmean_dist)
-    #     print(describe(self.geo_div_prop))
+        pcat_div_runner=CatDivPropensity(self.training_matrix,cat_utils.get_users_cat_visits(self.training_matrix,self.poi_cats),
+        self.undirected_category_tree)
+        print("Computing categoric diversification propensity")
+        self.cat_div_propensity=pcat_div_runner.compute_cat_div_propensity()
+       #print(self.cat_div_propensity)
+        # self.beta=geo_div_propensity/np.add(geo_div_propensity,cat_div_propensity)
+    
 
-    # def compute_cat_div_propensity(self):
-    #     uid_cat_visits=cat_utils.get_users_cat_visits(self.training_matrix,self.poi_cats)
-    #     self.cat_div_prop=np.array(pgc.cat_div_propensity(uid_cat_visits,method='cat_div_ld'))
-    #     print(describe(self.cat_div_prop))
+        executor = ProcessPoolExecutor()
+
+        futures = [executor.submit(self.run_persongeocat, uid)
+                for uid in self.all_uids]
+        results = [futures[i].result() for i in progressbar(range(len(futures)))]
+        result_out = open(self.get_final_rec_file_name(), 'w')
+        for json_string_result in results:
+            result_out.write(json_string_result)
+        result_out.close() 
+
+
+        # cat_div_propensity= pcat_div_runner
+
     
     def load_base_predicted(self):
         result_file = open(self.get_base_rec_file_name(), 'r')
