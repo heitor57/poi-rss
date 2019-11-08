@@ -52,9 +52,9 @@ def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undire
 	list_size = K
 	tabu_size = 100
 	tabu_index = 0
-
-	div_geo_cat_weight = 0.75 # beta,this is here because of the work to be done on parameter customization for each user
-	div_weight = 0.5 # lambda, geo vs cat
+	
+	# div_geo_cat_weight = 0.75 # beta,this is here because of the work to be done on parameter customization for each user
+	# div_weight = 0.5 # lambda, geo vs cat
 
 	current_solution = RecList(list_size)
 	best_solution = RecList(list_size)

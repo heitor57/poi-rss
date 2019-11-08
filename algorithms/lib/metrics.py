@@ -1,5 +1,7 @@
 import numpy as np
 import networkx as nx
+import geocat.objfunc
+
 
 def mapk(actual, predicted, k):
     score = 0.0
@@ -197,7 +199,7 @@ def calculate_fo(current_solution, poi_cats, undirected_category_tree, user_log,
 
     current_solution.diversity = divgeocatk(
 		ildk(current_solution.item_list, poi_cats, undirected_category_tree),
-		1, #Cobertura de gêneros
+		geocat.objfunc.gc_list(current_solution.item_list,relevant_cats,poi_cats), #Cobertura de gêneros
 		prk(user_log, current_solution.item_list, poi_neighbors),
         div_geo_cat_weight
 	)
