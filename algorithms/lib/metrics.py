@@ -179,10 +179,27 @@ def epck(rec_list,actual,uid,training_matrix):
     EPC=C_2*sum_2
     return EPC
 
-
 def divgeocatk(ild_value,gc_value,pr_value,div_geo_cat_weight):
     div_cat = gc_div+ild_div/rec_list_size
     div_geo = pr_value
     div=div_geo_cat_weight*div_geo+(1-div_geo_cat_weight)*div_cat
     return div
 
+def relk(score_list, size):
+    relevance = 0
+    for i in score_list:
+        relevance += i
+    relevance /= len(score_list)
+    return relevance
+
+def calculate_fo(current_solution, poi_cats, undirected_category_tree, user_log,
+                poi_neighbors, div_geo_cat_weight, div_weight, k):
+
+    current_solution.diversity = divgeocatk(
+		ildk(current_solution.item_list, poi_cats, undirected_category_tree),
+		1, #Cobertura de gêneros
+		prk(user_log, current_solution.item_list, poi_neighbors),
+        div_geo_cat_weight
+	)
+    current_solution.relevance = relk(current_solution.score_list, k)
+    return (current_solution.relevance**(1-div_weight))*(current_solution.diversity**div_weight)
