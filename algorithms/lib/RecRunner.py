@@ -24,8 +24,23 @@ from usg.PowerLaw import PowerLaw
 import geocat.objfunc as gcobjfunc
 from pgc.GeoDivPropensity import GeoDivPropensity
 from pgc.CatDivPropensity import CatDivPropensity
+from constants import experiment_constants
+import metrics
 
 
+DATA_DIRECTORY='../data' # directory with all data
+
+R_FORMAT='.json' # Results format is json, metrics, rec lists, etc
+D_FORMAT='.pickle' # data set format is pickle
+
+TRAIN='checkin/train' # train data sets
+TEST='checkin/test' # test data sets
+POI='poi/' # poi data sets with cats and coos
+USER='user/' # users and friends
+NEIGHBOR='neighbor/' # neighbors of pois
+
+METRICS='result/metrics/'
+METRICS='result/reclist/'
 
 def normalize(scores):
     max_score = max(scores)
@@ -38,6 +53,7 @@ def dict_to_list_gen(d):
         yield v
 def dict_to_list(d):
     return list(dict_to_list_gen(d))
+
 class RecRunner:
 
     def __init__(self, base_rec, final_rec, city,
@@ -127,8 +143,7 @@ class RecRunner:
     def get_base_rec_name(self):
         list_parameters=list(map(str,dict_to_list(self.base_rec_parameters)))
         string="_" if len(list_parameters)>0 else ""
-        return self.data_directory+"result/reclist/" +\
-                          f"{self.city}_{self.base_rec}_{self.base_rec_list_size}"+\
+        return f"{self.city}_{self.base_rec}_{self.base_rec_list_size}"+\
                               string+'_'.join(list_parameters)
 
     def get_final_rec_name(self):
@@ -136,7 +151,7 @@ class RecRunner:
         string="_" if len(list_parameters)>0 else ""
         return f"{self.get_base_rec_name()}_{self.final_rec}_{self.final_rec_list_size}"+\
             string+'_'.join(list_parameters)
-
+    
     def get_base_rec_file_name(self):
         return self.get_base_rec_name()+".json"
 
@@ -244,7 +259,7 @@ class RecRunner:
         print("usg terminated")
         # dview.map_sync(run_usg,range(user_num))
 
-        result_out = open(self.get_base_rec_file_name(), 'w')
+        result_out = open(self.data_directory+"result/reclist/" + self.get_base_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
@@ -260,7 +275,7 @@ class RecRunner:
         # results = [future.result() for future in futures]
         results = [futures[i].result() for i in progressbar(range(len(futures)))]
 
-        result_out = open(self.get_base_rec_file_name(), 'w')
+        result_out = open(self.data_directory+"result/reclist/"+self.get_base_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
@@ -287,9 +302,9 @@ class RecRunner:
 
     def run_geocat(self, uid):
         if uid in self.ground_truth:
-            predicted = self.user_base_predicted_lid[
+            predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
-            overall_scores = self.user_base_predicted_score[
+            overall_scores = self.user_base_predicted_score[uid][
                 0:self.base_rec_list_size]
             actual = self.ground_truth[uid]
             # start_time = time.time()
@@ -313,7 +328,7 @@ class RecRunner:
         futures = [executor.submit(self.run_geocat, uid)
                 for uid in self.all_uids]
         results = [futures[i].result() for i in progressbar(range(len(futures)))]
-        result_out = open(self.get_final_rec_file_name(), 'w')
+        result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
@@ -321,9 +336,9 @@ class RecRunner:
 
     def run_persongeocat(self,uid):
         if uid in self.ground_truth:
-            predicted = self.user_base_predicted_lid[
+            predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
-            overall_scores = self.user_base_predicted_score[
+            overall_scores = self.user_base_predicted_score[uid][
                 0:self.base_rec_list_size]
             actual = self.ground_truth[uid]
             # start_time = time.time()
@@ -366,7 +381,7 @@ class RecRunner:
         futures = [executor.submit(self.run_persongeocat, uid)
                 for uid in self.all_uids]
         results = [futures[i].result() for i in progressbar(range(len(futures)))]
-        result_out = open(self.get_final_rec_file_name(), 'w')
+        result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close() 
@@ -376,11 +391,20 @@ class RecRunner:
 
     
     def load_base_predicted(self):
-        result_file = open(self.get_base_rec_file_name(), 'r')
+        result_file = open(self.data_directory+"result/reclist/"+self.get_base_rec_file_name(), 'r')
         for i,line in enumerate(result_file):
             obj=json.loads(line)
-            self.user_base_predicted_lid=obj['predicted']
-            self.user_base_predicted_score=obj['score']
+            self.user_base_predicted_lid[obj['user_id']]=obj['predicted']
+            self.user_base_predicted_score[obj['user_id']]=obj['score']
+
+    def load_final_predicted(self):
+        result_file = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'r')
+
+        for i,line in enumerate(result_file):
+            obj=json.loads(line)
+            self.user_final_predicted_lid[obj['user_id']]=obj['predicted']
+            self.user_final_predicted_score[obj['user_id']]=obj['score']
+
     
     def run_base_recommender(self):
         base_recommender=self.BASE_RECOMMENDERS[self.base_rec]
@@ -394,5 +418,73 @@ class RecRunner:
         else:
             print("User base predicted list is empty")
         pass
-    def eval_metrics(self):
+
+    def eval(self,uid,*,base=False,k):
+        if base:
+            predicted=self.user_base_predicted_lid[uid]
+        else:
+            predicted=self.user_final_predicted_lid[uid]
+        actual=self.ground_truth[uid]
+        
+        predicted_at_k=predicted[:k]
+        precision_val=metrics.precisionk(actual, predicted_at_k)
+        rec_val=metrics.recallk(actual, predicted_at_k)
+        pr_val=metrics.prk(self.training_matrix[uid],predicted_at_k,self.poi_neighbors)
+        ild_val=metrics.ildk(predicted_at_k,self.poi_cats,self.undirected_category_tree)
+        gc_val=metrics.gck(uid,self.training_matrix,self.poi_cats,predicted_at_k)
+        epc_val=metrics.epck(predicted_at_k,actual,uid,self.training_matrix)
+        
+        d={'user_id':uid,'precision':precision_val,'recall':rec_val,'pr':pr_val,'ild':ild_val,'gc':gc_val,'epc':epc_val}
+
+        return json.dumps(d)+'\n'
+    def eval_rec_metrics(self,*,base=False):
+        for i,k in enumerate(experiment_constants.METRICS_K):
+            print(f"running metrics at @{k}")
+            
+            if base:
+                result_out = open(self.data_directory+"result/metrics/"+self.get_base_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
+            else:
+                result_out = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
+            
+            executor = ProcessPoolExecutor()
+            futures = [executor.submit(self.eval, uid,base=base,k=k)
+                    for uid in self.all_uids]
+            results = [futures[i].result() for i in progressbar(range(len(futures)))]
+
+            for json_string_result in results:
+                result_out.write(json_string_result)
+            result_out.close()
+
+    def load_metrics(self,*,base=False):
+        self.metrics={}
+        for i,k in enumerate(experiment_constants.METRICS_K):
+            if base:
+                result_file = open(self.data_directory+"result/metrics/"+self.get_base_rec_name()+f"_{str(k)}{R_FORMAT}", 'r')
+            else:
+                result_file = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'r')
+            
+            self.metrics[k]=[]
+            for i,line in enumerate(result_file):
+                obj=json.loads(line)
+                self.metrics[k].append(obj)
+    def print_metrics(self):
+        pass
+        for i,k in enumerate(experiment_constants.METRICS_K):
+            metrics_mean=defaultdict(float)
+            for obj in self.metrics[k]:
+                for key in obj:
+                    metrics_mean[key]+=obj[key]
+            print(f"Metrics at @{k}")
+            fig = plt.figure()
+            ax=fig.add_subplot(111)
+            del metrics_mean['user_id']
+            for key in metrics_mean:
+                metrics_mean[key]/=len(self.metrics[k])
+                print(f"{key}:{metrics_mean[key]}")
+                ax.bar(key,metrics_mean[key])
+            ax.bar('MAUT',np.mean(list(metrics_mean.values())))
+            ax.set_title(f"Metrics with {self.get_final_rec_name()}")
+            fig.savefig(self.data_directory+"result/img/"+self.get_final_rec_name()+f"_{str(k)}.png")
+            
+            pass
         pass
