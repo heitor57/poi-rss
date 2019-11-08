@@ -52,7 +52,7 @@ def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undire
 	list_size = K
 	tabu_size = 100
 	tabu_index = 0
-	
+
 	# div_geo_cat_weight = 0.75 # beta,this is here because of the work to be done on parameter customization for each user
 	# div_weight = 0.5 # lambda, geo vs cat
 
@@ -63,7 +63,7 @@ def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undire
 	current_solution.create_from_base_rec(tmp_rec_list, tmp_score_list)
 	# Calcula a função objetivo
 	current_solution.fo = metrics.calculate_fo(current_solution, poi_cats, undirected_category_tree,
-						user_log, poi_neighbors, div_geo_cat_weight, div_weight, K)
+						user_log, poi_neighbors, div_geo_cat_weight, div_weight, K, relevant_cats)
 	
 	# Inicializa a melhor solução
 	best_solution.clone(current_solution)

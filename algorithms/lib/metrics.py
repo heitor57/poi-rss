@@ -195,7 +195,7 @@ def relk(score_list, size):
     return relevance
 
 def calculate_fo(current_solution, poi_cats, undirected_category_tree, user_log,
-                poi_neighbors, div_geo_cat_weight, div_weight, k):
+                poi_neighbors, div_geo_cat_weight, div_weight, k, relevant_cats):
 
     current_solution.diversity = divgeocatk(
 		ildk(current_solution.item_list, poi_cats, undirected_category_tree),
