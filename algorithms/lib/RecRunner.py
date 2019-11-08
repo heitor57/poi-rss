@@ -75,29 +75,18 @@ class RecRunner:
         #     "geocat": ['div_weight','div_geo_cat_weight'],
         #     "persongeocat": ['div_weight']
         # }
-        if base_rec not in self.BASE_RECOMMENDERS:
-            self.base_rec = next(iter(self.BASE_RECOMMENDERS))
-            print(f"Base recommender not detected, using default:{self.base_rec}")
-        else:
-            self.base_rec = base_rec
-        if final_rec not in self.FINAL_RECOMMENDERS:
-            self.final_rec = next(iter(self.FINAL_RECOMMENDERS))
-            print(f"Base recommender not detected, using default:{self.final_rec}")
-        else:
-            self.final_rec = final_rec
-        
+        self.base_rec=base_rec
+        self.final_rec=final_rec
+
+        self.set_base_rec_parameters(base_rec_parameters)
+        self.set_final_rec_parameters(final_rec_parameters)
+
         self.city = city
 
         self.base_rec_list_size = base_rec_list_size
         self.final_rec_list_size = final_rec_list_size
-        if data_directory[-1] != '/':
-            data_directory += '/'
+
         self.data_directory = data_directory
-        
-        # parametros para o metodo base
-        self.set_base_rec_parameters(base_rec_parameters)
-        # parametros para o metodo final
-        self.set_final_rec_parameters(final_rec_parameters)
 
         # buffers de resultado do metodo base
         self.user_base_predicted_lid={}
@@ -105,7 +94,45 @@ class RecRunner:
         # buffers de resultado do metodo final
         self.user_final_predicted_lid={}
         self.user_final_predicted_score={}
-        
+
+        self.metrics={}
+        self.metrics_name=['precision','recall','pr','ild','gc','epc']
+
+    @property
+    def data_directory(self):
+        return self._data_directory
+    @data_directory.setter
+    def data_directory(self,data_directory):
+        print("EWQ")
+        if data_directory[-1] != '/':
+            data_directory += '/'
+        self._data_directory=data_directory
+    @property
+    def base_rec(self):
+        return self._base_rec
+    @base_rec.setter
+    def base_rec(self,base_rec):
+        if base_rec not in self.BASE_RECOMMENDERS:
+            self._base_rec = next(iter(self.BASE_RECOMMENDERS))
+            print(f"Base recommender not detected, using default:{self._base_rec}")
+        else:
+            self._base_rec = base_rec
+        # parametros para o metodo base
+        self.set_base_rec_parameters({})
+
+    @property
+    def final_rec(self):
+        return self._final_rec
+    @final_rec.setter
+    def final_rec(self,final_rec):
+        if final_rec not in self.FINAL_RECOMMENDERS:
+            self._final_rec = next(iter(self.FINAL_RECOMMENDERS))
+            print(f"Base recommender not detected, using default:{self._final_rec}")
+        else:
+            self._final_rec = final_rec
+        # parametros para o metodo final
+        self.set_final_rec_parameters({})
+    
     def set_final_rec_parameters(self,parameters):
         final_parameters=self.get_final_parameters()[self.final_rec]
         for parameter in parameters.copy():
@@ -456,35 +483,103 @@ class RecRunner:
             result_out.close()
 
     def load_metrics(self,*,base=False):
-        self.metrics={}
+        if base:
+            rec_using=self.base_rec
+        else:
+            rec_using=self.final_rec
+        
+        self.metrics[rec_using]={}
         for i,k in enumerate(experiment_constants.METRICS_K):
             if base:
                 result_file = open(self.data_directory+"result/metrics/"+self.get_base_rec_name()+f"_{str(k)}{R_FORMAT}", 'r')
             else:
                 result_file = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'r')
             
-            self.metrics[k]=[]
+            self.metrics[rec_using][k]=[]
             for i,line in enumerate(result_file):
                 obj=json.loads(line)
-                self.metrics[k].append(obj)
-    def print_metrics(self):
-        pass
+                self.metrics[rec_using][k].append(obj)
+
+
+
+
+    def plot_bar_metrics(self):
+        palette = plt.get_cmap('Set1')
         for i,k in enumerate(experiment_constants.METRICS_K):
-            metrics_mean=defaultdict(float)
-            for obj in self.metrics[k]:
-                for key in obj:
-                    metrics_mean[key]+=obj[key]
-            print(f"Metrics at @{k}")
+
+
+            metrics_mean=dict()
+            for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                metrics=metrics[k]
+                
+                metrics_mean[rec_using]=defaultdict(float)
+                for obj in metrics:
+                    for key in obj:
+                        if key in self.metrics_name:
+                            metrics_mean[rec_using][key]+=obj[key]
+                
+                
+                for j,key in enumerate(metrics_mean[rec_using]):
+                    metrics_mean[rec_using][key]/=len(metrics)
+                    #print(f"{key}:{metrics_mean[rec_using][key]}")
             fig = plt.figure()
             ax=fig.add_subplot(111)
-            del metrics_mean['user_id']
-            for key in metrics_mean:
-                metrics_mean[key]/=len(self.metrics[k])
-                print(f"{key}:{metrics_mean[key]}")
-                ax.bar(key,metrics_mean[key])
-            ax.bar('MAUT',np.mean(list(metrics_mean.values())))
-            ax.set_title(f"Metrics with {self.get_final_rec_name()}")
-            fig.savefig(self.data_directory+"result/img/"+self.get_final_rec_name()+f"_{str(k)}.png")
+            barWidth= 1-len(self.metrics)/(1+len(self.metrics))
+            N=len(self.metrics_name)
+            indexes=np.arange(N)
+            i=0
+            for rec_using,rec_metrics in metrics_mean.items():
+                print(f"{rec_using} at @{k}")
+                print(rec_metrics.values())
+                ax.bar(indexes+i*barWidth,rec_metrics.values(),barWidth,label=rec_using,color=palette(i))
+                #ax.bar(indexes[j]+i*barWidth,np.mean(list(rec_metrics.values())),barWidth,label=rec_using,color=palette(i))
+                i+=1
             
-            pass
-        pass
+            ax.set_xticks(indexes+barWidth*(np.floor(len(self.metrics)/2)-1)+barWidth/2)
+            # ax.legend((p1[0], p2[0]), self.metrics_name)
+            ax.legend(tuple(self.metrics.keys()))
+            ax.set_xticklabels(self.metrics_name)
+            ax.set_title(f"at @{k}, {self.city}")
+            fig.show()
+            plt.show()
+            fig.savefig(self.data_directory+f"result/img/all_met_{str(k)}.png")
+                
+                # ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean[rec_using].values())),barWidth,label=rec_using,color=palette(i))
+
+
+    def print_metrics(self):
+        
+        palette = plt.get_cmap('Set1')
+        for i,k in enumerate(experiment_constants.METRICS_K):
+            fig = plt.figure()
+            ax=fig.add_subplot(111)
+            #barWidth = 1-(len(self.metrics)-1)/len(self.metrics)
+            barWidth= 0.25
+            N=len(self.metrics_name)
+            indexes=np.arange(N)
+            
+            for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                metrics=metrics[k]
+                
+                metrics_mean=defaultdict(float)
+                for obj in metrics:
+                    for key in obj:
+                        metrics_mean[key]+=obj[key]
+                print(f"Metrics at @{k}")
+                
+                del metrics_mean['user_id']
+                for j,key in enumerate(metrics_mean):
+                    metrics_mean[key]/=len(metrics)
+                    print(f"{key}:{metrics_mean[key]}")
+                    
+                    ax.bar(indexes[j]+i*barWidth,metrics_mean[key],barWidth,label=rec_using,color=palette(i))
+                ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean.values())),barWidth,label=rec_using,color=palette(i))
+            ax.set_title(f"Metrics")
+            ax.legend((p1[0], p2[0]), list(self.metrics.keys()))
+            ax.set_xticks(indexes+barWidth/2)
+            ax.set_xticklabels(metrics_name)
+            fig.show()
+            plt.show()
+            #fig.savefig(self.data_directory+"result/img/"+self.get_final_rec_name()+f"_{str(k)}.png")
+                
+                
