@@ -100,7 +100,8 @@ def ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_
     
     
 def geocat(uid,training_matrix,tmp_rec_list,tmp_score_list,actual,
-          poi_cats,poi_neighbors,K,undirected_category_tree):
+          poi_cats,poi_neighbors,K,undirected_category_tree,
+          div_geo_cat_weight,div_weight):
     range_K=range(K)
     rec_list=[]
 
@@ -125,8 +126,8 @@ def geocat(uid,training_matrix,tmp_rec_list,tmp_score_list,actual,
     assert user_log[user_log.nonzero()[0]].sum() == len(poi_cover)
 #         print(uid)
 #         print("Count:",cnt)
-    div_geo_cat_weight = 0.75 # beta,this is here because of the work to be done on parameter customization for each user
-    div_weight = 0.5 # lambda, geo vs cat
+    # div_geo_cat_weight = 0.75 # beta,this is here because of the work to be done on parameter customization for each user
+    # div_weight = 0.5 # lambda, geo vs cat
     current_proportionality=0
     final_scores=[]
 
