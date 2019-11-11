@@ -164,7 +164,7 @@ class RecRunner:
     def get_final_parameters():
         return  {
             "geocat": {'div_weight':0.5,'div_geo_cat_weight':0.75},
-            "persongeocat": {'div_weight':0.5}
+            "persongeocat": {'div_weight':0.5,'cat_div_method':'std_norm'}
         }
 
     def get_base_rec_name(self):
@@ -178,7 +178,20 @@ class RecRunner:
         string="_" if len(list_parameters)>0 else ""
         return f"{self.get_base_rec_name()}_{self.final_rec}_{self.final_rec_list_size}"+\
             string+'_'.join(list_parameters)
-    
+    def get_base_rec_short_name(self):
+        #list_parameters=list(map(str,dict_to_list(self.base_rec_parameters)))
+        if self.base_rec == "mostpopular":
+            return self.base_rec
+        elif self.base_rec == "usg":
+            return self.base_rec
+        #string="_" if len(list_parameters)>0 else ""
+    def get_final_rec_short_name(self):
+        if self.final_rec == 'geocat':
+            return f"{self.get_base_rec_short_name()}_{self.final_rec}"
+        elif self.final_rec == 'persongeocat':
+            return f"{self.get_base_rec_short_name()}_{self.final_rec}_{self.final_rec_parameters['cat_div_method']}"
+
+
     def get_base_rec_file_name(self):
         return self.get_base_rec_name()+".json"
 
@@ -395,8 +408,9 @@ class RecRunner:
         #print(geo_div_propensity)
         
 
-        pcat_div_runner=CatDivPropensity(self.training_matrix,cat_utils.get_users_cat_visits(self.training_matrix,self.poi_cats),
-        self.undirected_category_tree)
+        pcat_div_runner=CatDivPropensity(self.training_matrix,
+        cat_utils.get_users_cat_visits(self.training_matrix,self.poi_cats),
+        self.undirected_category_tree,cat_div_method=self.final_rec_parameters['cat_div_method'])
         print("Computing categoric diversification propensity")
         self.cat_div_propensity=pcat_div_runner.compute_cat_div_propensity()
        #print(self.cat_div_propensity)
@@ -485,20 +499,22 @@ class RecRunner:
     def load_metrics(self,*,base=False):
         if base:
             rec_using=self.base_rec
+            rec_short_name=self.get_base_rec_short_name()
         else:
             rec_using=self.final_rec
+            rec_short_name=self.get_final_rec_short_name()
         
-        self.metrics[rec_using]={}
+        self.metrics[rec_short_name]={}
         for i,k in enumerate(experiment_constants.METRICS_K):
             if base:
                 result_file = open(self.data_directory+"result/metrics/"+self.get_base_rec_name()+f"_{str(k)}{R_FORMAT}", 'r')
             else:
                 result_file = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'r')
             
-            self.metrics[rec_using][k]=[]
+            self.metrics[rec_short_name][k]=[]
             for i,line in enumerate(result_file):
                 obj=json.loads(line)
-                self.metrics[rec_using][k].append(obj)
+                self.metrics[rec_short_name][k].append(obj)
 
 
 
@@ -507,7 +523,7 @@ class RecRunner:
         palette = plt.get_cmap('Set1')
         for i,k in enumerate(experiment_constants.METRICS_K):
 
-
+            
             metrics_mean=dict()
             for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
                 metrics=metrics[k]
