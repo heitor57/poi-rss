@@ -22,6 +22,7 @@ class CatDivPropensity():
 
         self.cat_div_propensity=None
     def cat_div_std_norm(self,cats_visits):
+        cats_visits=np.array(list(cats_visits.values()),dtype=np.int32)
         std=np.std(cats_visits)
         if std == 0:
             return 0
