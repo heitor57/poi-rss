@@ -179,7 +179,10 @@ def geodiv(uid,training_matrix,tmp_rec_list,tmp_score_list,
         for j in range(len(tmp_rec_list)):
             candidate_poi_id=tmp_rec_list[j]
             candidate_score=tmp_score_list[j]
-            objective_value=geodiv_objective_function(candidate_poi_id,log_poi_id,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id],current_proportionality,div_weight,candidate_score)
+            #objective_value=geodiv_objective_function(candidate_poi_id,log_poi_id,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id],current_proportionality,div_weight,candidate_score)
+            objective_value=geodiv_objective_function(candidate_poi_id,log_poi_ids,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id],
+                                        current_proportionality,div_weight,candidate_score)
+            
             if objective_value > max_objective_value:
                 max_objective_value=objective_value
                 poi_to_insert=candidate_poi_id
