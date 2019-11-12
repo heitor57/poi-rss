@@ -53,6 +53,15 @@ class RecList:
 		self.relevance = other_rec_list.relevance
 		self.diversity = other_rec_list.diversity
 
+	def clone_particle(self, particle):
+		self.clear()
+		self.item_list = particle.best_item_list.copy()
+		self.score_list = particle.base_rec_list.copy()
+		self.size = particle.size
+		self.fo = particle.best_fo
+		self.relevance = particle.best_relevance
+		self.diversity = particle.best_diversity
+
 	def create_neighbour(self, base_rec_list, base_rec_list_size, base_rec_score_list):
 		neighbour = RecList(self.size)
 		neighbour.clone(self)
@@ -83,9 +92,3 @@ class RecList:
 			return 0
 		else:
 			return -1
-	
-	def remove_item(self, item):
-		if item in self.item_list:
-			self.item_list.remove(item)
-
-	

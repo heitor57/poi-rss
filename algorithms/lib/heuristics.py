@@ -1,6 +1,9 @@
 import geocat.objfunc as objfunc
-from RecList import RecList
 import metrics
+from RecList import RecList
+from Swarm import Swarm
+from Particle import Particle
+from random import randint
 
 def local_max(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirected_category_tree,
 				rec_list, relevant_cats, log_poi_ids, log_neighbors, poi_cover, current_proportionality,
@@ -43,8 +46,7 @@ def local_max(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirect
 	return rec_list,final_scores
 
 def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirected_category_tree,
-				rec_list, relevant_cats, log_poi_ids, log_neighbors, poi_cover, current_proportionality,
-				div_geo_cat_weight, div_weight, final_scores, user_id, training_matrix, user_log):
+				relevant_cats, div_geo_cat_weight, div_weight, user_log):
 
 	max_iteration = 100
 	iteration = 0
@@ -104,3 +106,100 @@ def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undire
 
 	# A melhor solução está em best_solution, agora não sei o que fazer para completar o processo de diversificação
 	return best_solution.get_result()
+
+def pso_roulette_shuffle(roulette_list, roulette_size):
+	for i in range(roulette_size):
+		r = randint(roulette_size)
+		temp = roulette_list[i]
+		roulette_list[i] = roulette_list[r]
+		roulette_list[r] = temp
+
+def pso_roulette(w, c1, c2):
+	roulette_list = []
+	t1 = w * 10
+	t2 = c1 * 10
+	t3 = 10 - (t1 + t2)
+
+	for i in range(t1):
+		roulette_list.append(1)
+	
+	for i in range(t2):
+		roulette_list.append(2)
+
+	for i in range(t3):
+		roulette_list.append(3)
+
+	pso_roulette_shuffle(roulette_list, len(roulette_list))
+	roulette_position = randint(10)
+	return roulette_list[roulette_position]
+
+def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirected_category_tree,
+				relevant_cats, div_geo_cat_weight, div_weight, user_log):
+	
+	swarm_size = 30
+	particle_size = 10
+	base_rec_size = K
+	iteration = 0
+	max_iteration = 100
+
+	# Global best solution
+	global_best = RecList(particle_size)
+	
+	# Best diversity
+	dbest = RecList(particle_size)
+
+	# Particle swarm
+	swarm = Swarm(swarm_size)
+	swarm.create_particles(tmp_rec_list, tmp_score_list, particle_size, base_rec_size)
+
+	# Calculate local best for each particle and global best
+	for i in range(swarm_size):
+
+		metrics.pso_calculate_fo(swarm[i], poi_cats, undirected_category_tree, user_log, poi_neighbors,
+								div_geo_cat_weight, div_weight, K, relevant_cats, dbest)
+
+		# Update global best
+		if (global_best.fo < swarm[i].best_fo):
+			global_best.clone_particle(swarm[i])
+
+	while iteration < max_iteration:
+		gbest_position = -1
+
+		for i in range(swarm_size):
+			# Build particle from parents
+			new_particle = Particle(particle_size)
+
+			for i in range(particle_size):
+				item_id = -1
+				item_score = -1
+
+				while item_id == -1 or item_id not in swarm[i]:
+					particle_choice = pso_roulette(0.3, 0.3, 0.6)
+					position = randint(10)
+					
+					if (particle_choice == 1):
+						item_id = swarm[i].item_list[position]
+						item_score = swarm[i].score_list[position]
+					elif (particle_choice == 2):
+						item_id = swarm[i].best_item_list[position]
+						item_score = swarm[i].best_score_list[position]
+					else:
+						item_id = global_best.item_list[position]
+						item_score = global_best.score_list[position]
+
+				new_particle.add_item(item_id, item_score)
+			
+			swarm[i].clone(new_particle)
+
+			# Calcule local best and global best
+			metrics.pso_calculate_fo(swarm[i], poi_cats, undirected_category_tree, user_log, poi_neighbors,
+									div_geo_cat_weight, div_weight, K, relevant_cats, dbest)
+			# Update global best
+			if (global_best.fo < swarm[i].best_fo):
+				global_best.clone_particle(swarm[i])
+
+		# Path relink function is not complete
+		# global_best = path_Relink(gbest, gbestPos, dBest, swarm, hashFeature, numPreds, alfa, featureSize);
+		iteration += 1
+
+	return global_best.get_result()
