@@ -43,7 +43,8 @@ METRICS='result/metrics/'
 METRICS='result/reclist/'
 
 def normalize(scores):
-    max_score = max(scores)
+    scores=np.array(scores,dtype=np.float64)
+    max_score = np.max(scores)
     if not max_score == 0:
         scores = [s / max_score for s in scores]
     return scores
@@ -65,7 +66,8 @@ class RecRunner:
         }
         self.FINAL_RECOMMENDERS = {
             "geocat": self.geocat,
-            "persongeocat": self.persongeocat
+            "persongeocat": self.persongeocat,
+            "geodiv" : self.geodiv
         }
         # self.BASE_RECOMMENDERS_PARAMETERS = {
         #     "mostpopular": [],
@@ -163,8 +165,9 @@ class RecRunner:
     @staticmethod
     def get_final_parameters():
         return  {
-            "geocat": {'div_weight':0.5,'div_geo_cat_weight':0.75},
-            "persongeocat": {'div_weight':0.5,'cat_div_method':'std_norm'}
+            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.75},
+            "persongeocat": {'div_weight':0.75,'cat_div_method':'ld'},
+            "geodiv": {'div_weight':0.75}
         }
 
     def get_base_rec_name(self):
@@ -190,7 +193,8 @@ class RecRunner:
             return f"{self.get_base_rec_short_name()}_{self.final_rec}"
         elif self.final_rec == 'persongeocat':
             return f"{self.get_base_rec_short_name()}_{self.final_rec}_{self.final_rec_parameters['cat_div_method']}"
-
+        elif self.final_rec == 'geodiv':
+            return f"{self.get_base_rec_short_name()}_{self.final_rec}"
 
     def get_base_rec_file_name(self):
         return self.get_base_rec_name()+".json"
@@ -346,10 +350,10 @@ class RecRunner:
                 0:self.base_rec_list_size]
             overall_scores = self.user_base_predicted_score[uid][
                 0:self.base_rec_list_size]
-            actual = self.ground_truth[uid]
+
             # start_time = time.time()
 
-            predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores, actual,
+            predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores,
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
                                                          self.final_rec_parameters['div_geo_cat_weight'],self.final_rec_parameters['div_weight'])
 
@@ -380,15 +384,15 @@ class RecRunner:
                 0:self.base_rec_list_size]
             overall_scores = self.user_base_predicted_score[uid][
                 0:self.base_rec_list_size]
-            actual = self.ground_truth[uid]
+            
             # start_time = time.time()
             if self.geo_div_propensity[uid] == 0 and self.cat_div_propensity[uid] == 0:
-                predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores, actual,
+                predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores,
                                                 self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
                                                 0,0)
             else:
                 div_geo_cat_weight=(self.geo_div_propensity[uid])/(self.geo_div_propensity[uid]+self.cat_div_propensity[uid])
-                predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores, actual,
+                predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores,
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
                                                          div_geo_cat_weight,self.final_rec_parameters['div_weight'])
 
@@ -430,7 +434,38 @@ class RecRunner:
 
         # cat_div_propensity= pcat_div_runner
 
-    
+    def run_geodiv(self, uid):
+        if uid in self.ground_truth:
+            predicted = self.user_base_predicted_lid[uid][
+                0:self.base_rec_list_size]
+            overall_scores = self.user_base_predicted_score[uid][
+                0:self.base_rec_list_size]
+            
+            # start_time = time.time()
+
+            predicted, overall_scores = gcobjfunc.geodiv(uid, self.training_matrix, predicted, overall_scores,
+                                                         self.poi_neighbors, self.final_rec_list_size,
+                                                         self.final_rec_parameters['div_weight'])
+
+            # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
+
+            predicted = np.array(predicted)[list(
+                reversed(np.argsort(overall_scores)))]
+            overall_scores = list(reversed(np.sort(overall_scores)))
+
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
+        return None
+
+    def geodiv(self):
+        executor = ProcessPoolExecutor()
+
+        futures = [executor.submit(self.run_geodiv, uid)
+                for uid in self.all_uids]
+        results = [futures[i].result() for i in progressbar(range(len(futures)))]
+        result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
+        for json_string_result in results:
+            result_out.write(json_string_result)
+        result_out.close()
     def load_base_predicted(self):
         result_file = open(self.data_directory+"result/reclist/"+self.get_base_rec_file_name(), 'r')
         for i,line in enumerate(result_file):
@@ -459,6 +494,17 @@ class RecRunner:
         else:
             print("User base predicted list is empty")
         pass
+    def run_all_base(self):
+        for recommender in self.BASE_RECOMMENDERS:
+            self.base_rec=recommender
+            print(f"Running {recommender}")
+            self.run_base_recommender()
+    def run_all_final(self):
+        print(f"Running all final recommenders, base recommender is {self.base_rec}")
+        for recommender in self.FINAL_RECOMMENDERS:
+            self.final_rec=recommender
+            print(f"Running {recommender}")
+            self.run_final_recommender()
 
     def eval(self,uid,*,base=False,k):
         if base:
