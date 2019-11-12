@@ -550,11 +550,30 @@ class RecRunner:
                 ax.bar(indexes+i*barWidth,rec_metrics.values(),barWidth,label=rec_using,color=palette(i))
                 #ax.bar(indexes[j]+i*barWidth,np.mean(list(rec_metrics.values())),barWidth,label=rec_using,color=palette(i))
                 i+=1
+            metrics_utility_score=dict()
+            for rec_using in metrics_mean:
+                metrics_utility_score[rec_using]=dict()
+            for metric_name in self.metrics_name:
+                max_metric_value=0
+                min_metric_value=1
+                for rec_using,rec_metrics in metrics_mean.items():
+                    max_metric_value=max(max_metric_value,rec_metrics[metric_name])
+                    min_metric_value=min(min_metric_value,rec_metrics[metric_name])
+                for rec_using,rec_metrics in metrics_mean.items():
+                    metrics_utility_score[rec_using][metric_name]=(rec_metrics[metric_name]-min_metric_value)\
+                        /(max_metric_value-min_metric_value)
+            i=0
+            for rec_using,utility_scores in metrics_utility_score.items():
+                ax.bar(N+i*barWidth,np.sum(list(utility_scores.values()))/len(utility_scores),barWidth,label=rec_using,color=palette(i))
+                i+=1
             
-            ax.set_xticks(indexes+barWidth*(np.floor(len(self.metrics)/2)-1)+barWidth/2)
+                
+
+            #ax.set_xticks(np.arange(N+1)+barWidth*(np.floor((len(self.metrics))/2)-1)+barWidth/2)
+            ax.set_xticks(np.arange(N+1)+barWidth*(((len(self.metrics))/2)-1)+barWidth/2)
             # ax.legend((p1[0], p2[0]), self.metrics_name)
             ax.legend(tuple(self.metrics.keys()))
-            ax.set_xticklabels(self.metrics_name)
+            ax.set_xticklabels(self.metrics_name+['MAUT'])
             ax.set_title(f"at @{k}, {self.city}")
             fig.show()
             plt.show()
@@ -563,39 +582,39 @@ class RecRunner:
                 # ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean[rec_using].values())),barWidth,label=rec_using,color=palette(i))
 
 
-    def print_metrics(self):
+    # def print_metrics(self):
         
-        palette = plt.get_cmap('Set1')
-        for i,k in enumerate(experiment_constants.METRICS_K):
-            fig = plt.figure()
-            ax=fig.add_subplot(111)
-            #barWidth = 1-(len(self.metrics)-1)/len(self.metrics)
-            barWidth= 0.25
-            N=len(self.metrics_name)
-            indexes=np.arange(N)
+    #     palette = plt.get_cmap('Set1')
+    #     for i,k in enumerate(experiment_constants.METRICS_K):
+    #         fig = plt.figure()
+    #         ax=fig.add_subplot(111)
+    #         #barWidth = 1-(len(self.metrics)-1)/len(self.metrics)
+    #         barWidth= 0.25
+    #         N=len(self.metrics_name)
+    #         indexes=np.arange(N)
             
-            for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
-                metrics=metrics[k]
+    #         for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+    #             metrics=metrics[k]
                 
-                metrics_mean=defaultdict(float)
-                for obj in metrics:
-                    for key in obj:
-                        metrics_mean[key]+=obj[key]
-                print(f"Metrics at @{k}")
+    #             metrics_mean=defaultdict(float)
+    #             for obj in metrics:
+    #                 for key in obj:
+    #                     metrics_mean[key]+=obj[key]
+    #             print(f"Metrics at @{k}")
                 
-                del metrics_mean['user_id']
-                for j,key in enumerate(metrics_mean):
-                    metrics_mean[key]/=len(metrics)
-                    print(f"{key}:{metrics_mean[key]}")
+    #             del metrics_mean['user_id']
+    #             for j,key in enumerate(metrics_mean):
+    #                 metrics_mean[key]/=len(metrics)
+    #                 print(f"{key}:{metrics_mean[key]}")
                     
-                    ax.bar(indexes[j]+i*barWidth,metrics_mean[key],barWidth,label=rec_using,color=palette(i))
-                ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean.values())),barWidth,label=rec_using,color=palette(i))
-            ax.set_title(f"Metrics")
-            ax.legend((p1[0], p2[0]), list(self.metrics.keys()))
-            ax.set_xticks(indexes+barWidth/2)
-            ax.set_xticklabels(metrics_name)
-            fig.show()
-            plt.show()
+    #                 ax.bar(indexes[j]+i*barWidth,metrics_mean[key],barWidth,label=rec_using,color=palette(i))
+    #             ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean.values())),barWidth,label=rec_using,color=palette(i))
+    #         ax.set_title(f"Metrics")
+    #         ax.legend((p1[0], p2[0]), list(self.metrics.keys()))
+    #         ax.set_xticks(indexes+barWidth/2)
+    #         ax.set_xticklabels(metrics_name)
+    #         fig.show()
+    #         plt.show()
             #fig.savefig(self.data_directory+"result/img/"+self.get_final_rec_name()+f"_{str(k)}.png")
                 
                 
