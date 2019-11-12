@@ -29,6 +29,38 @@ def min_dist_to_list_cat(poi_id,pois,poi_cats,undirected_category_tree):
             min_dissim=min(min_dissim,local_min_distance)
     return min_dissim
 
+def ld_objective_function(score,poi_id,pois,poi_cats,undirected_category_tree,div_weight):
+    div=min_dist_to_list_cat(poi_id,pois,poi_cats,undirected_category_tree)
+    return (1-div_weight)*score + div*div_weight
+
+def ld(uid,training_matrix,tmp_rec_list,tmp_score_list,
+            poi_cats,undirected_category_tree,K,div_weight):
+    
+    range_K=range(K)
+    rec_list=[]
+    
+    final_scores=[]
+    for i in range_K:
+        #print(i)
+        poi_to_insert=None
+        max_objective_value=-200
+        for j in range(len(tmp_rec_list)):
+            candidate_poi_id=tmp_rec_list[j]
+            candidate_score=tmp_score_list[j]
+            objective_value=ld_objective_function(candidate_score,candidate_poi_id,rec_list,poi_cats,
+                                                    undirected_category_tree,div_weight)
+            if objective_value > max_objective_value:
+                max_objective_value=objective_value
+                poi_to_insert=candidate_poi_id
+        if poi_to_insert is not None:
+            rm_idx=tmp_rec_list.index(poi_to_insert)
+            tmp_rec_list.pop(rm_idx)
+            tmp_score_list.pop(rm_idx)
+            rec_list.append(poi_to_insert)
+            final_scores.append(max_objective_value)
+    
+    return rec_list,final_scores
+    
 def gc(poi_id,rec_list,relevant_cats,poi_cats):
 
     cats=set(poi_cats[poi_id])
@@ -128,10 +160,7 @@ def geodiv(uid,training_matrix,tmp_rec_list,tmp_score_list,
             log_poi_ids.append(lid)
     log_size=len(log_poi_ids)
     assert user_log[user_log.nonzero()[0]].sum() == len(poi_cover)
-#         print(uid)
-#         print("Count:",cnt)
-    # div_geo_cat_weight = 0.75 # beta,this is here because of the work to be done on parameter customization for each user
-    # div_weight = 0.5 # lambda, geo vs cat
+
     current_proportionality=0
     final_scores=[]
     log_neighbors=dict()
@@ -150,13 +179,10 @@ def geodiv(uid,training_matrix,tmp_rec_list,tmp_score_list,
         for j in range(len(tmp_rec_list)):
             candidate_poi_id=tmp_rec_list[j]
             candidate_score=tmp_score_list[j]
-            # pr=update_geo_cov(candidate_poi_id,log_poi_ids,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id])
-            # objective_value=max(0,pr-current_proportionality)
-            objective_value=geodiv_objective_function(candidate_poi_id,log_poi_ids,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id],current_proportionality,candidate_score,div_weight)
+            objective_value=geodiv_objective_function(candidate_poi_id,log_poi_id,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id],current_proportionality,div_weight,candidate_score)
             if objective_value > max_objective_value:
                 max_objective_value=objective_value
                 poi_to_insert=candidate_poi_id
-            pass
         if poi_to_insert is not None:
             rm_idx=tmp_rec_list.index(poi_to_insert)
             tmp_rec_list.pop(rm_idx)
