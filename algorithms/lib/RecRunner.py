@@ -26,7 +26,7 @@ from pgc.GeoDivPropensity import GeoDivPropensity
 from pgc.CatDivPropensity import CatDivPropensity
 from constants import experiment_constants
 import metrics
-
+from geocat.Binomial import Binomial
 
 DATA_DIRECTORY='../data' # directory with all data
 
@@ -69,7 +69,8 @@ class RecRunner:
             "geocat": self.geocat,
             "persongeocat": self.persongeocat,
             "geodiv" : self.geodiv,
-            "ld" : self.ld
+            "ld" : self.ld,
+            "binomial": self.binomial
         }
         # self.BASE_RECOMMENDERS_PARAMETERS = {
         #     "mostpopular": [],
@@ -170,7 +171,8 @@ class RecRunner:
             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.75},
             "persongeocat": {'div_weight':0.75,'cat_div_method':'ld'},
             "geodiv": {'div_weight':0.75},
-            "ld": {'div_weight':0.75}
+            "ld": {'div_weight':0.75},
+            "binomial":{'alpha':0.5,'div_weight':0.75}
         }
 
     def get_base_rec_name(self):
@@ -499,6 +501,43 @@ class RecRunner:
             result_out.write(json_string_result)
         result_out.close()
     
+    def run_binomial(self,uid):
+        if uid in self.ground_truth:
+            predicted = self.user_base_predicted_lid[uid][
+                0:self.base_rec_list_size]
+            overall_scores = self.user_base_predicted_score[uid][
+                0:self.base_rec_list_size]
+            predicted, overall_scores=self.binomial.binomial(uid,predicted,overall_scores,self.final_rec_list_size)
+            # predicted, overall_scores = gcobjfunc.ld(uid, self.training_matrix, predicted, overall_scores,
+            #                                     self.poi_cats,self.undirected_category_tree,self.final_rec_list_size,
+            #                                     self.final_rec_parameters['div_weight'])
+
+            predicted = np.array(predicted)[list(
+                reversed(np.argsort(overall_scores)))]
+            overall_scores = list(reversed(np.sort(overall_scores)))
+
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
+        return None
+    def binomial(self):
+        self.binomial=Binomial(self.training_matrix,self.poi_cats,
+            self.final_rec_parameters['div_weight'],self.final_rec_parameters['alpha'])
+        self.binomial.compute_all_probabilities()
+
+        # predicted = self.user_base_predicted_lid[0][
+        #     0:self.base_rec_list_size]
+        # overall_scores = self.user_base_predicted_score[0][
+        #     0:self.base_rec_list_size]
+        # self.binomial.binomial(0,predicted,overall_scores,self.final_rec_list_size)
+        executor = ProcessPoolExecutor()
+
+        futures = [executor.submit(self.run_binomial, uid)
+                for uid in self.all_uids]
+        results = [futures[i].result() for i in progressbar(range(len(futures)))]
+        result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
+        for json_string_result in results:
+            result_out.write(json_string_result)
+        result_out.close()
+
     def load_base_predicted(self):
         result_file = open(self.data_directory+"result/reclist/"+self.get_base_rec_file_name(), 'r')
         for i,line in enumerate(result_file):
