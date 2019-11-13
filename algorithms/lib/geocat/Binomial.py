@@ -1,9 +1,10 @@
 import numpy as np
 # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.713.513&rep=rep1&type=pdf
 # 2014 vargas binomial
+import scipy.special
 import scipy.stats
 from collections import defaultdict
-
+from time import time
 from tqdm import tqdm
 
 class Binomial:
@@ -26,7 +27,6 @@ class Binomial:
     def k_g_s(self,genre,items):
         count=0
         for item in items:
-            
             if genre in self.poi_cats[item]:
                 count+=1
         return count
@@ -87,7 +87,11 @@ class Binomial:
         
         return genres_in_rec_list
 
+    # def probability_mass_function(self,n,k,p):
+    #     return scipy.special.comb(n,k)*p**k*(1-p)**(n-k)
+    
     def coverage(self,uid,rec_list,rec_list_size,rec_list_genres):
+        
         # scipy.stats.binom(n=rec_list_size,
         #                     p=genre_probability(uid,genre,training_matrix,poi_cats,alpha))
         #genres=self.genres.copy()
@@ -97,19 +101,21 @@ class Binomial:
 
 
         cov=1
-        for genre in genres:
-            binom=scipy.stats.binom.pmf(n=rec_list_size,
-                        p=self.p[uid][genre],k=0)
-            cov*=binom**exponent
+
+        cov=np.prod(scipy.stats.binom.pmf(n=rec_list_size,
+            p=[self.p[uid][genre] for genre in genres],k=0)**exponent)
+        # for genre in genres:
+        #     binom=scipy.stats.binom.pmf(n=rec_list_size,
+        #                p=self.p[uid][genre],k=0)
+        #     # binom = self.probability_mass_function(rec_list_size,0,self.p[uid][genre])
+        #     cov*=binom**exponent
         return cov
 
-    # def pmf_greater_equal(k):
-    #     for l in 
-    #     pass
 
 
-
+    
     def non_redundancy(self,uid,rec_list,rec_list_size,rec_list_genres):
+
         genres=rec_list_genres
         num_genres = len(genres)
         result_non_red=1
@@ -119,12 +125,17 @@ class Binomial:
             for genre in genres:
                 k=self.k_g_s(genre,rec_list)
 
-                binom=0
-                for l in range(1,k-1):
-                    binom+=scipy.stats.binom.pmf(n=rec_list_size,
-                                                p=self.p[uid][genre],k=l)
+                # binom=0
+                # for l in range(1,k-1):
+                #     binom+=scipy.stats.binom.pmf(n=rec_list_size,
+                #                                 p=self.p[uid][genre],k=l)
+                binom=np.sum(scipy.stats.binom.pmf(n=rec_list_size,
+                                p=self.p[uid][genre],k=list(range(1,k-1)))
+                                )
+                    #binom+=self.probability_mass_function(rec_list_size,l,self.p[uid][genre])
                 binom=(1-binom)**exponent
                 result_non_red*=binom
+
         return result_non_red
         
     def binom_div(self,uid,rec_list,rec_list_size,rec_list_genres):
@@ -149,7 +160,7 @@ class Binomial:
             #print(i)
             poi_to_insert=None
             max_objective_value=-200
-            print("ejwiq")
+            
             for j in range(len(tmp_rec_list)):
                 candidate_poi_id=tmp_rec_list[j]
                 candidate_score=tmp_score_list[j]
