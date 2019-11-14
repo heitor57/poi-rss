@@ -32,9 +32,9 @@ class Binomial:
         return count
 
     # p^{''}_{g}
-    def user_probability_genre(self,uid,genre):
+    def user_probability_genre(self, uid, genre):
         lids=self.training_matrix[uid].nonzero()[0]
-        count=self.k_g_s(genre,lids)
+        count=self.k_g_s(genre, lids)
         # for lid in lids:
         #     if genre in poi_cats[lid]:
         #         count+=1
@@ -42,7 +42,7 @@ class Binomial:
 
 
     # p^{'}_{g}
-    def global_probability_genre(self,genre):
+    def global_probability_genre(self, genre):
         num_item_users_consumed=0
         count=0
         for uid in range(self.training_matrix.shape[0]):
@@ -80,11 +80,10 @@ class Binomial:
     #     p -- probability of success
     #     """
 
-    def get_genres_in_rec_list(self,rec_list):
+    def get_genres_in_rec_list(self, rec_list):
         genres_in_rec_list = set()
         for lid in rec_list:
             genres_in_rec_list.update(self.poi_cats[lid])
-        
         return genres_in_rec_list
 
     # def probability_mass_function(self,n,k,p):
@@ -113,7 +112,7 @@ class Binomial:
 
 
 
-    
+
     def non_redundancy(self,uid,rec_list,rec_list_size,rec_list_genres):
 
         genres=rec_list_genres
@@ -138,7 +137,7 @@ class Binomial:
 
         return result_non_red
         
-    def binom_div(self,uid,rec_list,rec_list_size,rec_list_genres):
+    def binom_div(self, uid, rec_list,rec_list_size,rec_list_genres):
         return self.coverage(uid,rec_list,rec_list_size,rec_list_genres)*\
             self.non_redundancy(uid,rec_list,rec_list_size,rec_list_genres)
 

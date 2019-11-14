@@ -11,6 +11,7 @@ import pickle
 from concurrent.futures import ProcessPoolExecutor
 import json
 import time
+from datetime import datetime
 
 import numpy as np
 from progressbar import progressbar
@@ -201,6 +202,8 @@ class RecRunner:
             return self.base_rec
         elif self.base_rec == "usg":
             return self.base_rec
+        else:
+            return self.base_rec
         #string="_" if len(list_parameters)>0 else ""
     def get_final_rec_short_name(self):
         if self.final_rec == 'geocat':
@@ -208,6 +211,8 @@ class RecRunner:
         elif self.final_rec == 'persongeocat':
             return f"{self.get_base_rec_short_name()}_{self.final_rec}_{self.final_rec_parameters['cat_div_method']}"
         elif self.final_rec == 'geodiv':
+            return f"{self.get_base_rec_short_name()}_{self.final_rec}"
+        else:
             return f"{self.get_base_rec_short_name()}_{self.final_rec}"
 
     def get_base_rec_file_name(self):
@@ -583,9 +588,16 @@ class RecRunner:
     def run_all_final(self):
         print(f"Running all final recommenders, base recommender is {self.base_rec}")
         for recommender in self.FINAL_RECOMMENDERS:
-            self.final_rec=recommender
+            self.final_rec = recommender
             print(f"Running {recommender}")
             self.run_final_recommender()
+    def run_all_eval(self):
+        print(f"Evaluating all final recommenders, base recommender is {self.base_rec}")
+        for recommender in self.FINAL_RECOMMENDERS:
+            self.final_rec = recommender
+            print(f"Running {recommender}")
+            self.load_final_predicted()
+            self.eval_rec_metrics()
 
     def eval(self,uid,*,base=False,k):
         if base:
@@ -704,6 +716,7 @@ class RecRunner:
             ax.set_title(f"at @{k}, {self.city}")
             fig.show()
             plt.show()
-            fig.savefig(self.data_directory+f"result/img/all_met_{str(k)}.png")
-                
+            timestamp = datetime.timestamp(datetime.now())
+            fig.savefig(self.data_directory+f"result/img/all_met_{str(k)}_{timestamp}.png")
+            
                 # ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean[rec_using].values())),barWidth,label=rec_using,color=palette(i))
