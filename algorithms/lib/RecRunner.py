@@ -28,39 +28,45 @@ from constants import experiment_constants
 import metrics
 from geocat.Binomial import Binomial
 
-DATA_DIRECTORY='../data' # directory with all data
+DATA_DIRECTORY = '../data'  # directory with all data
 
-R_FORMAT='.json' # Results format is json, metrics, rec lists, etc
-D_FORMAT='.pickle' # data set format is pickle
+R_FORMAT = '.json'  # Results format is json, metrics, rec lists, etc
+D_FORMAT = '.pickle'  # data set format is pickle
 
-TRAIN='checkin/train' # train data sets
-TEST='checkin/test' # test data sets
-POI='poi/' # poi data sets with cats and coos
-USER='user/' # users and friends
-NEIGHBOR='neighbor/' # neighbors of pois
+TRAIN = 'checkin/train'  # train data sets
+TEST = 'checkin/test'  # test data sets
+POI = 'poi/'  # poi data sets with cats and coos
+USER = 'user/'  # users and friends
+NEIGHBOR = 'neighbor/'  # neighbors of pois
 
-METRICS='result/metrics/'
-METRICS='result/reclist/'
+METRICS = 'result/metrics/'
+METRICS = 'result/reclist/'
+
 
 def normalize(scores):
-    scores=np.array(scores,dtype=np.float128)
+    scores = np.array(scores, dtype=np.float128)
 
     max_score = np.max(scores)
     if not max_score == 0:
         scores = [s / max_score for s in scores]
     return scores
+
+
 def dict_to_list_gen(d):
-    for k,v in zip(d.keys(),d.values()):
+    for k, v in zip(d.keys(), d.values()):
         yield k
         yield v
+
+
 def dict_to_list(d):
     return list(dict_to_list_gen(d))
+
 
 class RecRunner:
 
     def __init__(self, base_rec, final_rec, city,
                  base_rec_list_size, final_rec_list_size, data_directory,
-                 base_rec_parameters={},final_rec_parameters={}):
+                 base_rec_parameters={}, final_rec_parameters={}):
         self.BASE_RECOMMENDERS = {
             "mostpopular": self.mostpopular,
             "usg": self.usg
@@ -68,8 +74,8 @@ class RecRunner:
         self.FINAL_RECOMMENDERS = {
             "geocat": self.geocat,
             "persongeocat": self.persongeocat,
-            "geodiv" : self.geodiv,
-            "ld" : self.ld,
+            "geodiv": self.geodiv,
+            "ld": self.ld,
             "binomial": self.binomial
         }
         # self.BASE_RECOMMENDERS_PARAMETERS = {
@@ -80,8 +86,8 @@ class RecRunner:
         #     "geocat": ['div_weight','div_geo_cat_weight'],
         #     "persongeocat": ['div_weight']
         # }
-        self.base_rec=base_rec
-        self.final_rec=final_rec
+        self.base_rec = base_rec
+        self.final_rec = final_rec
 
         self.set_base_rec_parameters(base_rec_parameters)
         self.set_final_rec_parameters(final_rec_parameters)
@@ -94,29 +100,32 @@ class RecRunner:
         self.data_directory = data_directory
 
         # buffers de resultado do metodo base
-        self.user_base_predicted_lid={}
-        self.user_base_predicted_score={}
+        self.user_base_predicted_lid = {}
+        self.user_base_predicted_score = {}
         # buffers de resultado do metodo final
-        self.user_final_predicted_lid={}
-        self.user_final_predicted_score={}
+        self.user_final_predicted_lid = {}
+        self.user_final_predicted_score = {}
 
-        self.metrics={}
-        self.metrics_name=['precision','recall','pr','ild','gc','epc']
+        self.metrics = {}
+        self.metrics_name = ['precision', 'recall', 'pr', 'ild', 'gc', 'epc']
 
     @property
     def data_directory(self):
         return self._data_directory
+
     @data_directory.setter
-    def data_directory(self,data_directory):
+    def data_directory(self, data_directory):
         if data_directory[-1] != '/':
             data_directory += '/'
         print(f"Setting data directory to {data_directory}")
-        self._data_directory=data_directory
+        self._data_directory = data_directory
+
     @property
     def base_rec(self):
         return self._base_rec
+
     @base_rec.setter
-    def base_rec(self,base_rec):
+    def base_rec(self, base_rec):
         if base_rec not in self.BASE_RECOMMENDERS:
             self._base_rec = next(iter(self.BASE_RECOMMENDERS))
             print(f"Base recommender not detected, using default:{self._base_rec}")
@@ -128,8 +137,9 @@ class RecRunner:
     @property
     def final_rec(self):
         return self._final_rec
+
     @final_rec.setter
-    def final_rec(self,final_rec):
+    def final_rec(self, final_rec):
         if final_rec not in self.FINAL_RECOMMENDERS:
             self._final_rec = next(iter(self.FINAL_RECOMMENDERS))
             print(f"Base recommender not detected, using default:{self._final_rec}")
@@ -137,18 +147,17 @@ class RecRunner:
             self._final_rec = final_rec
         # parametros para o metodo final
         self.set_final_rec_parameters({})
-    
-    def set_final_rec_parameters(self,parameters):
-        final_parameters=self.get_final_parameters()[self.final_rec]
+
+    def set_final_rec_parameters(self, parameters):
+        final_parameters = self.get_final_parameters()[self.final_rec]
         for parameter in parameters.copy():
             if parameter not in final_parameters:
                 del parameters[parameter]
-        
         for parameter in final_parameters:
             if parameter not in parameters:
-                parameters[parameter]=final_parameters[parameter]
-        self.final_rec_parameters=parameters
-    def set_base_rec_parameters(self,parameters):
+                parameters[parameter] = final_parameters[parameter]
+        self.final_rec_parameters = parameters
+    def set_base_rec_parameters(self, parameters):
         base_parameters=self.get_base_parameters()[self.base_rec]
         for parameter in parameters.copy():
             if parameter not in base_parameters:
@@ -621,7 +630,7 @@ class RecRunner:
         else:
             rec_using=self.final_rec
             rec_short_name=self.get_final_rec_short_name()
-        
+
         self.metrics[rec_short_name]={}
         for i,k in enumerate(experiment_constants.METRICS_K):
             if base:
