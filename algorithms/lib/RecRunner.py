@@ -6,7 +6,7 @@
 # print(sys.path)
 
 from abc import ABC, abstractmethod
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import pickle
 from concurrent.futures import ProcessPoolExecutor
 import json
@@ -90,8 +90,8 @@ class RecRunner:
         self.base_rec = base_rec
         self.final_rec = final_rec
 
-        self.set_base_rec_parameters(base_rec_parameters)
-        self.set_final_rec_parameters(final_rec_parameters)
+        self.base_rec_parameters = base_rec_parameters
+        self.final_rec_parameters = final_rec_parameters
 
         self.city = city
 
@@ -133,7 +133,7 @@ class RecRunner:
         else:
             self._base_rec = base_rec
         # parametros para o metodo base
-        self.set_base_rec_parameters({})
+        self.base_rec_parameters = {}
 
     @property
     def final_rec(self):
@@ -147,34 +147,51 @@ class RecRunner:
         else:
             self._final_rec = final_rec
         # parametros para o metodo final
-        self.set_final_rec_parameters({})
+        self.final_rec_parameters = {}
 
-    def set_final_rec_parameters(self, parameters):
+    @property
+    def final_rec_parameters(self):
+        return self._final_rec_parameters
+
+    @final_rec_parameters.setter
+    def final_rec_parameters(self, parameters):
         final_parameters = self.get_final_parameters()[self.final_rec]
-        for parameter in parameters.copy():
-            if parameter not in final_parameters:
-                del parameters[parameter]
+        # for parameter in parameters.copy():
+        #     if parameter not in final_parameters:
+        #         del parameters[parameter]
+        parameters_result = dict()
         for parameter in final_parameters:
             if parameter not in parameters:
-                parameters[parameter] = final_parameters[parameter]
-        self.final_rec_parameters = parameters
-    def set_base_rec_parameters(self, parameters):
-        base_parameters=self.get_base_parameters()[self.base_rec]
-        for parameter in parameters.copy():
-            if parameter not in base_parameters:
-                del parameters[parameter]
-        
+                parameters_result[parameter] = final_parameters[parameter]
+            else:
+                parameters_result[parameter] = parameters[parameter]
+        self._final_rec_parameters = parameters_result
+
+    @property
+    def base_rec_parameters(self):
+        return self._base_rec_parameters
+
+    @base_rec_parameters.setter
+    def base_rec_parameters(self, parameters):
+        base_parameters = self.get_base_parameters()[self.base_rec]
+        # for parameter in parameters.copy():
+        #     if parameter not in base_parameters:
+        #         del parameters[parameter]
+        parameters_result = dict()
         for parameter in base_parameters:
             if parameter not in parameters:
-                parameters[parameter]=base_parameters[parameter]
-        self.base_rec_parameters=parameters
+                parameters_result[parameter] = base_parameters[parameter]
+            else:
+                parameters_result[parameter] = parameters[parameter]
+        self._base_rec_parameters = parameters_result
     
     @staticmethod
     def get_base_parameters():
         return {
             "mostpopular": {},
-            "usg": {'alpha':0.1,'beta':0.1,'eta':0.05}
+            "usg": {'alpha': 0.1, 'beta': 0.1, 'eta': 0.05}
         }
+
     @staticmethod
     def get_final_parameters():
         return  {
@@ -182,7 +199,7 @@ class RecRunner:
             "persongeocat": {'div_weight':0.75,'cat_div_method':'ld'},
             "geodiv": {'div_weight':0.75},
             "ld": {'div_weight':0.75},
-            "binomial":{'alpha':0.5,'div_weight':0.75}
+            "binomial": {'alpha': 0.5, 'div_weight': 0.75}
         }
 
     def get_base_rec_name(self):
@@ -326,8 +343,8 @@ class RecRunner:
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
-        print("Saved Rec List in "+self.data_directory+"result/reclist/" +
-              self.city+"_sigir11_top_" + str(top_k) + ".json")
+#        print("Saved Rec List in "+self.data_directory+"result/reclist/" +
+#             self.city+"_sigir11_top_" + str(top_k) + ".json")
 
     def mostpopular(self):
 
@@ -426,15 +443,17 @@ class RecRunner:
 
     def persongeocat(self):
         print("Computing geographic diversification propensity")
-        pgeo_div_runner=GeoDivPropensity(self.training_matrix,self.poi_coos)
-        self.geo_div_propensity= pgeo_div_runner.geo_div_walk()
-        #print(geo_div_propensity)
+        pgeo_div_runner = GeoDivPropensity(self.training_matrix, self.poi_coos)
+        self.geo_div_propensity = pgeo_div_runner.geo_div_walk()
         
-
-        pcat_div_runner=CatDivPropensity(self.training_matrix,
-        cat_utils.get_users_cat_visits(self.training_matrix,self.poi_cats),
-        self.undirected_category_tree,cat_div_method=self.final_rec_parameters['cat_div_method'])
-        print("Computing categoric diversification propensity")
+        pcat_div_runner = CatDivPropensity(
+            self.training_matrix,
+            cat_utils.get_users_cat_visits(self.training_matrix,
+                                           self.poi_cats),
+            self.undirected_category_tree,
+            cat_div_method=self.final_rec_parameters['cat_div_method'])
+        print("Computing categoric diversification propensity with",
+              self.final_rec_parameters['cat_div_method'])
         self.cat_div_propensity=pcat_div_runner.compute_cat_div_propensity()
        #print(self.cat_div_propensity)
         # self.beta=geo_div_propensity/np.add(geo_div_propensity,cat_div_propensity)

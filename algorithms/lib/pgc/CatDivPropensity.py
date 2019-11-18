@@ -18,10 +18,19 @@ class CatDivPropensity():
         self.CAT_METHODS = {
             "std_norm": self.cat_div_std_norm,
             "mad_norm": self.cat_div_mad_norm,
-            "ld": self.cat_div_ld
+            "ld": self.cat_div_ld,
+            "raw_std": self.cat_div_raw_std,
         }
 
         self.cat_div_propensity = None
+
+    def cat_div_raw_std(self, cats_visits):
+        cats_visits = np.array(list(cats_visits.values()), dtype=np.int32)
+        std = np.std(cats_visits)
+        if std == 0:
+            return 0
+        else:
+            return 2*std/(np.max(cats_visits)-np.min(cats_visits))
 
     def cat_div_std_norm(self, cats_visits):
         cats_visits = np.array(list(cats_visits.values()), dtype=np.int32)
@@ -72,3 +81,15 @@ class CatDivPropensity():
         self.cat_div_propensity = [futures[i].result()
                                    for i in progressbar(range(len(futures)))]
         return self.cat_div_propensity
+
+
+    def cat_div_binomial(self, poi_cats, div_weight, alpha):
+        binomial = Binomial(self.training_matrix, poi_cats,
+            div_weight, alpha)
+        binomial.compute_all_probabilities()
+        for uid in range(len(self.training_matrix.shape[0])):
+
+            lids = self.training_matrix[uid].nonzero()
+            cats = {poi_cats[lid] for lid in lids}
+            num_lids = len(lids)
+            binomial.binom_div(uid, lids, num_lids, cats)

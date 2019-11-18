@@ -144,6 +144,36 @@ def geocat_objective_function(poi_id,score,
     objective_value=ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
     return objective_value
 
+
+# new NORM ILD GC PR
+def NORM_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight):
+
+    delta_proportionality=max(0,pr-current_proportionality)
+    
+    #delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy(),poi_neighbors)-current_proportionality)
+    #print(poi.business_id,ild_div,gc_div,delta_proportionality)
+
+    if delta_proportionality<0:
+        delta_proportionality=0
+    div_cat = gc_div+ild_div/rec_list_size
+    div_geo = delta_proportionality
+    div=div_geo_cat_weight*div_geo+(1-div_geo_cat_weight)*div_cat
+    return (score**(1-div_weight))*(div**div_weight)
+
+
+def persongeocat_objective_function(poi_id,score,
+                                rec_list,rec_list_size,
+                                poi_cats,undirected_category_tree,relevant_cats,
+                                log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                div_geo_cat_weight,div_weight,current_proportionality):
+    ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
+    gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
+    pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
+    objective_value=NORM_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
+    return objective_value
+
+
+
 def geodiv(uid,training_matrix,tmp_rec_list,tmp_score_list,
             poi_neighbors,K,div_weight):
     
