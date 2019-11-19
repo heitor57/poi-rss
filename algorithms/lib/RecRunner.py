@@ -195,7 +195,7 @@ class RecRunner:
     @staticmethod
     def get_final_parameters():
         return  {
-            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.75},
+            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.75, 'heuristic': 'local_max'},
             "persongeocat": {'div_weight':0.75,'cat_div_method':'ld'},
             "geodiv": {'div_weight':0.75},
             "ld": {'div_weight':0.75},
@@ -224,7 +224,7 @@ class RecRunner:
         #string="_" if len(list_parameters)>0 else ""
     def get_final_rec_short_name(self):
         if self.final_rec == 'geocat':
-            return f"{self.get_base_rec_short_name()}_{self.final_rec}"
+            return f"{self.get_base_rec_short_name()}_{self.final_rec}_{self.final_rec_parameters['heuristic']}"
         elif self.final_rec == 'persongeocat':
             return f"{self.get_base_rec_short_name()}_{self.final_rec}_{self.final_rec_parameters['cat_div_method']}"
         elif self.final_rec == 'geodiv':
@@ -391,7 +391,8 @@ class RecRunner:
 
             predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores,
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
-                                                         self.final_rec_parameters['div_geo_cat_weight'],self.final_rec_parameters['div_weight'])
+                                                         self.final_rec_parameters['div_geo_cat_weight'],self.final_rec_parameters['div_weight'],
+                                                         self.final_rec_parameters['heuristic'])
 
             # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
 
@@ -593,6 +594,7 @@ class RecRunner:
 
 
     def run_final_recommender(self):
+
         final_recommender=self.FINAL_RECOMMENDERS[self.final_rec]
         if len(self.user_base_predicted_lid)>0:
             final_recommender()
