@@ -14,7 +14,7 @@ import time
 from datetime import datetime
 
 import numpy as np
-from progressbar import progressbar
+from tqdm import tqdm
 from scipy.stats import describe
 import matplotlib.pyplot as plt
 
@@ -335,7 +335,7 @@ class RecRunner:
         print("Running usg")
         futures = [executor.submit(
             self.run_usg, U, S, G, uid, alpha, beta) for uid in all_uids]
-        results = [futures[i].result() for i in progressbar(range(len(futures)))]
+        results = [futures[i].result() for i in tqdm(range(len(futures)))]
         print("usg terminated")
         # dview.map_sync(run_usg,range(user_num))
 
@@ -353,7 +353,7 @@ class RecRunner:
         futures = [executor.submit(self.run_mostpopular, uid)
                    for uid in self.all_uids]
         # results = [future.result() for future in futures]
-        results = [futures[i].result() for i in progressbar(range(len(futures)))]
+        results = [futures[i].result() for i in tqdm(range(len(futures)))]
 
         result_out = open(self.data_directory+"result/reclist/"+self.get_base_rec_file_name(), 'w')
         for json_string_result in results:
@@ -408,7 +408,7 @@ class RecRunner:
 
         futures = [executor.submit(self.run_geocat, uid)
                 for uid in self.all_uids]
-        results = [futures[i].result() for i in progressbar(range(len(futures)))]
+        results = [futures[i].result() for i in tqdm(range(len(futures)))]
         result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
@@ -464,7 +464,7 @@ class RecRunner:
 
         futures = [executor.submit(self.run_persongeocat, uid)
                 for uid in self.all_uids]
-        results = [futures[i].result() for i in progressbar(range(len(futures)))]
+        results = [futures[i].result() for i in tqdm(range(len(futures)))]
         result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
@@ -500,7 +500,7 @@ class RecRunner:
 
         futures = [executor.submit(self.run_geodiv, uid)
                 for uid in self.all_uids]
-        results = [futures[i].result() for i in progressbar(range(len(futures)))]
+        results = [futures[i].result() for i in tqdm(range(len(futures)))]
         result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
@@ -529,7 +529,7 @@ class RecRunner:
 
         futures = [executor.submit(self.run_ld, uid)
                 for uid in self.all_uids]
-        results = [futures[i].result() for i in progressbar(range(len(futures)))]
+        results = [futures[i].result() for i in tqdm(range(len(futures)))]
         result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
@@ -566,7 +566,7 @@ class RecRunner:
 
         futures = [executor.submit(self.run_binomial, uid)
                 for uid in self.all_uids]
-        results = [futures[i].result() for i in progressbar(range(len(futures)))]
+        results = [futures[i].result() for i in tqdm(range(len(futures)))]
         result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
@@ -650,7 +650,7 @@ class RecRunner:
             executor = ProcessPoolExecutor()
             futures = [executor.submit(self.eval, uid,base=base,k=k)
                     for uid in self.all_uids]
-            results = [futures[i].result() for i in progressbar(range(len(futures)))]
+            results = [futures[i].result() for i in tqdm(range(len(futures)))]
 
             for json_string_result in results:
                 result_out.write(json_string_result)

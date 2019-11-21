@@ -2,7 +2,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import scipy
-from progressbar import progressbar
+from tqdm import tqdm
 
 import geocat.objfunc as geocat
 
@@ -79,7 +79,7 @@ class CatDivPropensity():
         for cat_visits in self.users_categories_visits:
             futures.append(executor.submit(func, cat_visits))
         self.cat_div_propensity = [futures[i].result()
-                                   for i in progressbar(range(len(futures)))]
+                                   for i in tqdm(range(len(futures)))]
         return self.cat_div_propensity
 
 
