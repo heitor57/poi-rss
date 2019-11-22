@@ -32,7 +32,6 @@ class Particle:
 		return "Items: "+str(self.item_list)+"\nF.O: Unknown"
 
 	def clear(self):
-		self.size = size
 		self.best_fo = 0
 		self.best_relevance = 0
 		self.best_diversity = 0
@@ -55,9 +54,13 @@ class Particle:
 		self.score_list = other_particle.score_list.copy()
 	
 	def add_item(self, item, item_score):
-		if len(self.item_list)+1 == self.size:
+		if len(self.item_list) < self.size:
 			self.item_list.append(item)
 			self.score_list.append(item_score)
 			return 0
 		else:
 			return -1
+
+	def set_initial_best(self):
+		self.best_item_list = self.item_list.copy()
+		self.best_score_list = self.score_list.copy()

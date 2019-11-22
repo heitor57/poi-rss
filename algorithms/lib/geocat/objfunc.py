@@ -75,8 +75,7 @@ def gc(poi_id,rec_list,relevant_cats,poi_cats):
     return count_equal/len(relevant_cats)
 
 def gc_list(rec_list,relevant_cats,poi_cats):
-    gc(rec_list[-1],rec_list[:-1],relevant_cats,poi_cats)
-
+    return gc(rec_list[-1],rec_list[:-1],relevant_cats,poi_cats)
 
 def update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover,poi_neighbors,neighbors):
     log_size=len(log_poi_ids)

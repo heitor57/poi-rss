@@ -32,7 +32,6 @@ class RecList:
 		return self.item_list, self.score_list
 
 	def clear(self):
-		self.size = 0
 		self.fo = 0
 		self.diversity = 0
 		self.relevance = 0
@@ -56,7 +55,7 @@ class RecList:
 	def clone_particle(self, particle):
 		self.clear()
 		self.item_list = particle.best_item_list.copy()
-		self.score_list = particle.base_rec_list.copy()
+		self.score_list = particle.best_score_list.copy()
 		self.size = particle.size
 		self.fo = particle.best_fo
 		self.relevance = particle.best_relevance
@@ -66,18 +65,18 @@ class RecList:
 		neighbour = RecList(self.size)
 		neighbour.clone(self)
 
-		index_1 = randint(0, self.size)
-		index_2 = randint(0, self.size)
+		index_1 = randint(0, self.size-1)
+		index_2 = randint(0, self.size-1)
 		while index_1 == index_2:
-			index_2 = randint(0, self.size)
+			index_2 = randint(0, self.size-1)
 
-		index_3 = randint(0, base_rec_list_size)
+		index_3 = randint(0, base_rec_list_size-1)
 		while base_rec_list[index_3] in neighbour:
-			index_3 = randint(0, base_rec_list_size)
+			index_3 = randint(0, base_rec_list_size-1)
 
-		index_4 = randint(0, base_rec_list_size)
+		index_4 = randint(0, base_rec_list_size-1)
 		while index_3 == index_4 or base_rec_list[index_4] in neighbour:
-			index_4 = randint(0, base_rec_list_size)
+			index_4 = randint(0, base_rec_list_size-1)
 
 		neighbour.item_list[index_1] = base_rec_list[index_3]
 		neighbour.score_list[index_1] = base_rec_score_list[index_3]

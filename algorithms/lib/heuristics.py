@@ -1,9 +1,10 @@
-import geocat.objfunc as objfunc
+from geocat import objfunc
 import metrics
 from RecList import RecList
 from Swarm import Swarm
 from Particle import Particle
 from random import randint
+from sys import exit
 
 def local_max(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirected_category_tree,
 				rec_list, relevant_cats, log_poi_ids, log_neighbors, poi_cover, current_proportionality,
@@ -50,9 +51,9 @@ def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undire
 
 	max_iteration = 100
 	iteration = 0
-	neighbour_number = 20
+	neighbour_number = 100
 	list_size = K
-	tabu_size = 100
+	tabu_size = 1000
 	tabu_index = 0
 
 	# div_geo_cat_weight = 0.75 # beta,this is here because of the work to be done on parameter customization for each user
@@ -109,15 +110,15 @@ def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undire
 
 def pso_roulette_shuffle(roulette_list, roulette_size):
 	for i in range(roulette_size):
-		r = randint(roulette_size)
+		r = randint(0, roulette_size-1)
 		temp = roulette_list[i]
 		roulette_list[i] = roulette_list[r]
 		roulette_list[r] = temp
 
 def pso_roulette(w, c1, c2):
 	roulette_list = []
-	t1 = w * 10
-	t2 = c1 * 10
+	t1 = int(w * 10)
+	t2 = int(c1 * 10)
 	t3 = 10 - (t1 + t2)
 
 	for i in range(t1):
@@ -130,7 +131,7 @@ def pso_roulette(w, c1, c2):
 		roulette_list.append(3)
 
 	pso_roulette_shuffle(roulette_list, len(roulette_list))
-	roulette_position = randint(10)
+	roulette_position = randint(0, 9)
 	return roulette_list[roulette_position]
 
 def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirected_category_tree,
@@ -138,7 +139,7 @@ def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, und
 	
 	swarm_size = 30
 	particle_size = 10
-	base_rec_size = K
+	base_rec_size = len(tmp_rec_list)
 	iteration = 0
 	max_iteration = 100
 
@@ -151,10 +152,10 @@ def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, und
 	# Particle swarm
 	swarm = Swarm(swarm_size)
 	swarm.create_particles(tmp_rec_list, tmp_score_list, particle_size, base_rec_size)
+	cont = 0
 
 	# Calculate local best for each particle and global best
 	for i in range(swarm_size):
-
 		metrics.pso_calculate_fo(swarm[i], poi_cats, undirected_category_tree, user_log, poi_neighbors,
 								div_geo_cat_weight, div_weight, K, relevant_cats, dbest)
 
@@ -175,7 +176,7 @@ def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, und
 
 				while item_id == -1 or item_id not in swarm[i]:
 					particle_choice = pso_roulette(0.3, 0.3, 0.6)
-					position = randint(10)
+					position = randint(0, particle_size-1)
 					
 					if (particle_choice == 1):
 						item_id = swarm[i].item_list[position]
@@ -189,6 +190,7 @@ def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, und
 
 				new_particle.add_item(item_id, item_score)
 			
+			new_particle.set_initial_best()
 			swarm[i].clone(new_particle)
 
 			# Calcule local best and global best
