@@ -310,7 +310,8 @@ class RecRunner:
             #actual = ground_truth[uid]
             # print(uid)
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        return None
+        print("ERROR")
+        return "ERROR"
 
     def usg(self):
         training_matrix = self.training_matrix
