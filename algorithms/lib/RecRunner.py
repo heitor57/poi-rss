@@ -282,7 +282,8 @@ class RecRunner:
         print(f"{CITY} city base loaded")
         self.all_uids = list(range(user_num))
         self.all_lids = list(range(poi_num))
-
+    def not_in_ground_truth_message(uid):
+        print(f"{uid} not in ground_truth [ERROR]")
     def run_usg(self, U, S, G, uid, alpha, beta):
         if uid in self.ground_truth:
 
@@ -310,8 +311,8 @@ class RecRunner:
             #actual = ground_truth[uid]
             # print(uid)
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        print("ERROR")
-        return "ERROR"
+        self.not_in_ground_truth_message()
+        return ""
 
     def usg(self):
         training_matrix = self.training_matrix
