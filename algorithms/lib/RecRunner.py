@@ -380,7 +380,8 @@ class RecRunner:
             self.user_base_predicted_lid[uid]=predicted
             self.user_base_predicted_score[uid]=overall_scores
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        return None
+        self.not_in_ground_truth_message()
+        return ""
 
     def run_geocat(self, uid):
         if uid in self.ground_truth:
@@ -403,7 +404,8 @@ class RecRunner:
             overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        return None
+        self.not_in_ground_truth_message()
+        return ""
 
     def geocat(self):
         executor = ProcessPoolExecutor()
@@ -442,7 +444,8 @@ class RecRunner:
             overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        return None
+        self.not_in_ground_truth_message()
+        return ""
 
     def persongeocat(self):
         print("Computing geographic diversification propensity")
@@ -495,7 +498,8 @@ class RecRunner:
             overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        return None
+        self.not_in_ground_truth_message()
+        return ""
 
     def geodiv(self):
         executor = ProcessPoolExecutor()
@@ -524,7 +528,8 @@ class RecRunner:
             overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        return None
+        self.not_in_ground_truth_message()
+        return ""
     
     def ld(self):
         executor = ProcessPoolExecutor()
@@ -553,7 +558,8 @@ class RecRunner:
             overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        return None
+        self.not_in_ground_truth_message()
+        return ""
     def binomial(self):
         self.binomial=Binomial(self.training_matrix,self.poi_cats,
             self.final_rec_parameters['div_weight'],self.final_rec_parameters['alpha'])
