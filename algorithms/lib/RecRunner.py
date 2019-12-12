@@ -617,10 +617,11 @@ class RecRunner:
             self.run_base_recommender()
     def run_all_final(self):
         print(f"Running all final recommenders, base recommender is {self.base_rec}")
-        for recommender in self.FINAL_RECOMMENDERS and recommender not in self.except_final_rec:
-            self.final_rec = recommender
-            print(f"Running {recommender}")
-            self.run_final_recommender()
+        for recommender in self.FINAL_RECOMMENDERS:
+            if recommender not in self.except_final_rec:
+                self.final_rec = recommender
+                print(f"Running {recommender}")
+                self.run_final_recommender()
     def run_all_eval(self):
         print(f"Evaluating all final recommenders, base recommender is {self.base_rec}")
         for recommender in self.FINAL_RECOMMENDERS:
