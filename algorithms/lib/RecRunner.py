@@ -89,7 +89,7 @@ class RecRunner:
         # }
         self.base_rec = base_rec
         self.final_rec = final_rec
-
+        
         self.base_rec_parameters = base_rec_parameters
         self.final_rec_parameters = final_rec_parameters
 
@@ -109,6 +109,7 @@ class RecRunner:
 
         self.metrics = {}
         self.metrics_name = ['precision', 'recall', 'pr', 'ild', 'gc', 'epc']
+        self.except_final_rec = except_final_rec
 
     @property
     def data_directory(self):
