@@ -67,7 +67,7 @@ class RecRunner:
 
     def __init__(self, base_rec, final_rec, city,
                  base_rec_list_size, final_rec_list_size, data_directory,
-                 base_rec_parameters={}, final_rec_parameters={}):
+                 base_rec_parameters={}, final_rec_parameters={},except_final_rec=[]):
         self.BASE_RECOMMENDERS = {
             "mostpopular": self.mostpopular,
             "usg": self.usg
@@ -616,7 +616,7 @@ class RecRunner:
             self.run_base_recommender()
     def run_all_final(self):
         print(f"Running all final recommenders, base recommender is {self.base_rec}")
-        for recommender in self.FINAL_RECOMMENDERS:
+        for recommender in self.FINAL_RECOMMENDERS and recommender not in self.except_final_rec:
             self.final_rec = recommender
             print(f"Running {recommender}")
             self.run_final_recommender()
