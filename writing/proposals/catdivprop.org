@@ -1,0 +1,74 @@
+#+TITLE: Proposals to measure categoric diversification propensity of users
+#+AUTHOR: Heitor Lourenço Werneck
+#+OPTIONS: toc:nil
+#+LATEX_HEADER:\usepackage{float}
+#+LATEX_HEADER:\usepackage{aliascnt}
+
+
+#+BEGIN_EXPORT latex
+\newaliascnt{eqfloat}{equation}
+\newfloat{eqfloat}{h}{eqflts}
+\floatname{eqfloat}{Equation}
+
+\newcommand*{\ORGeqfloat}{}
+\let\ORGeqfloat\eqfloat
+\def\eqfloat{%
+  \let\ORIGINALcaption\caption
+  \def\caption{%
+    \addtocounter{equation}{-1}%
+    \ORIGINALcaption
+  }%
+  \ORGeqfloat
+}
+#+END_EXPORT
+
+
+#+BEGIN_EXPORT latex
+\begin{eqfloat}
+\begin{equation}
+\begin{aligned}
+u \in U && \text{Users}
+\\
+CatsVisits_{uc} \in \mathbb{N} && \text{Visits of user u in category c}
+\\
+sCatsVisits_u=\sqrt{\frac{\sum_{c=1}^{|CatsVisits_u|}(CatsVisits_{uc}-\bar{CatsVisits_{uc}})^2}{|CatsVisits_u|-1}} && \text{std of cats visits}
+\\
+CatDivProp=\delta_u=1-\frac{2\cdot sCatsVisits_u}{max(CatsVisits_u)-min(CatsVisits_u)}
+\\
+sCatsVisits_u = 0 \implies \delta_u=0
+\end{aligned}
+\end{equation}
+\caption{Standard deviation formula using categories visits of user}
+\end{eqfloat}
+#+END_EXPORT
+
+
+#+BEGIN_EXPORT latex
+\begin{eqfloat}
+\begin{equation}
+\begin{aligned}
+u \in U && \text{Users}
+\\
+CatsVisits_{uc} \in \mathbb{N}
+\\
+\text{Visits of user u in category c}
+\\
+VisitedCat_{uc} \in Category = \{"bakery","restaurant",...\}
+\\
+VisitedCat_{u} \in Category = \{\{"bakery","restaurant"\},...\}
+\\
+sCatsVisits_u=\sqrt{\frac{\sum_{c=1}^{|CatsVisits_u|}(CatsVisits_{uc}-\bar{CatsVisits_{uc}})^2}{|CatsVisits_u|-1}}
+\\
+\text{std of cats visits}
+\\
+dissim_{cat}(cat_1,cat_2)=1-\frac{1}{(1+sp(cat_1,cat_2))}
+\\
+CatDivProp=\delta_u=\frac{\sum_{i=1}^{|VisitedCat_u|}\sum_{j=1,j\neq i}^{|VisitedCat_u|}dissim_{cat}(VisitedCat_{ui},VisitedCat_{uj})}
+{|VisitedCat_u|^2-|VisitedCat_u|}
+\end{aligned}
+\end{equation}
+\caption{Dissimilarity of categories visits}
+\end{eqfloat}
+#+END_EXPORT
+
+
