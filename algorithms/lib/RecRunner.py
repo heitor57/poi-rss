@@ -603,6 +603,7 @@ class RecRunner:
     
     def run_base_recommender(self):
         base_recommender=self.BASE_RECOMMENDERS[self.base_rec]
+        print(f"Running {self.base_rec} final recommender")
         base_recommender()
 
 
@@ -610,6 +611,7 @@ class RecRunner:
 
         final_recommender=self.FINAL_RECOMMENDERS[self.final_rec]
         if len(self.user_base_predicted_lid)>0:
+            print(f"Running {self.final_rec} final recommender")
             final_recommender()
         else:
             print("User base predicted list is empty")
