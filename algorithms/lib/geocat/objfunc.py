@@ -155,7 +155,7 @@ def NORM_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size
 
     if delta_proportionality<0:
         delta_proportionality=0
-    div_cat = gc_div+ild_div/rec_list_size
+    div_cat = (gc_div+ild_div)/2
     div_geo = delta_proportionality
     div=div_geo_cat_weight*div_geo+(1-div_geo_cat_weight)*div_cat
     return (score**(1-div_weight))*(div**div_weight)
