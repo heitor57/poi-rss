@@ -4,7 +4,6 @@
 #+LATEX_HEADER:\usepackage{float}
 #+LATEX_HEADER:\usepackage{aliascnt}
 
-
 #+BEGIN_EXPORT latex
 \newaliascnt{eqfloat}{equation}
 \newfloat{eqfloat}{h}{eqflts}
@@ -21,6 +20,24 @@
   \ORGeqfloat
 }
 #+END_EXPORT
+
+
+
+#+BEGIN_EXPORT latex
+\begin{eqfloat}
+\begin{equation}
+\begin{aligned}
+div_{cat}(i,R) = GenreCov(\{i\}\cup R) + \frac{ILD(\{i\}\cup R)}{|R|}
+\\
+\downarrow
+\\
+div_{cat}(i,R) = \frac{GenreCov(\{i\}\cup R) + ILD(\{i\}\cup R)}{2}
+\end{aligned}
+\end{equation}
+\caption{Redefinition of category diversification formula}
+\end{eqfloat}
+#+END_EXPORT
+
 
 
 #+BEGIN_EXPORT latex
