@@ -431,12 +431,16 @@ class RecRunner:
             if self.geo_div_propensity[uid] == 0 and self.cat_div_propensity[uid] == 0:
                 predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores,
                                                 self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
-                                                0,0)
+                                                             0,0,
+                                                             'local_max',
+                                                             gcobjfunc.persongeocat_objective_function)
             else:
                 div_geo_cat_weight=(self.geo_div_propensity[uid])/(self.geo_div_propensity[uid]+self.cat_div_propensity[uid])
                 predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores,
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
-                                                         div_geo_cat_weight,self.final_rec_parameters['div_weight'])
+                                                             div_geo_cat_weight,self.final_rec_parameters['div_weight'],
+                                                             'local_max',
+                                                             gcobjfunc.persongeocat_objective_function)
 
             # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
 

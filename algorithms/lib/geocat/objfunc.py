@@ -225,7 +225,8 @@ def geodiv(uid,training_matrix,tmp_rec_list,tmp_score_list,
     return rec_list,final_scores
 def geocat(uid,training_matrix,tmp_rec_list,tmp_score_list,
           poi_cats,poi_neighbors,K,undirected_category_tree,
-          div_geo_cat_weight,div_weight,method='local_max'):
+           div_geo_cat_weight,div_weight,method='local_max',
+           objective_function=geocat_objective_function):
     range_K=range(K)
     rec_list=[]
 
@@ -268,8 +269,9 @@ def geocat(uid,training_matrix,tmp_rec_list,tmp_score_list,
 
     if method == 'local_max':
         rec_list,final_scores = heuristics.local_max(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors,
-                K, undirected_category_tree, rec_list, relevant_cats, log_poi_ids, log_neighbors, poi_cover,
-                current_proportionality, div_geo_cat_weight, div_weight, final_scores)
+                                                     K, undirected_category_tree, rec_list, relevant_cats, log_poi_ids, log_neighbors, poi_cover,
+                                                     current_proportionality, div_geo_cat_weight, div_weight, final_scores,
+                                                     objective_function)
 
     elif method == 'tabu_search':
         rec_list,final_scores = heuristics.tabu_search(tmp_rec_list, tmp_score_list, poi_cats,
