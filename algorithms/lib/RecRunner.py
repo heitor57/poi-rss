@@ -283,6 +283,7 @@ class RecRunner:
         print(f"{CITY} city base loaded")
         self.all_uids = list(range(user_num))
         self.all_lids = list(range(poi_num))
+        self.test_data()
     def not_in_ground_truth_message(uid):
         print(f"{uid} not in ground_truth [ERROR]")
     def run_usg(self, U, S, G, uid, alpha, beta):
@@ -758,6 +759,7 @@ class RecRunner:
             
                 # ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean[rec_using].values())),barWidth,label=rec_using,color=palette(i))
     def test_data(self):
+        has_some_error_global = False
         for i in self.all_uids:
             has_some_error = False
             test_size = len(self.ground_truth[i])
@@ -765,10 +767,15 @@ class RecRunner:
             if test_size == 0:
                 print(f"user {i} with empty ground truth")
                 has_some_error = True
+                # remove from tests
+                self.all_uids.remove(i)
             if train_size == 0:
-                print(f"user {i} with empty training data")
+                print(f"user {i} with empty training data!!!!! Really bad error")
                 has_some_error = True
             if has_some_error:
+                has_some_error_global = True
                 print("Training size is %d, test size is %d" %\
                       (train_size,test_size))
+        if not has_some_error_global:
+            print("No error encountered in base")
             
