@@ -62,7 +62,9 @@ def ld(uid,training_matrix,tmp_rec_list,tmp_score_list,
     return rec_list,final_scores
     
 def gc(poi_id,rec_list,relevant_cats,poi_cats):
-
+    # People who doenst have relevant cats have genre coverage equals to 0
+    if len(relevant_cats) == 0:
+        return 0
     cats=set(poi_cats[poi_id])
     for lid in rec_list:
         cats.update(poi_cats[lid])
