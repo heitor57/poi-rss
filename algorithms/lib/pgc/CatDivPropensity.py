@@ -58,6 +58,7 @@ class CatDivPropensity():
                     dis_sum += geocat.category_dis_sim(
                         cat1, cat2, self.undirected_category_tree)
         length = len(cats_visits)
+        # print(length,dis_sum/(length**2-length))
         return dis_sum/(length**2-length)
 
     def cat_div_binomial(self):
@@ -73,13 +74,15 @@ class CatDivPropensity():
         # }
         func = self.CAT_METHODS.get(self.cat_div_method,
                                     lambda: "Invalid method")
-
-        executor = ProcessPoolExecutor()
-        futures = []
-        for cat_visits in self.users_categories_visits:
-            futures.append(executor.submit(func, cat_visits))
-        self.cat_div_propensity = [futures[i].result()
-                                   for i in tqdm(range(len(futures)))]
+        self.cat_div_propensity=[]
+        for i in tqdm(range(len(self.users_categories_visits))):
+            self.cat_div_propensity.append(func(self.users_categories_visits[i]))
+        # executor = ProcessPoolExecutor()
+        # futures = []
+        # for cat_visits in self.users_categories_visits:
+        #     futures.append(executor.submit(func, cat_visits))
+        # self.cat_div_propensity = [futures[i].result()
+        #                            for i in tqdm(range(len(futures)), desc='CatDivProp')]
         return self.cat_div_propensity
 
 
