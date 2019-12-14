@@ -757,3 +757,18 @@ class RecRunner:
             fig.savefig(self.data_directory+f"result/img/all_met_{str(k)}_{timestamp}.png")
             
                 # ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean[rec_using].values())),barWidth,label=rec_using,color=palette(i))
+    def test_data(self):
+        for i in self.all_uids:
+            has_some_error = False
+            test_size = len(self.ground_truth[i])
+            train_size = np.count_nonzero(self.training_matrix[i])
+            if test_size == 0:
+                print(f"user {i} with empty ground truth")
+                has_some_error = True
+            if train_size == 0:
+                print(f"user {i} with empty training data")
+                has_some_error = True
+            if has_some_error:
+                print("Training size is %d, test size is %d" %\
+                      (train_size,test_size))
+            
