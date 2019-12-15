@@ -12,6 +12,7 @@ networkx = "*"
 scipy = "*"
 matplotlib = "*"
 tqdm = "*"
+pympler = "*"
 
 [requires]
 python_version = "3.7"

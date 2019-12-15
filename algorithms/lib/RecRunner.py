@@ -45,7 +45,7 @@ NEIGHBOR = 'neighbor/'  # neighbors of pois
 METRICS = 'result/metrics/'
 METRICS = 'result/reclist/'
 
-CHKS = 10 # chunk size for process pool executor
+CHKS = 40 # chunk size for process pool executor
 
 def normalize(scores):
     scores = np.array(scores, dtype=np.float128)
