@@ -3,11 +3,13 @@ from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 import scipy
 from tqdm import tqdm
+from parallel_util import run_parallel
 
 import geocat.objfunc as geocat
 
 
 class CatDivPropensity():
+    CHKS = 50 # chunk size for parallel pool executor
     def __init__(self, training_matrix, users_categories_visits,
                  undirected_category_tree, cat_div_method='std_norm'):
         self.training_matrix = training_matrix
@@ -74,9 +76,9 @@ class CatDivPropensity():
         # }
         func = self.CAT_METHODS.get(self.cat_div_method,
                                     lambda: "Invalid method")
-        self.cat_div_propensity=[]
-        for i in tqdm(range(len(self.users_categories_visits))):
-            self.cat_div_propensity.append(func(self.users_categories_visits[i]))
+        args=[(i,) for i in self.users_categories_visits]
+        self.cat_div_propensity = run_parallel(func, args, self.CHKS)
+
         # executor = ProcessPoolExecutor()
         # futures = []
         # for cat_visits in self.users_categories_visits:

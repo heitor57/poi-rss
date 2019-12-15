@@ -12,6 +12,7 @@ from concurrent.futures import ProcessPoolExecutor
 import json
 import time
 from datetime import datetime
+import itertools
 
 import numpy as np
 from tqdm import tqdm
@@ -28,6 +29,7 @@ from pgc.CatDivPropensity import CatDivPropensity
 from constants import experiment_constants
 import metrics
 from geocat.Binomial import Binomial
+from parallel_util import run_parallel
 
 DATA_DIRECTORY = '../data'  # directory with all data
 
@@ -43,6 +45,7 @@ NEIGHBOR = 'neighbor/'  # neighbors of pois
 METRICS = 'result/metrics/'
 METRICS = 'result/reclist/'
 
+CHKS = 10 # chunk size for process pool executor
 
 def normalize(scores):
     scores = np.array(scores, dtype=np.float128)
@@ -64,7 +67,15 @@ def dict_to_list(d):
 
 
 class RecRunner:
-
+    def save_result(self,results,base=True):
+        if base:
+            result_out = open(self.data_directory+"result/reclist/" + self.get_base_rec_file_name(), 'w')
+        else:
+            result_out = open(self.data_directory+"result/reclist/" + self.get_final_rec_file_name(), 'w')
+        for json_string_result in results:
+            result_out.write(json_string_result)
+        result_out.close()
+    
     def __init__(self, base_rec, final_rec, city,
                  base_rec_list_size, final_rec_list_size, data_directory,
                  base_rec_parameters={}, final_rec_parameters={},except_final_rec=[]):
@@ -284,8 +295,10 @@ class RecRunner:
         self.all_uids = list(range(user_num))
         self.all_lids = list(range(poi_num))
         self.test_data()
+
     def not_in_ground_truth_message(uid):
         print(f"{uid} not in ground_truth [ERROR]")
+
     def run_usg(self, U, S, G, uid, alpha, beta):
         if uid in self.ground_truth:
 
@@ -335,34 +348,65 @@ class RecRunner:
         S.compute_friend_sim(social_relations, training_matrix)
         G.fit_distance_distribution(training_matrix, poi_coos)
 
-        executor = ProcessPoolExecutor()
         print("Running usg")
-        futures = [executor.submit(
-            self.run_usg, U, S, G, uid, alpha, beta) for uid in all_uids]
-        results = [futures[i].result() for i in tqdm(range(len(futures)))]
+        args=[(U, S, G, uid, alpha, beta) for uid in self.all_uids]
+        results = run_parallel(self.run_usg,args,CHKS)
         print("usg terminated")
-        # dview.map_sync(run_usg,range(user_num))
 
-        result_out = open(self.data_directory+"result/reclist/" + self.get_base_rec_file_name(), 'w')
-        for json_string_result in results:
-            result_out.write(json_string_result)
-        result_out.close()
-#        print("Saved Rec List in "+self.data_directory+"result/reclist/" +
-#             self.city+"_sigir11_top_" + str(top_k) + ".json")
+        self.save_result(results,base=True)
 
     def mostpopular(self):
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_mostpopular,args,CHKS)
+        self.save_result(results,base=True)
 
-        executor = ProcessPoolExecutor()
+    def geocat(self):
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_geocat,args,CHKS)
+        self.save_result(results,base=False)
 
-        futures = [executor.submit(self.run_mostpopular, uid)
-                   for uid in self.all_uids]
-        # results = [future.result() for future in futures]
-        results = [futures[i].result() for i in tqdm(range(len(futures)))]
+    def persongeocat(self):
+        print("Computing geographic diversification propensity")
+        pgeo_div_runner = GeoDivPropensity(self.training_matrix, self.poi_coos)
+        self.geo_div_propensity = pgeo_div_runner.geo_div_walk()
+        
+        pcat_div_runner = CatDivPropensity(
+            self.training_matrix,
+            cat_utils.get_users_cat_visits(self.training_matrix,
+                                           self.poi_cats),
+            self.undirected_category_tree,
+            cat_div_method=self.final_rec_parameters['cat_div_method'])
+        print("Computing categoric diversification propensity with",
+              self.final_rec_parameters['cat_div_method'])
+        self.cat_div_propensity=pcat_div_runner.compute_cat_div_propensity()
+       #print(self.cat_div_propensity)
+        # self.beta=geo_div_propensity/np.add(geo_div_propensity,cat_div_propensity)
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_persongeocat,args,CHKS)
+        self.save_result(results,base=False)
 
-        result_out = open(self.data_directory+"result/reclist/"+self.get_base_rec_file_name(), 'w')
-        for json_string_result in results:
-            result_out.write(json_string_result)
-        result_out.close()
+    def geodiv(self):
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_geodiv,args,CHKS)
+        self.save_result(results,base=False)
+
+    def ld(self):
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_ld,args,CHKS)
+        self.save_result(results,base=False)
+
+    def binomial(self):
+        self.binomial=Binomial(self.training_matrix,self.poi_cats,
+            self.final_rec_parameters['div_weight'],self.final_rec_parameters['alpha'])
+        self.binomial.compute_all_probabilities()
+        # predicted = self.user_base_predicted_lid[0][
+        #     0:self.base_rec_list_size]
+        # overall_scores = self.user_base_predicted_score[0][
+        #     0:self.base_rec_list_size]
+        # self.binomial.binomial(0,predicted,overall_scores,self.final_rec_list_size)
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_binomial,args,CHKS)
+        self.save_result(results,base=False)
 
     def run_mostpopular(self, uid):
         if uid in self.ground_truth:
@@ -409,18 +453,6 @@ class RecRunner:
         self.not_in_ground_truth_message()
         return ""
 
-    def geocat(self):
-        executor = ProcessPoolExecutor()
-
-        futures = [executor.submit(self.run_geocat, uid)
-                for uid in self.all_uids]
-        results = [futures[i].result() for i in tqdm(range(len(futures)))]
-        result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
-        for json_string_result in results:
-            result_out.write(json_string_result)
-        result_out.close()
-
-
     def run_persongeocat(self,uid):
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
@@ -453,36 +485,6 @@ class RecRunner:
         self.not_in_ground_truth_message()
         return ""
 
-    def persongeocat(self):
-        print("Computing geographic diversification propensity")
-        pgeo_div_runner = GeoDivPropensity(self.training_matrix, self.poi_coos)
-        self.geo_div_propensity = pgeo_div_runner.geo_div_walk()
-        
-        pcat_div_runner = CatDivPropensity(
-            self.training_matrix,
-            cat_utils.get_users_cat_visits(self.training_matrix,
-                                           self.poi_cats),
-            self.undirected_category_tree,
-            cat_div_method=self.final_rec_parameters['cat_div_method'])
-        print("Computing categoric diversification propensity with",
-              self.final_rec_parameters['cat_div_method'])
-        self.cat_div_propensity=pcat_div_runner.compute_cat_div_propensity()
-       #print(self.cat_div_propensity)
-        # self.beta=geo_div_propensity/np.add(geo_div_propensity,cat_div_propensity)
-    
-
-        executor = ProcessPoolExecutor()
-
-        futures = [executor.submit(self.run_persongeocat, uid)
-                for uid in self.all_uids]
-        results = [futures[i].result() for i in tqdm(range(len(futures)))]
-        result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
-        for json_string_result in results:
-            result_out.write(json_string_result)
-        result_out.close() 
-
-
-        # cat_div_propensity= pcat_div_runner
 
     def run_geodiv(self, uid):
         if uid in self.ground_truth:
@@ -507,17 +509,7 @@ class RecRunner:
         self.not_in_ground_truth_message()
         return ""
 
-    def geodiv(self):
-        executor = ProcessPoolExecutor()
 
-        futures = [executor.submit(self.run_geodiv, uid)
-                for uid in self.all_uids]
-        results = [futures[i].result() for i in tqdm(range(len(futures)))]
-        result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
-        for json_string_result in results:
-            result_out.write(json_string_result)
-        result_out.close()
-    
     def run_ld(self, uid):
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
@@ -537,16 +529,6 @@ class RecRunner:
         self.not_in_ground_truth_message()
         return ""
     
-    def ld(self):
-        executor = ProcessPoolExecutor()
-
-        futures = [executor.submit(self.run_ld, uid)
-                for uid in self.all_uids]
-        results = [futures[i].result() for i in tqdm(range(len(futures)))]
-        result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
-        for json_string_result in results:
-            result_out.write(json_string_result)
-        result_out.close()
     
     def run_binomial(self,uid):
         if uid in self.ground_truth:
@@ -566,25 +548,6 @@ class RecRunner:
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         self.not_in_ground_truth_message()
         return ""
-    def binomial(self):
-        self.binomial=Binomial(self.training_matrix,self.poi_cats,
-            self.final_rec_parameters['div_weight'],self.final_rec_parameters['alpha'])
-        self.binomial.compute_all_probabilities()
-
-        # predicted = self.user_base_predicted_lid[0][
-        #     0:self.base_rec_list_size]
-        # overall_scores = self.user_base_predicted_score[0][
-        #     0:self.base_rec_list_size]
-        # self.binomial.binomial(0,predicted,overall_scores,self.final_rec_list_size)
-        executor = ProcessPoolExecutor()
-
-        futures = [executor.submit(self.run_binomial, uid)
-                for uid in self.all_uids]
-        results = [futures[i].result() for i in tqdm(range(len(futures)))]
-        result_out = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'w')
-        for json_string_result in results:
-            result_out.write(json_string_result)
-        result_out.close()
 
     def load_base_predicted(self):
         result_file = open(self.data_directory+"result/reclist/"+self.get_base_rec_file_name(), 'r')
@@ -632,9 +595,14 @@ class RecRunner:
     def run_all_eval(self):
         print(f"Evaluating all final recommenders, base recommender is {self.base_rec}")
         for recommender in self.FINAL_RECOMMENDERS:
-            self.final_rec = recommender
-            print(f"Running {recommender}")
-            self.load_final_predicted()
+            try:
+                self.final_rec = recommender
+                print(f"Running {recommender}")
+                self.load_final_predicted()
+            except Exception as e:
+                print(e)
+                print(f"Maybe recommender {recommender} doesnt have final predicted")
+                continue
             self.eval_rec_metrics()
 
     def eval(self,uid,*,base=False,k):
