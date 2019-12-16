@@ -65,34 +65,6 @@ def dict_to_list_gen(d):
 def dict_to_list(d):
     return list(dict_to_list_gen(d))
 
-# def singleton(cls):
-#     instance = [None]
-#     def wrapper(*args, **kwargs):
-#         if instance[0] is None:
-#             instance[0] = cls(*args, **kwargs)
-#         return instance[0]
-
-#     return wrapper
-
-# class Singleton(object):
-#     _instance = None  # Keep instance reference 
-    
-#     def __new__(cls, *args, **kwargs):
-#         if not cls._instance:
-#             cls._instance = object.__new__(cls, *args, **kwargs)
-#         return cls._instance
-
-# class Singleton(type):
-#     _instances = {}
-#     def __call__(cls, *args, **kwargs):
-#         if cls not in cls._instances:
-#             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-#         else:
-#             cls._instances[cls].__init__(*args, **kwargs)
-#         return cls._instances[cls]
-
-
-
 class RecRunner():
     _instance = None
     def save_result(self,results,base=True):
@@ -418,7 +390,9 @@ class RecRunner():
         results = run_parallel(self.run_binomial,args,CHKS)
         self.save_result(results,base=False)
 
-    def run_usg(self, U, S, G, uid, alpha, beta):
+    @classmethod
+    def run_usg(cls, U, S, G, uid, alpha, beta):
+        self = cls.getInstance()
         if uid in self.ground_truth:
 
             U_scores = normalize([U.predict(uid, lid)
@@ -447,8 +421,9 @@ class RecRunner():
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         self.not_in_ground_truth_message()
         return ""
-
-    def run_mostpopular(self,uid):
+    @classmethod
+    def run_mostpopular(cls,uid):
+        self = cls.getInstance()
         #self = RecRunner()
         if uid in self.ground_truth:
             poi_indexes = set(list(range(self.poi_num)))
@@ -470,7 +445,9 @@ class RecRunner():
         self.not_in_ground_truth_message()
         return ""
 
-    def run_geocat(self, uid):
+    @classmethod
+    def run_geocat(cls, uid):
+        self = cls.getInstance()
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
@@ -494,7 +471,9 @@ class RecRunner():
         self.not_in_ground_truth_message()
         return ""
 
-    def run_persongeocat(self,uid):
+    @classmethod
+    def run_persongeocat(cls,uid):
+        self = cls.getInstance()
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
@@ -526,8 +505,9 @@ class RecRunner():
         self.not_in_ground_truth_message()
         return ""
 
-
-    def run_geodiv(self, uid):
+    @classmethod
+    def run_geodiv(cls, uid):
+        self = cls.getInstance()
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
@@ -550,8 +530,9 @@ class RecRunner():
         self.not_in_ground_truth_message()
         return ""
 
-
-    def run_ld(self, uid):
+    @classmethod
+    def run_ld(cls, uid):
+        self = cls.getInstance()
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
@@ -570,8 +551,9 @@ class RecRunner():
         self.not_in_ground_truth_message()
         return ""
     
-    
-    def run_binomial(self,uid):
+    @classmethod
+    def run_binomial(cls,uid):
+        self = cls.getInstance()
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
