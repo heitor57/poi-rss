@@ -3,7 +3,7 @@
 # module_path = os.path.abspath(os.path.join('.'))
 # if module_path not in sys.path:
 #     sys.path.append(module_path)
-# print(sys.path)
+#print(sys.path)
 
 from abc import ABC, abstractmethod
 from collections import defaultdict, OrderedDict
@@ -64,6 +64,15 @@ def dict_to_list_gen(d):
 
 def dict_to_list(d):
     return list(dict_to_list_gen(d))
+
+def singleton(cls):
+    instance = [None]
+    def wrapper(*args, **kwargs):
+        if instance[0] is None:
+            instance[0] = cls(*args, **kwargs)
+        return instance[0]
+
+    return wrapper
 
 
 class RecRunner:
@@ -299,35 +308,6 @@ class RecRunner:
     def not_in_ground_truth_message(uid):
         print(f"{uid} not in ground_truth [ERROR]")
 
-    def run_usg(self, U, S, G, uid, alpha, beta):
-        if uid in self.ground_truth:
-
-            U_scores = normalize([U.predict(uid, lid)
-                                  if self.training_matrix[uid, lid] == 0 else -1
-                                  for lid in self.all_lids])
-            S_scores = normalize([S.predict(uid, lid)
-                                  if self.training_matrix[uid, lid] == 0 else -1
-                                  for lid in self.all_lids])
-            G_scores = normalize([G.predict(uid, lid)
-                                  if self.training_matrix[uid, lid] == 0 else -1
-                                  for lid in self.all_lids])
-
-            U_scores = np.array(U_scores)
-            S_scores = np.array(S_scores)
-            G_scores = np.array(G_scores)
-
-            overall_scores = (1.0 - alpha - beta) * U_scores + \
-                alpha * S_scores + beta * G_scores
-
-            predicted = list(reversed(overall_scores.argsort()))[
-                :self.base_rec_list_size]
-            overall_scores = list(reversed(np.sort(overall_scores)))[
-                :self.base_rec_list_size]
-            #actual = ground_truth[uid]
-            # print(uid)
-            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        self.not_in_ground_truth_message()
-        return ""
 
     def usg(self):
         training_matrix = self.training_matrix
@@ -357,6 +337,7 @@ class RecRunner:
 
     def mostpopular(self):
         args=[(uid,) for uid in self.all_uids]
+        #results = run_parallel(self.run_mostpopular,args,CHKS)
         results = run_parallel(self.run_mostpopular,args,CHKS)
         self.save_result(results,base=True)
 
@@ -408,7 +389,38 @@ class RecRunner:
         results = run_parallel(self.run_binomial,args,CHKS)
         self.save_result(results,base=False)
 
-    def run_mostpopular(self, uid):
+    def run_usg(self, U, S, G, uid, alpha, beta):
+        if uid in self.ground_truth:
+
+            U_scores = normalize([U.predict(uid, lid)
+                                  if self.training_matrix[uid, lid] == 0 else -1
+                                  for lid in self.all_lids])
+            S_scores = normalize([S.predict(uid, lid)
+                                  if self.training_matrix[uid, lid] == 0 else -1
+                                  for lid in self.all_lids])
+            G_scores = normalize([G.predict(uid, lid)
+                                  if self.training_matrix[uid, lid] == 0 else -1
+                                  for lid in self.all_lids])
+
+            U_scores = np.array(U_scores)
+            S_scores = np.array(S_scores)
+            G_scores = np.array(G_scores)
+
+            overall_scores = (1.0 - alpha - beta) * U_scores + \
+                alpha * S_scores + beta * G_scores
+
+            predicted = list(reversed(overall_scores.argsort()))[
+                :self.base_rec_list_size]
+            overall_scores = list(reversed(np.sort(overall_scores)))[
+                :self.base_rec_list_size]
+            #actual = ground_truth[uid]
+            # print(uid)
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
+        self.not_in_ground_truth_message()
+        return ""
+
+    def run_mostpopular(self,uid):
+        #self = RecRunner()
         if uid in self.ground_truth:
             poi_indexes = set(list(range(self.poi_num)))
             visited_indexes = set(self.training_matrix[uid].nonzero()[0])

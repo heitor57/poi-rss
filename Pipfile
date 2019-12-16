@@ -13,6 +13,11 @@ scipy = "*"
 matplotlib = "*"
 tqdm = "*"
 pympler = "*"
+pathos = "*"
+dill = "*"
+multiprocess = "*"
+pox = "*"
+ppft = "*"
 
 [requires]
 python_version = "3.7"
