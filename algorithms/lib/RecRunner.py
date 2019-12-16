@@ -424,7 +424,6 @@ class RecRunner():
     @classmethod
     def run_mostpopular(cls,uid):
         self = cls.getInstance()
-        #self = RecRunner()
         if uid in self.ground_truth:
             poi_indexes = set(list(range(self.poi_num)))
             visited_indexes = set(self.training_matrix[uid].nonzero()[0])
