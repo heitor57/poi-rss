@@ -130,7 +130,11 @@ class RecRunner:
         self.metrics = {}
         self.metrics_name = ['precision', 'recall', 'pr', 'ild', 'gc', 'epc']
         self.except_final_rec = except_final_rec
+        self.welcome_message()
 
+    def welcome_message(self):
+        print("Chunk size is %d" % (CHKS))
+        pass
     @property
     def data_directory(self):
         return self._data_directory
@@ -579,7 +583,7 @@ class RecRunner:
     
     def run_base_recommender(self):
         base_recommender=self.BASE_RECOMMENDERS[self.base_rec]
-        print(f"Running {self.base_rec} final recommender")
+        print(f"Running {self.base_rec} base recommender")
         base_recommender()
 
 
