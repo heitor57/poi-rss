@@ -65,17 +65,36 @@ def dict_to_list_gen(d):
 def dict_to_list(d):
     return list(dict_to_list_gen(d))
 
-def singleton(cls):
-    instance = [None]
-    def wrapper(*args, **kwargs):
-        if instance[0] is None:
-            instance[0] = cls(*args, **kwargs)
-        return instance[0]
+# def singleton(cls):
+#     instance = [None]
+#     def wrapper(*args, **kwargs):
+#         if instance[0] is None:
+#             instance[0] = cls(*args, **kwargs)
+#         return instance[0]
 
-    return wrapper
+#     return wrapper
+
+# class Singleton(object):
+#     _instance = None  # Keep instance reference 
+    
+#     def __new__(cls, *args, **kwargs):
+#         if not cls._instance:
+#             cls._instance = object.__new__(cls, *args, **kwargs)
+#         return cls._instance
+
+# class Singleton(type):
+#     _instances = {}
+#     def __call__(cls, *args, **kwargs):
+#         if cls not in cls._instances:
+#             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+#         else:
+#             cls._instances[cls].__init__(*args, **kwargs)
+#         return cls._instances[cls]
 
 
-class RecRunner:
+
+class RecRunner():
+    _instance = None
     def save_result(self,results,base=True):
         if base:
             result_out = open(self.data_directory+"result/reclist/" + self.get_base_rec_file_name(), 'w')
@@ -84,7 +103,13 @@ class RecRunner:
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
-    
+
+    @classmethod
+    def getInstance(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance=cls(*args,**kwargs)
+        return cls._instance
+        
     def __init__(self, base_rec, final_rec, city,
                  base_rec_list_size, final_rec_list_size, data_directory,
                  base_rec_parameters={}, final_rec_parameters={},except_final_rec=[]):
@@ -109,7 +134,7 @@ class RecRunner:
         # }
         self.base_rec = base_rec
         self.final_rec = final_rec
-        
+
         self.base_rec_parameters = base_rec_parameters
         self.final_rec_parameters = final_rec_parameters
 
