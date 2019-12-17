@@ -13,6 +13,7 @@ import json
 import time
 from datetime import datetime
 import itertools
+import multiprocessing
 
 import numpy as np
 from tqdm import tqdm
@@ -45,7 +46,8 @@ NEIGHBOR = 'neighbor/'  # neighbors of pois
 METRICS = 'result/metrics/'
 METRICS = 'result/reclist/'
 
-CHKS = 40 # chunk size for process pool executor
+#CHKS = 40 # chunk size for process pool executor
+#CHKSL = 200 # chunk size for process pool executor largest
 
 def normalize(scores):
     scores = np.array(scores, dtype=np.float128)
@@ -128,9 +130,14 @@ class RecRunner():
         self.metrics_name = ['precision', 'recall', 'pr', 'ild', 'gc', 'epc']
         self.except_final_rec = except_final_rec
         self.welcome_message()
+        self.CHKS = 50 # chunk size for process pool executor
+        self.CHKSL = 100# chunk size for process pool executor largest
 
+    def message_start_section(self,string):
+        print("------===%s===------" % (string))
+    
     def welcome_message(self):
-        print("Chunk size is %d" % (CHKS))
+        #print("Chunk size is %d" % (self.CHKS))
         pass
     @property
     def data_directory(self):
@@ -305,6 +312,13 @@ class RecRunner():
         self.all_uids = list(range(user_num))
         self.all_lids = list(range(poi_num))
         self.test_data()
+        self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/2)
+        self.CHKSL = int(len(self.all_uids)/multiprocessing.cpu_count())
+        self.welcome_load()
+
+    def welcome_load(self):
+        self.message_start_section("LOAD FINAL MESSAGE")
+        print("Chunk size set to %d for this base" %(self.CHKSL))
 
     def not_in_ground_truth_message(uid):
         print(f"{uid} not in ground_truth [ERROR]")
@@ -331,20 +345,20 @@ class RecRunner():
 
         print("Running usg")
         args=[(U, S, G, uid, alpha, beta) for uid in self.all_uids]
-        results = run_parallel(self.run_usg,args,CHKS)
+        results = run_parallel(self.run_usg,args,self.CHKS)
         print("usg terminated")
 
         self.save_result(results,base=True)
 
     def mostpopular(self):
         args=[(uid,) for uid in self.all_uids]
-        #results = run_parallel(self.run_mostpopular,args,CHKS)
-        results = run_parallel(self.run_mostpopular,args,CHKS)
+        #results = run_parallel(self.run_mostpopular,args,self.CHKS)
+        results = run_parallel(self.run_mostpopular,args,self.CHKS)
         self.save_result(results,base=True)
 
     def geocat(self):
         args=[(uid,) for uid in self.all_uids]
-        results = run_parallel(self.run_geocat,args,CHKS)
+        results = run_parallel(self.run_geocat,args,self.CHKS)
         self.save_result(results,base=False)
 
     def persongeocat(self):
@@ -364,17 +378,17 @@ class RecRunner():
        #print(self.cat_div_propensity)
         # self.beta=geo_div_propensity/np.add(geo_div_propensity,cat_div_propensity)
         args=[(uid,) for uid in self.all_uids]
-        results = run_parallel(self.run_persongeocat,args,CHKS)
+        results = run_parallel(self.run_persongeocat,args,self.CHKS)
         self.save_result(results,base=False)
 
     def geodiv(self):
         args=[(uid,) for uid in self.all_uids]
-        results = run_parallel(self.run_geodiv,args,CHKS)
+        results = run_parallel(self.run_geodiv,args,self.CHKS)
         self.save_result(results,base=False)
 
     def ld(self):
         args=[(uid,) for uid in self.all_uids]
-        results = run_parallel(self.run_ld,args,CHKS)
+        results = run_parallel(self.run_ld,args,self.CHKS)
         self.save_result(results,base=False)
 
     def binomial(self):
@@ -387,7 +401,7 @@ class RecRunner():
         #     0:self.base_rec_list_size]
         # self.binomial.binomial(0,predicted,overall_scores,self.final_rec_list_size)
         args=[(uid,) for uid in self.all_uids]
-        results = run_parallel(self.run_binomial,args,CHKS)
+        results = run_parallel(self.run_binomial,args,self.CHKS)
         self.save_result(results,base=False)
 
     @classmethod
@@ -594,7 +608,6 @@ class RecRunner():
 
 
     def run_final_recommender(self):
-
         final_recommender=self.FINAL_RECOMMENDERS[self.final_rec]
         if len(self.user_base_predicted_lid)>0:
             print(f"Running {self.final_rec} final recommender")
@@ -627,7 +640,7 @@ class RecRunner():
                 continue
             self.eval_rec_metrics()
 
-    def eval(self,uid,*,base=False,k):
+    def eval(self,uid,base,k):
         if base:
             predicted=self.user_base_predicted_lid[uid]
         else:
@@ -654,11 +667,9 @@ class RecRunner():
             else:
                 result_out = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
             
-            executor = ProcessPoolExecutor()
-            futures = [executor.submit(self.eval, uid,base=base,k=k)
-                    for uid in self.all_uids]
-            results = [futures[i].result() for i in tqdm(range(len(futures)))]
-
+            args=[(uid,base,k) for uid in self.all_uids]
+            results = run_parallel(self.eval,args,self.CHKSL)
+            
             for json_string_result in results:
                 result_out.write(json_string_result)
             result_out.close()
@@ -749,6 +760,7 @@ class RecRunner():
             
                 # ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean[rec_using].values())),barWidth,label=rec_using,color=palette(i))
     def test_data(self):
+        self.message_start_section("TESTING DATA SET")
         has_some_error_global = False
         for i in self.all_uids:
             has_some_error = False
