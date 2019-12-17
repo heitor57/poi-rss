@@ -22,7 +22,6 @@
 #+END_EXPORT
 
 
-
 #+BEGIN_EXPORT latex
 \begin{eqfloat}
 \begin{equation}
@@ -38,6 +37,20 @@ div_{cat}(i,R) = \frac{GenreCov(\{i\}\cup R) + ILD(\{i\}\cup R)}{2}
 \end{eqfloat}
 #+END_EXPORT
 
+#+BEGIN_EXPORT latex
+\begin{eqfloat}
+\begin{equation}
+\begin{aligned}
+div_{cat}(i,R) = GenreCov(\{i\}\cup R) + \frac{ILD(\{i\}\cup R)}{|R|}
+\\
+\downarrow
+\\
+div_{cat}(i,R) = \frac{(|R|-1)\cdot GenreCov(\{i\}\cup R) + ILD(\{i\}\cup R)}{|R|}
+\end{aligned}
+\end{equation}
+\caption{Another redefinition of category diversification formula}
+\end{eqfloat}
+#+END_EXPORT
 
 
 #+BEGIN_EXPORT latex
@@ -84,7 +97,7 @@ CatDivProp=\delta_u=\frac{\sum_{i=1}^{|VisitedCat_u|}\sum_{j=1,j\neq i}^{|Visite
 {|VisitedCat_u|^2-|VisitedCat_u|}
 \end{aligned}
 \end{equation}
-\caption{Dissimilarity of categories visits}
+\caption{Dissimilarity of categories visits (Not in the best formalization yet)}
 \end{eqfloat}
 #+END_EXPORT
 
