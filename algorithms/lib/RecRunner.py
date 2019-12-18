@@ -19,6 +19,7 @@ import numpy as np
 from tqdm import tqdm
 from scipy.stats import describe
 import matplotlib.pyplot as plt
+from pympler import asizeof
 
 import cat_utils
 from usg.UserBasedCF import UserBasedCF
@@ -66,6 +67,10 @@ def dict_to_list_gen(d):
 
 def dict_to_list(d):
     return list(dict_to_list_gen(d))
+
+def print_dict(dictionary):
+    for key, value in dictionary.items():
+        print(f"{key} : {value}")
 
 class RecRunner():
     _instance = None
@@ -132,6 +137,7 @@ class RecRunner():
         self.welcome_message()
         self.CHKS = 50 # chunk size for process pool executor
         self.CHKSL = 100# chunk size for process pool executor largest
+        self.cache = defaultdict(dict)
 
     def message_start_section(self,string):
         print("------===%s===------" % (string))
@@ -343,8 +349,16 @@ class RecRunner():
         S.compute_friend_sim(social_relations, training_matrix)
         G.fit_distance_distribution(training_matrix, poi_coos)
 
+        self.cache[self.base_rec]['U'] = U
+        self.cache[self.base_rec]['S'] = S
+        self.cache[self.base_rec]['G'] = G
+
         print("Running usg")
-        args=[(U, S, G, uid, alpha, beta) for uid in self.all_uids]
+        args=[(uid, alpha, beta) for uid in self.all_uids]
+        print("args memory usage:",asizeof.asizeof(args)/1024**2,"MB")
+        print("U memory usage:",asizeof.asizeof(U)/1024**2,"MB")
+        print("S memory usage:",asizeof.asizeof(S)/1024**2,"MB")
+        print("G memory usage:",asizeof.asizeof(G)/1024**2,"MB")
         results = run_parallel(self.run_usg,args,self.CHKS)
         print("usg terminated")
 
@@ -405,8 +419,11 @@ class RecRunner():
         self.save_result(results,base=False)
 
     @classmethod
-    def run_usg(cls, U, S, G, uid, alpha, beta):
+    def run_usg(cls, uid, alpha, beta):
         self = cls.getInstance()
+        U = self.cache[self.base_rec]['U']
+        S = self.cache[self.base_rec]['S']
+        G = self.cache[self.base_rec]['G']
         if uid in self.ground_truth:
 
             U_scores = normalize([U.predict(uid, lid)
@@ -604,6 +621,7 @@ class RecRunner():
     def run_base_recommender(self):
         base_recommender=self.BASE_RECOMMENDERS[self.base_rec]
         print(f"Running {self.base_rec} base recommender")
+        self.print_parameters(base=True)
         base_recommender()
 
 
@@ -611,6 +629,7 @@ class RecRunner():
         final_recommender=self.FINAL_RECOMMENDERS[self.final_rec]
         if len(self.user_base_predicted_lid)>0:
             print(f"Running {self.final_rec} final recommender")
+            self.print_parameters(base=False)
             final_recommender()
         else:
             print("User base predicted list is empty")
@@ -781,3 +800,9 @@ class RecRunner():
         if not has_some_error_global:
             print("No error encountered in base")
             
+    def print_parameters(self, base):
+        print_dict(self.base_rec_parameters)
+        if base == False:
+            print()
+            print_dict(self.final_rec_parameters)
+
