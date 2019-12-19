@@ -693,13 +693,19 @@ class RecRunner():
                 result_out.write(json_string_result)
             result_out.close()
 
-    def load_metrics(self,*,base=False):
+    def load_metrics(self,*,base=False,short_name=True):
         if base:
             rec_using=self.base_rec
-            rec_short_name=self.get_base_rec_short_name()
+            if short_name:
+                rec_short_name=self.get_base_rec_short_name()
+            else:
+                rec_short_name=self.get_base_rec_name()
         else:
             rec_using=self.final_rec
-            rec_short_name=self.get_final_rec_short_name()
+            if short_name:
+                rec_short_name=self.get_final_rec_short_name()
+            else:
+                rec_short_name=self.get_final_rec_name()
 
         self.metrics[rec_short_name]={}
         for i,k in enumerate(experiment_constants.METRICS_K):
@@ -806,3 +812,40 @@ class RecRunner():
             print()
             print_dict(self.final_rec_parameters)
 
+
+    def plot_geocat_parameters_metrics(self):
+        palette = plt.get_cmap('Set1')
+        fig = plt.figure(figsize=(8,8))
+        ax=fig.add_subplot(111)
+        plt.xticks(rotation='vertical')
+        K = max(experiment_constants.METRICS_K)
+        metrics_mean=dict()
+        x = 1
+        r = 0.25
+        l = []
+        for i in np.append(np.arange(0, x, r),x):
+            for j in np.append(np.arange(0, x, r),x):
+                if not(i==0 and i!=j):
+                    l.append((i,j))
+        self.base_rec = "usg"
+        self.final_rec = "geocat"
+        rec_using = self.get_final_rec_short_name()
+        # There is some ways to do it more efficiently but i could not draw lines between points
+        # this way is ultra slow but works
+        for i, metric_name in enumerate(self.metrics_name):
+            metric_values = []
+            for div_weight, div_geo_cat_weight in l:
+                self.final_rec_parameters['div_weight'], self.final_rec_parameters['div_geo_cat_weight'] = div_weight, div_geo_cat_weight
+                self.load_metrics(base=False)
+                metrics=self.metrics[rec_using][K]
+                metrics_mean[rec_using]=defaultdict(float)
+                for obj in metrics:
+                    metrics_mean[rec_using][metric_name]+=obj[metric_name]
+                metrics_mean[rec_using][metric_name]/=len(metrics)
+                metric_values.append(metrics_mean[rec_using][metric_name])
+            ax.plot(list(map(str,l)),metric_values, '-o',color=palette(i))
+        ax.legend(tuple(self.metrics_name))
+        fig.show()
+        plt.show()
+        timestamp = datetime.timestamp(datetime.now())
+        fig.savefig(self.data_directory+f"result/img/geocat_parameters_{str(K)}_{timestamp}.png")
