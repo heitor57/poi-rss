@@ -781,7 +781,7 @@ class RecRunner():
             fig.show()
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
-            fig.savefig(self.data_directory+f"result/img/all_met_{str(k)}_{timestamp}.png")
+            fig.savefig(self.data_directory+f"result/img/all_met_{self.city}_{str(k)}_{timestamp}.png")
             
                 # ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean[rec_using].values())),barWidth,label=rec_using,color=palette(i))
     def test_data(self):
@@ -848,4 +848,4 @@ class RecRunner():
         fig.show()
         plt.show()
         timestamp = datetime.timestamp(datetime.now())
-        fig.savefig(self.data_directory+f"result/img/geocat_parameters_{str(K)}_{timestamp}.png")
+        fig.savefig(self.data_directory+f"result/img/geocat_parameters_{self.city}_{str(K)}_{timestamp}.png")
