@@ -2,6 +2,7 @@ import numpy as np
 import networkx as nx
 import geocat.objfunc
 
+np.seterr(all='raise')
 
 def mapk(actual, predicted, k):
     score = 0.0
@@ -92,7 +93,7 @@ def gck(uid,training_matrix,poi_cats,predicted):
         for cat2 in predicted_cats:
             if cat1 == cat2:
                 #print(cat1)
-                count_equal=count_equal+1    
+                count_equal=count_equal+1
     return count_equal/len(relevant_cats)
 
 def prk(user_log,rec_list,poi_neighbors):
@@ -145,24 +146,30 @@ def prk(user_log,rec_list,poi_neighbors):
     
     return PR
 
-# def epc_pop_list(training_matrix):
-#     visits=training_matrix.sum(axis=0)
-#     return visits/np.max(visits)
+def epc_pop_list(training_matrix):
+    visits=training_matrix.sum(axis=0)
+    return visits/np.max(visits)
 
 
-# def old_epck(rec_list,actual,uid,pop,epc_numerator,epc_denominator):
-#     epc=0
-#     local_epc_numerator=0
-#     local_epc_denominator=0
-#     for i,lid in enumerate(rec_list):
-#         if lid in actual:
-#             tmpval=np.log(i+2)/np.log(2)
-#             local_epc_numerator+=np.log(1-pop[lid])/tmpval
-#             local_epc_denominator+=1/tmpval
-#     epc_numerator.append(local_epc_numerator)
-#     epc_denominator.append(local_epc_denominator)
-    
-#     return epc_numerator.sum()/epc_denominator.sum()
+def old_epck(rec_list,actual,pop,epc_numerator,epc_denominator):
+    epc=0
+    local_epc_numerator=0
+    local_epc_denominator=0
+    for i,lid in enumerate(rec_list):
+        if lid in actual:
+            tmpval=np.log(i+2)/np.log(2)
+            local_epc_numerator+=(1-pop[lid])/tmpval
+            local_epc_denominator+=1/tmpval
+    epc_numerator.append(local_epc_numerator)
+    epc_denominator.append(local_epc_denominator)
+
+def old_global_epck(training_matrix,ground_truth,predictions,all_uids):
+    pop = epc_pop_list(training_matrix)
+    epc_numerator = []
+    epc_denominator = []
+    for uid in all_uids:
+        old_epck(predictions[uid],ground_truth[uid],pop,epc_numerator,epc_denominator)
+    return np.sum(epc_numerator)/np.sum(epc_denominator)
 
 def epck(rec_list,actual,uid,training_matrix):
 # ####    print(f"RecListSize:{len(rec_list)}")

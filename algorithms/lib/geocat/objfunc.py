@@ -73,7 +73,7 @@ def gc(poi_id,rec_list,relevant_cats,poi_cats):
         for cat2 in cats:
             if cat1 == cat2:
                 #print(cat1)
-                count_equal=count_equal+1    
+                count_equal=count_equal+1
     return count_equal/len(relevant_cats)
 
 def gc_list(rec_list,relevant_cats,poi_cats):

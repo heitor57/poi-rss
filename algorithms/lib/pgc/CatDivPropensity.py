@@ -10,6 +10,13 @@ import geocat.objfunc as geocat
 
 class CatDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
+    _instance = None
+    @classmethod
+    def getInstance(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance=cls(*args,**kwargs)
+        return cls._instance
+
     def __init__(self, training_matrix, users_categories_visits,
                  undirected_category_tree, cat_div_method='std_norm'):
         self.training_matrix = training_matrix

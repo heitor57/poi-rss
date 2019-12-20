@@ -492,7 +492,6 @@ class RecRunner():
                                                          self.final_rec_parameters['heuristic'])
 
             # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
-
             predicted = np.array(predicted)[list(
                 reversed(np.argsort(overall_scores)))]
             overall_scores = list(reversed(np.sort(overall_scores)))
@@ -617,23 +616,27 @@ class RecRunner():
             self.user_final_predicted_lid[obj['user_id']]=obj['predicted']
             self.user_final_predicted_score[obj['user_id']]=obj['score']
 
-    
+    def message_recommender(self,base):
+        if base:
+            print(f"{self.base_rec} base recommender")
+        else:
+            print(f"{self.final_rec} final recommender")
+        self.print_parameters(base=base)
+
     def run_base_recommender(self):
         base_recommender=self.BASE_RECOMMENDERS[self.base_rec]
-        print(f"Running {self.base_rec} base recommender")
-        self.print_parameters(base=True)
+        self.message_recommender(base=True)
         base_recommender()
-
 
     def run_final_recommender(self):
         final_recommender=self.FINAL_RECOMMENDERS[self.final_rec]
         if len(self.user_base_predicted_lid)>0:
-            print(f"Running {self.final_rec} final recommender")
-            self.print_parameters(base=False)
+            self.message_recommender(base=False)
             final_recommender()
         else:
             print("User base predicted list is empty")
         pass
+
     def run_all_base(self):
         for recommender in self.BASE_RECOMMENDERS:
             self.base_rec=recommender
@@ -661,8 +664,10 @@ class RecRunner():
 
     def eval(self,uid,base,k):
         if base:
+            predictions = self.user_base_predicted_lid
             predicted=self.user_base_predicted_lid[uid]
         else:
+            predictions = self.user_final_predicted_lid
             predicted=self.user_final_predicted_lid[uid]
         actual=self.ground_truth[uid]
         
@@ -672,7 +677,18 @@ class RecRunner():
         pr_val=metrics.prk(self.training_matrix[uid],predicted_at_k,self.poi_neighbors)
         ild_val=metrics.ildk(predicted_at_k,self.poi_cats,self.undirected_category_tree)
         gc_val=metrics.gck(uid,self.training_matrix,self.poi_cats,predicted_at_k)
-        epc_val=metrics.epck(predicted_at_k,actual,uid,self.training_matrix)
+        # this epc is made based on some article of kdd'13
+        # A New Collaborative Filtering Approach for Increasing the Aggregate Diversity of Recommender Systems
+        # Not the most liked but the used in original geocat
+        if not hasattr(self,'epc_val'):
+            self.epc_val=metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids)
+            epc_val=self.epc_val
+        else:
+            epc_val=self.epc_val
+        if uid == max(self.all_uids):
+            del self.epc_val
+        # this epc is maded like vargas, recsys'11
+        #epc_val=metrics.epck(predicted_at_k,actual,uid,self.training_matrix)
         
         d={'user_id':uid,'precision':precision_val,'recall':rec_val,'pr':pr_val,'ild':ild_val,'gc':gc_val,'epc':epc_val}
 
@@ -686,6 +702,8 @@ class RecRunner():
             else:
                 result_out = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
             
+            self.message_recommender(base=base)
+
             args=[(uid,base,k) for uid in self.all_uids]
             results = run_parallel(self.eval,args,self.CHKSL)
             
@@ -814,38 +832,41 @@ class RecRunner():
 
 
     def plot_geocat_parameters_metrics(self):
-        palette = plt.get_cmap('Set1')
-        fig = plt.figure(figsize=(8,8))
-        ax=fig.add_subplot(111)
-        plt.xticks(rotation='vertical')
-        K = max(experiment_constants.METRICS_K)
-        metrics_mean=dict()
-        x = 1
-        r = 0.25
-        l = []
-        for i in np.append(np.arange(0, x, r),x):
-            for j in np.append(np.arange(0, x, r),x):
-                if not(i==0 and i!=j):
-                    l.append((i,j))
-        self.base_rec = "usg"
-        self.final_rec = "geocat"
-        rec_using = self.get_final_rec_short_name()
-        # There is some ways to do it more efficiently but i could not draw lines between points
-        # this way is ultra slow but works
-        for i, metric_name in enumerate(self.metrics_name):
-            metric_values = []
-            for div_weight, div_geo_cat_weight in l:
-                self.final_rec_parameters['div_weight'], self.final_rec_parameters['div_geo_cat_weight'] = div_weight, div_geo_cat_weight
-                self.load_metrics(base=False)
-                metrics=self.metrics[rec_using][K]
-                metrics_mean[rec_using]=defaultdict(float)
-                for obj in metrics:
-                    metrics_mean[rec_using][metric_name]+=obj[metric_name]
-                metrics_mean[rec_using][metric_name]/=len(metrics)
-                metric_values.append(metrics_mean[rec_using][metric_name])
-            ax.plot(list(map(str,l)),metric_values, '-o',color=palette(i))
-        ax.legend(tuple(self.metrics_name))
-        fig.show()
-        plt.show()
-        timestamp = datetime.timestamp(datetime.now())
-        fig.savefig(self.data_directory+f"result/img/geocat_parameters_{self.city}_{str(K)}_{timestamp}.png")
+
+        for i,K in enumerate(experiment_constants.METRICS_K):
+            palette = plt.get_cmap('Set1')
+            fig = plt.figure(figsize=(8,8))
+            ax=fig.add_subplot(111)
+            plt.xticks(rotation='vertical')
+            #K = max(experiment_constants.METRICS_K)
+            #K = 10
+            metrics_mean=dict()
+            x = 1
+            r = 0.25
+            l = []
+            for i in np.append(np.arange(0, x, r),x):
+                for j in np.append(np.arange(0, x, r),x):
+                    if not(i==0 and i!=j):
+                        l.append((i,j))
+            self.base_rec = "usg"
+            self.final_rec = "geocat"
+            rec_using = self.get_final_rec_short_name()
+            # There is some ways to do it more efficiently but i could not draw lines between points
+            # this way is ultra slow but works
+            for i, metric_name in enumerate(self.metrics_name):
+                metric_values = []
+                for div_weight, div_geo_cat_weight in l:
+                    self.final_rec_parameters['div_weight'], self.final_rec_parameters['div_geo_cat_weight'] = div_weight, div_geo_cat_weight
+                    self.load_metrics(base=False)
+                    metrics=self.metrics[rec_using][K]
+                    metrics_mean[rec_using]=defaultdict(float)
+                    for obj in metrics:
+                        metrics_mean[rec_using][metric_name]+=obj[metric_name]
+                    metrics_mean[rec_using][metric_name]/=len(metrics)
+                    metric_values.append(metrics_mean[rec_using][metric_name])
+                ax.plot(list(map(str,l)),metric_values, '-o',color=palette(i))
+            ax.legend(tuple(self.metrics_name))
+            fig.show()
+            plt.show()
+            timestamp = datetime.timestamp(datetime.now())
+            fig.savefig(self.data_directory+f"result/img/geocat_parameters_{self.city}_{str(K)}_{timestamp}.png")
