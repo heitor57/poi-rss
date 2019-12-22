@@ -45,7 +45,7 @@ USER = 'user/'  # users and friends
 NEIGHBOR = 'neighbor/'  # neighbors of pois
 
 METRICS = 'result/metrics/'
-METRICS = 'result/reclist/'
+RECLIST = 'result/reclist/'
 
 #CHKS = 40 # chunk size for process pool executor
 #CHKSL = 200 # chunk size for process pool executor largest
@@ -272,6 +272,12 @@ class RecRunner():
 
     def get_final_rec_file_name(self):
         return self.get_final_rec_name()+".json"
+
+    def get_base_metrics_name(self):
+        return self.data_directory+METRICS+self.get_base_rec_name()+f"{R_FORMAT}"
+
+    def get_final_metrics_name(self):
+        return self.data_directory+METRICS+self.get_final_rec_name()+f"{R_FORMAT}"
 
     def load_base(self):
         CITY = self.city
@@ -625,6 +631,8 @@ class RecRunner():
         else:
             print(f"{self.final_rec} final recommender")
         self.print_parameters(base=base)
+        print(f"Base rec list size = {self.base_rec_list_size}")
+        print(f"Final rec list size = {self.final_rec_list_size}")
 
     def run_base_recommender(self):
         base_recommender=self.BASE_RECOMMENDERS[self.base_rec]
