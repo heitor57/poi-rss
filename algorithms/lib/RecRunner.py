@@ -371,6 +371,9 @@ class RecRunner():
         self.save_result(results,base=True)
 
     def geocat(self):
+        # results = []
+        # for uid in self.all_uids:
+        #     results.append(self.run_geocat(uid))
         args=[(uid,) for uid in self.all_uids]
         results = run_parallel(self.run_geocat,args,self.CHKS)
         self.save_result(results,base=False)
@@ -680,13 +683,13 @@ class RecRunner():
         # this epc is made based on some article of kdd'13
         # A New Collaborative Filtering Approach for Increasing the Aggregate Diversity of Recommender Systems
         # Not the most liked but the used in original geocat
-        if not hasattr(self,'epc_val'):
-            self.epc_val=metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids)
-            epc_val=self.epc_val
-        else:
-            epc_val=self.epc_val
-        if uid == max(self.all_uids):
-            del self.epc_val
+        # if not hasattr(self,'epc_val'):
+        # epc_val=metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids)
+        epc_val=self.epc_val
+        # else:
+        #     epc_val=self.epc_val
+        # if uid == max(self.all_uids):
+        #     del self.epc_val
         # this epc is maded like vargas, recsys'11
         #epc_val=metrics.epck(predicted_at_k,actual,uid,self.training_matrix)
         
@@ -694,9 +697,15 @@ class RecRunner():
 
         return json.dumps(d)+'\n'
     def eval_rec_metrics(self,*,base=False):
+        if base:
+            predictions = self.user_base_predicted_lid
+        else:
+            predictions = self.user_final_predicted_lid
+
         for i,k in enumerate(experiment_constants.METRICS_K):
             print(f"running metrics at @{k}")
-            
+            self.epc_val = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids)
+
             if base:
                 result_out = open(self.data_directory+"result/metrics/"+self.get_base_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
             else:

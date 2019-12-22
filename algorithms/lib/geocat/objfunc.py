@@ -235,6 +235,7 @@ def geocat(uid,training_matrix,tmp_rec_list,tmp_score_list,
     lids=training_matrix[uid].nonzero()[0]
 
     lid_visits=training_matrix[:,lids].sum(axis=0)
+    #lid_visits=training_matrix[uid,lids]#.sum(axis=0)
     mean_visits=lid_visits.mean()
     relevant_lids=lids[lid_visits>mean_visits]
     relevant_cats=set()
