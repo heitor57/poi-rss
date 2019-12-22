@@ -501,9 +501,9 @@ class RecRunner():
                                                          self.final_rec_parameters['heuristic'])
 
             # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
-            predicted = np.array(predicted)[list(
-                reversed(np.argsort(overall_scores)))]
-            overall_scores = list(reversed(np.sort(overall_scores)))
+            # predicted = np.array(predicted)[list(
+            #     reversed(np.argsort(overall_scores)))]
+            # overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         self.not_in_ground_truth_message()
@@ -535,9 +535,9 @@ class RecRunner():
 
             # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
 
-            predicted = np.array(predicted)[list(
-                reversed(np.argsort(overall_scores)))]
-            overall_scores = list(reversed(np.sort(overall_scores)))
+            # predicted = np.array(predicted)[list(
+            #     reversed(np.argsort(overall_scores)))]
+            # overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         self.not_in_ground_truth_message()
@@ -560,9 +560,9 @@ class RecRunner():
 
             # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
 
-            predicted = np.array(predicted)[list(
-                reversed(np.argsort(overall_scores)))]
-            overall_scores = list(reversed(np.sort(overall_scores)))
+            # predicted = np.array(predicted)[list(
+            #     reversed(np.argsort(overall_scores)))]
+            # overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         self.not_in_ground_truth_message()
@@ -581,9 +581,9 @@ class RecRunner():
                                                 self.poi_cats,self.undirected_category_tree,self.final_rec_list_size,
                                                 self.final_rec_parameters['div_weight'])
 
-            predicted = np.array(predicted)[list(
-                reversed(np.argsort(overall_scores)))]
-            overall_scores = list(reversed(np.sort(overall_scores)))
+            # predicted = np.array(predicted)[list(
+            #     reversed(np.argsort(overall_scores)))]
+            # overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         self.not_in_ground_truth_message()
@@ -602,9 +602,9 @@ class RecRunner():
             #                                     self.poi_cats,self.undirected_category_tree,self.final_rec_list_size,
             #                                     self.final_rec_parameters['div_weight'])
 
-            predicted = np.array(predicted)[list(
-                reversed(np.argsort(overall_scores)))]
-            overall_scores = list(reversed(np.sort(overall_scores)))
+            # predicted = np.array(predicted)[list(
+            #     reversed(np.argsort(overall_scores)))]
+            # overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         self.not_in_ground_truth_message()
