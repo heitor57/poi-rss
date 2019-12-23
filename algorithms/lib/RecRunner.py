@@ -31,6 +31,7 @@ from pgc.CatDivPropensity import CatDivPropensity
 from constants import experiment_constants
 import metrics
 from geocat.Binomial import Binomial
+from geocat.Pm2 import Pm2
 from parallel_util import run_parallel
 
 DATA_DIRECTORY = '../data'  # directory with all data
@@ -101,7 +102,8 @@ class RecRunner():
             "persongeocat": self.persongeocat,
             "geodiv": self.geodiv,
             "ld": self.ld,
-            "binomial": self.binomial
+            "binomial": self.binomial,
+            "pm2": self.pm2
         }
         # self.BASE_RECOMMENDERS_PARAMETERS = {
         #     "mostpopular": [],
@@ -234,7 +236,8 @@ class RecRunner():
             "persongeocat": {'div_weight':0.75,'cat_div_method':'ld'},
             "geodiv": {'div_weight':0.75},
             "ld": {'div_weight':0.75},
-            "binomial": {'alpha': 0.5, 'div_weight': 0.75}
+            "binomial": {'alpha': 0.5, 'div_weight': 0.75},
+            "pm2": {'lambda': 0.9},
         }
 
     def get_base_rec_name(self):
@@ -389,7 +392,7 @@ class RecRunner():
         pgeo_div_runner = GeoDivPropensity(self.training_matrix, self.poi_coos)
         self.geo_div_propensity = pgeo_div_runner.geo_div_walk()
         
-        pcat_div_runner = CatDivPropensity(
+        pcat_div_runner = CatDivPropensity.getInstance(
             self.training_matrix,
             cat_utils.get_users_cat_visits(self.training_matrix,
                                            self.poi_cats),
@@ -427,6 +430,27 @@ class RecRunner():
         results = run_parallel(self.run_binomial,args,self.CHKS)
         self.save_result(results,base=False)
 
+    def pm2(self):
+        self.pm2 = Pm2(self.training_matrix,self.poi_cats,self.final_rec_parameters['lambda'])
+
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_pm2,args,self.CHKS)
+        self.save_result(results,base=False)
+        del self.pm2
+
+    @classmethod
+    def run_pm2(cls,uid):
+        self = cls.getInstance()
+        if uid in self.ground_truth:
+            predicted = self.user_base_predicted_lid[uid][
+                0:self.base_rec_list_size]
+            overall_scores = self.user_base_predicted_score[uid][
+                0:self.base_rec_list_size]
+            predicted, overall_scores=self.pm2.pm2(uid,predicted,overall_scores,self.final_rec_list_size)
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
+        self.not_in_ground_truth_message()
+        return ""
+    
     @classmethod
     def run_usg(cls, uid, alpha, beta):
         self = cls.getInstance()

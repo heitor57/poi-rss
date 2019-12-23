@@ -33,7 +33,9 @@ class CatDivPropensity():
 
         self.cat_div_propensity = None
 
-    def cat_div_raw_std(self, cats_visits):
+    @classmethod
+    def cat_div_raw_std(cls, cats_visits):
+        self = cls.getInstance()
         cats_visits = np.array(list(cats_visits.values()), dtype=np.int32)
         std = np.std(cats_visits)
         if std == 0:
@@ -41,7 +43,8 @@ class CatDivPropensity():
         else:
             return 2*std/(np.max(cats_visits)-np.min(cats_visits))
 
-    def cat_div_std_norm(self, cats_visits):
+    @classmethod
+    def cat_div_std_norm(cls, cats_visits):
         cats_visits = np.array(list(cats_visits.values()), dtype=np.int32)
         std = np.std(cats_visits)
         if std == 0:
@@ -49,17 +52,21 @@ class CatDivPropensity():
         else:
             return 1-2*std/(np.max(cats_visits)-np.min(cats_visits))
 
-    def cat_div_mad_norm(self, cats_visits):
+    @classmethod
+    def cat_div_mad_norm(cls, cats_visits):
         std = scipy.stats.median_absolute_deviation(cats_visits)
         if std == 0:
             return 0
         else:
             return 1-std/(np.max(cats_visits)-np.min(cats_visits))
 
-    def cat_div_skew(self, cats_visits):
+    @classmethod
+    def cat_div_skew(cls, cats_visits):
         pass
 
-    def cat_div_ld(self, cats_visits):
+    @classmethod
+    def cat_div_ld(cls, cats_visits):
+        self = cls.getInstance()
         dis_sum = 0
         for cat1 in cats_visits.keys():
             for cat2 in cats_visits.keys():
@@ -70,8 +77,9 @@ class CatDivPropensity():
         # print(length,dis_sum/(length**2-length))
         return dis_sum/(length**2-length)
 
-    def cat_div_binomial(self):
-
+    @classmethod
+    def cat_div_binomial(cls):
+        self = cls.getInstance()
         pass
 
     def compute_cat_div_propensity(self):
