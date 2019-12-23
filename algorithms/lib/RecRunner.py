@@ -429,6 +429,7 @@ class RecRunner():
         args=[(uid,) for uid in self.all_uids]
         results = run_parallel(self.run_binomial,args,self.CHKS)
         self.save_result(results,base=False)
+        del self.binomial
 
     def pm2(self):
         self.pm2 = Pm2(self.training_matrix,self.poi_cats,self.final_rec_parameters['lambda'])
