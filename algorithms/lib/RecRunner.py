@@ -697,8 +697,9 @@ class RecRunner():
                 print(f"Maybe recommender {recommender} doesnt have final predicted")
                 continue
             self.eval_rec_metrics()
-
-    def eval(self,uid,base,k):
+    @classmethod
+    def eval(cls,uid,base,k):
+        self = cls.getInstance()
         if base:
             predictions = self.user_base_predicted_lid
             predicted=self.user_base_predicted_lid[uid]
@@ -809,7 +810,7 @@ class RecRunner():
             i=0
             for rec_using,rec_metrics in metrics_mean.items():
                 print(f"{rec_using} at @{k}")
-                print(rec_metrics.values())
+                print(rec_metrics)
                 ax.bar(indexes+i*barWidth,rec_metrics.values(),barWidth,label=rec_using,color=palette(i))
                 #ax.bar(indexes[j]+i*barWidth,np.mean(list(rec_metrics.values())),barWidth,label=rec_using,color=palette(i))
                 i+=1
