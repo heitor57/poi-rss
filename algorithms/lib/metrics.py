@@ -164,12 +164,12 @@ def old_epck(rec_list,actual,pop,epc_numerator,epc_denominator):
     epc_numerator.append(local_epc_numerator)
     epc_denominator.append(local_epc_denominator)
 
-def old_global_epck(training_matrix,ground_truth,predictions,all_uids):
+def old_global_epck(training_matrix,ground_truth,predictions,all_uids,k):
     pop = epc_pop_list(training_matrix)
     epc_numerator = []
     epc_denominator = []
     for uid in all_uids:
-        old_epck(predictions[uid],ground_truth[uid],pop,epc_numerator,epc_denominator)
+        old_epck(predictions[uid][:k],ground_truth[uid],pop,epc_numerator,epc_denominator)
     return np.sum(epc_numerator)/np.sum(epc_denominator)
 
 def epck(rec_list,actual,uid,training_matrix):

@@ -234,10 +234,10 @@ class RecRunner():
         return  {
             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.75, 'heuristic': 'local_max'},
             "persongeocat": {'div_weight':0.75,'cat_div_method':'ld'},
-            "geodiv": {'div_weight':0.75},
-            "ld": {'div_weight':0.75},
+            "geodiv": {'div_weight':0.5},
+            "ld": {'div_weight':0.25},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
-            "pm2": {'lambda': 0.9},
+            "pm2": {'lambda': 1},
         }
 
     def get_base_rec_name(self):
@@ -433,7 +433,8 @@ class RecRunner():
 
     def pm2(self):
         self.pm2 = Pm2(self.training_matrix,self.poi_cats,self.final_rec_parameters['lambda'])
-
+        # for uid in self.all_uids:
+        #     self.run_pm2(uid)
         args=[(uid,) for uid in self.all_uids]
         results = run_parallel(self.run_pm2,args,self.CHKS)
         self.save_result(results,base=False)
@@ -738,7 +739,7 @@ class RecRunner():
 
         for i,k in enumerate(experiment_constants.METRICS_K):
             print(f"running metrics at @{k}")
-            self.epc_val = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids)
+            self.epc_val = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids,k)
 
             if base:
                 result_out = open(self.data_directory+"result/metrics/"+self.get_base_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')

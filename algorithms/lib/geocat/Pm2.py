@@ -59,27 +59,38 @@ class Pm2:
 
         return prob
 
-
-    def sainteLagueQuotient(self, v, s):
+    @staticmethod
+    @np.vectorize
+    def sainteLagueQuotient(v, s):
         return v/(2*s + 1)
 
-    def objective_function(self, score, quotient, i_star):
-        sub_sum = np.sum(quotient*score,where=list(range(len(quotient)))!=i_star)
-        main_sum = quotient[i_star]*score
+    def objective_function(self, candidate_id, score, quotient, i_star):
+        sub_sum = 0
+        main_sum = 0
+        for cat in self.poi_cats[candidate_id]:
+            cat_id = self.cat_to_id[cat]
+            if cat_id != i_star:
+                sub_sum += score * quotient[cat_id]
+            else:
+                main_sum += score * quotient[i_star]
+        #sub_sum = np.sum(quotient*score,where=list(range(self.num_cats))!=i_star)
         return self.main_quotient_weight*main_sum+(1-self.main_quotient_weight)*sub_sum
     
     def pm2(self,uid,tmp_rec_list,tmp_score_list,K):
-        sainteLagueQuotient = np.vectorize(self.sainteLagueQuotient)
+        # from pudb import set_trace; set_trace()
+        #sainteLagueQuotient = np.vectorize(self.sainteLagueQuotient)
         quotient = np.zeros(self.num_cats)
         # multiply probability with rec list size
         v = self.getUserCategoryProbability(uid)*K
+
         s = np.zeros(self.num_cats)
         rec_list=[]
         final_scores=[]
 
         for i in range(K):
             max_quotient = 0
-            quotient = sainteLagueQuotient(v,s)
+            quotient = self.sainteLagueQuotient(v,s)
+            # category with max value
             i_star = np.argmax(quotient)
             num_cur_candidates = len(tmp_rec_list)
 
@@ -89,7 +100,8 @@ class Pm2:
             for j in range(num_cur_candidates):
                 candidate_poi_id = tmp_rec_list[j]
                 candidate_score = tmp_score_list[j]
-                objective_value = self.objective_function(candidate_score, quotient, i_star)
+                objective_value = self.objective_function(candidate_poi_id,candidate_score,
+                                                          quotient, i_star)
                 if objective_value > max_objective_value:
                     max_objective_value=objective_value
                     poi_to_insert=candidate_poi_id
