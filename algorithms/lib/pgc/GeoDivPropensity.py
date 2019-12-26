@@ -16,7 +16,7 @@ class GeoDivPropensity():
         self.poi_coos=poi_coos
 
         self.mean_walk=self.cmean_dist_pois()
-        self.user_mean_walk=self.cmean_dist_users()
+        self.users_mean_walk=self.cmean_dist_users()
 
         self.GEO_METHODS = {
             "walk": self.geo_div_walk,
@@ -84,7 +84,7 @@ class GeoDivPropensity():
         return users_cmean
 
     def geo_div_walk(self):
-        norm_prop=(self.user_mean_walk/self.mean_walk)
+        norm_prop=(self.users_mean_walk/self.mean_walk)
         norm_prop[norm_prop>1]=1
         self.geo_div_propensity=norm_prop
         return norm_prop

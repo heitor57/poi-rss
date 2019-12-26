@@ -19,7 +19,9 @@ import numpy as np
 from tqdm import tqdm
 from scipy.stats import describe
 import matplotlib.pyplot as plt
+plt.rcParams['font.size'] = 9
 from pympler import asizeof
+import scipy
 
 import cat_utils
 from usg.UserBasedCF import UserBasedCF
@@ -47,7 +49,7 @@ NEIGHBOR = 'neighbor/'  # neighbors of pois
 
 METRICS = 'result/metrics/'
 RECLIST = 'result/reclist/'
-
+IMG = 'result/img/'
 #CHKS = 40 # chunk size for process pool executor
 #CHKSL = 200 # chunk size for process pool executor largest
 
@@ -387,12 +389,12 @@ class RecRunner():
         results = run_parallel(self.run_geocat,args,self.CHKS)
         self.save_result(results,base=False)
 
-    def persongeocat(self):
+    def persongeocat_preprocess(self):
         print("Computing geographic diversification propensity")
-        pgeo_div_runner = GeoDivPropensity(self.training_matrix, self.poi_coos)
-        self.geo_div_propensity = pgeo_div_runner.geo_div_walk()
+        self.pgeo_div_runner = GeoDivPropensity(self.training_matrix, self.poi_coos)
+        self.geo_div_propensity = self.pgeo_div_runner.geo_div_walk()
         
-        pcat_div_runner = CatDivPropensity.getInstance(
+        self.pcat_div_runner = CatDivPropensity.getInstance(
             self.training_matrix,
             cat_utils.get_users_cat_visits(self.training_matrix,
                                            self.poi_cats),
@@ -400,7 +402,9 @@ class RecRunner():
             cat_div_method=self.final_rec_parameters['cat_div_method'])
         print("Computing categoric diversification propensity with",
               self.final_rec_parameters['cat_div_method'])
-        self.cat_div_propensity=pcat_div_runner.compute_cat_div_propensity()
+        self.cat_div_propensity=self.pcat_div_runner.compute_cat_div_propensity()
+    def persongeocat(self):
+        self.persongeocat_preprocess()
        #print(self.cat_div_propensity)
         # self.beta=geo_div_propensity/np.add(geo_div_propensity,cat_div_propensity)
         args=[(uid,) for uid in self.all_uids]
@@ -803,8 +807,8 @@ class RecRunner():
                 for j,key in enumerate(metrics_mean[rec_using]):
                     metrics_mean[rec_using][key]/=len(metrics)
                     #print(f"{key}:{metrics_mean[rec_using][key]}")
-            fig = plt.figure()
-            ax=fig.add_subplot(111)
+            ax = plt.figure()
+            ax=ax.add_subplot(111)
             barWidth= 1-len(self.metrics)/(1+len(self.metrics))
             N=len(self.metrics_name)
             indexes=np.arange(N)
@@ -840,10 +844,10 @@ class RecRunner():
             ax.legend(tuple(self.metrics.keys()))
             ax.set_xticklabels(self.metrics_name+['MAUT'])
             ax.set_title(f"at @{k}, {self.city}")
-            fig.show()
+            ax.show()
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
-            fig.savefig(self.data_directory+f"result/img/all_met_{self.city}_{str(k)}_{timestamp}.png")
+            ax.savefig(self.data_directory+f"result/img/all_met_{self.city}_{str(k)}_{timestamp}.png")
             
                 # ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean[rec_using].values())),barWidth,label=rec_using,color=palette(i))
     def test_data(self):
@@ -879,8 +883,8 @@ class RecRunner():
 
         for i,K in enumerate(experiment_constants.METRICS_K):
             palette = plt.get_cmap('Set1')
-            fig = plt.figure(figsize=(8,8))
-            ax=fig.add_subplot(111)
+            ax = plt.figure(figsize=(8,8))
+            ax=ax.add_subplot(111)
             plt.xticks(rotation='vertical')
             #K = max(experiment_constants.METRICS_K)
             #K = 10
@@ -910,7 +914,141 @@ class RecRunner():
                     metric_values.append(metrics_mean[rec_using][metric_name])
                 ax.plot(list(map(str,l)),metric_values, '-o',color=palette(i))
             ax.legend(tuple(self.metrics_name))
-            fig.show()
+            ax.show()
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
-            fig.savefig(self.data_directory+f"result/img/geocat_parameters_{self.city}_{str(K)}_{timestamp}.png")
+            ax.savefig(self.data_directory+IMG+f"geocat_parameters_{self.city}_{str(K)}_{timestamp}.png")
+
+    def plot_geopersonparameter(self):
+        # self.load_base()
+        # self.persongeocat_preprocess()
+
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
+
+        users_mean_walk = np.sort(self.pgeo_div_runner.users_mean_walk)
+        mean_walk = self.pgeo_div_runner.mean_walk
+        training_matrix = self.training_matrix
+
+        uupper=np.ma.masked_where(users_mean_walk >= mean_walk, users_mean_walk)
+        ulower=np.ma.masked_where(users_mean_walk < mean_walk, users_mean_walk)
+        t=np.arange(0,training_matrix.shape[0],1)
+
+        ax.plot(t, ulower, t, uupper,t,[mean_walk]*training_matrix.shape[0])
+
+        ax.annotate('"Max" geographical diversification', xy=(1, 1), xytext=(1, mean_walk+0.1))
+        ax.annotate("Users below: "+str(len(ulower[ulower.mask == False]))+", users above:"+str(len(uupper[uupper.mask == False])), xy=(0, 0), xytext=(0,0))
+
+        ax.legend(('Users above upper bound', 'Users below upper bound', 'Upper bound distance'))
+        ax.set_xlabel("User id")
+        ax.set_ylabel("centroid mean distance")
+        fig.savefig(self.data_directory+IMG+f'cmd_{self.city}.png')
+        plt.show()
+
+    def plot_geodivprop(self):
+
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
+        ax.plot(np.sort(self.geo_div_propensity))
+        ax.set_xlabel("User id")
+        ax.set_ylabel("Geographical diversification propensity")
+        ax.set_title("Users geographical diversification propensity")
+        fig.savefig(self.data_directory+IMG+f'gdp_{self.city}.png')
+        plt.show()
+
+
+    def plot_catdivprop(self):
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
+        ax.plot(np.sort(self.cat_div_propensity))
+        ax.set_xlabel("User id")
+        ax.set_ylabel("Categorical diversification propensity")
+        ax.set_title("Users categorical diversification propensity")
+        fig.savefig(self.data_directory+IMG+f'cdp_{self.city}.png')
+        plt.show()
+
+
+    def plot_users_max_min_catprop(self):
+        cat_div_prop = self.cat_div_propensity
+        uid_cat_visits = self.pcat_div_runner.users_categories_visits
+
+        uids=dict()
+        uids['user min']=(np.argmin(cat_div_prop))
+        uids['user median']=(np.argsort(cat_div_prop)[len(cat_div_prop)//2])
+        uids['user max']=(np.argmax(cat_div_prop))
+        for i, user_type in enumerate(uids):
+            uid=uids[user_type]
+            print(user_type)
+            visits=list(uid_cat_visits[uid].values())
+
+            fig=plt.figure()
+            ax0, ax1=fig.subplots(1,2)
+
+            ax0.plot(visits)
+            ax0.set_xlabel("Category 'id'")
+            ax0.set_ylabel("Visits")
+            print(f"""std={np.std(visits)}
+        skew={scipy.stats.skew(visits)}
+        kurtosis={scipy.stats.kurtosis(visits)}
+        Frequency hist skew={scipy.stats.skew(np.bincount(visits))}
+        Frequency hist kurtosis={scipy.stats.kurtosis(visits)}
+        different categories visited={len(visits)}
+        """)
+
+            ax1.hist(visits)
+            ax1.set_xlabel("Visits")
+            ax1.set_ylabel("Count")
+
+            fig.savefig(self.data_directory+IMG+f'mmm_{self.city}_{user_type}.png')
+            plt.show()
+
+    def plot_relation_catdivprop_catvisits(self):
+        cat_div_prop = np.array(self.cat_div_propensity)
+        uid_cat_visits = self.pcat_div_runner.users_categories_visits
+
+        argres=np.argsort(cat_div_prop)
+        uid_cats=np.array(list(map(len,uid_cat_visits)))[argres]
+        
+        fig=plt.figure()
+        ax=fig.subplots(1,1)
+        ax.plot(uid_cats/np.max(uid_cats))
+        ax.plot(cat_div_prop[argres])
+        ax.annotate('Correlation='+f"{np.corrcoef(cat_div_prop[argres],uid_cats)[0,1]:.2f}", xy=(0, 1))
+        ax.legend(["Number of categories visited","$\delta$ CatDivProp"])
+        fig.savefig(self.data_directory+IMG+'cdp_nc_madison.png')
+        plt.show()
+
+    def plot_geocatdivprop(self):
+        geo_div_prop = self.geo_div_propensity
+        cat_div_prop = self.cat_div_propensity
+        fig=plt.figure()
+        ax = fig.subplots(1,1)
+        t=np.arange(0,self.training_matrix.shape[0],1)
+        ax.plot(t,geo_div_prop,t,cat_div_prop)
+        ax.legend(("Geographical diversification","Categorical diversification"))
+        ax.set_xlabel("User id")
+        ax.set_ylabel("Diversification propensity")
+        ax.set_title("Users cat and geo diversification propensity")
+        fig.savefig(self.data_directory+IMG+'gcdp_madison.png')
+        plt.show()
+    def plot_personparameter(self):
+
+        geo_div_prop = self.geo_div_propensity
+        cat_div_prop = self.cat_div_propensity
+        training_matrix = self.training_matrix
+        fig=plt.figure()
+        ax = fig.subplots(1,1)
+        t=np.arange(0,training_matrix.shape[0],1)
+        # ax.plot(t,geo_div_prop,t,cat_div_prop)
+        # ax.legend(("Geographical diversification","Categorical diversification"))
+        # ax.set_xlabel("User id")
+        # ax.set_ylabel("Diversification propensity")
+        # ax.set_title("Users cat and geo diversification propensity")
+        plt.plot(np.sort(geo_div_prop/(geo_div_prop+cat_div_prop)))
+        plt.xlabel("Users")
+        plt.ylabel("Value of $\\beta$")
+        plt.title("Value of $\\beta$ in the original formula $div_{geo-cat}(i,R)=\\beta\cdot div_{geo}(i,R)+(1-\\beta)\cdot div_{cat}(i,R)$")
+
+        plt.text(training_matrix.shape[0]/2,0.5,"median $\\beta$="+str(np.median(geo_div_prop/(geo_div_prop+cat_div_prop))))
+        plt.savefig(self.data_directory+IMG+'beta_madison.png')
+        plt.show()
