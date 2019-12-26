@@ -807,8 +807,8 @@ class RecRunner():
                 for j,key in enumerate(metrics_mean[rec_using]):
                     metrics_mean[rec_using][key]/=len(metrics)
                     #print(f"{key}:{metrics_mean[rec_using][key]}")
-            ax = plt.figure()
-            ax=ax.add_subplot(111)
+            fig = plt.figure()
+            ax=fig.add_subplot(111)
             barWidth= 1-len(self.metrics)/(1+len(self.metrics))
             N=len(self.metrics_name)
             indexes=np.arange(N)
@@ -844,10 +844,10 @@ class RecRunner():
             ax.legend(tuple(self.metrics.keys()))
             ax.set_xticklabels(self.metrics_name+['MAUT'])
             ax.set_title(f"at @{k}, {self.city}")
-            ax.show()
+            fig.show()
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
-            ax.savefig(self.data_directory+f"result/img/all_met_{self.city}_{str(k)}_{timestamp}.png")
+            fig.savefig(self.data_directory+f"result/img/all_met_{self.city}_{str(k)}_{timestamp}.png")
             
                 # ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean[rec_using].values())),barWidth,label=rec_using,color=palette(i))
     def test_data(self):
@@ -883,8 +883,8 @@ class RecRunner():
 
         for i,K in enumerate(experiment_constants.METRICS_K):
             palette = plt.get_cmap('Set1')
-            ax = plt.figure(figsize=(8,8))
-            ax=ax.add_subplot(111)
+            fig = plt.figure(figsize=(8,8))
+            ax=fig.add_subplot(111)
             plt.xticks(rotation='vertical')
             #K = max(experiment_constants.METRICS_K)
             #K = 10
@@ -914,10 +914,9 @@ class RecRunner():
                     metric_values.append(metrics_mean[rec_using][metric_name])
                 ax.plot(list(map(str,l)),metric_values, '-o',color=palette(i))
             ax.legend(tuple(self.metrics_name))
-            ax.show()
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
-            ax.savefig(self.data_directory+IMG+f"geocat_parameters_{self.city}_{str(K)}_{timestamp}.png")
+            fig.savefig(self.data_directory+IMG+f"geocat_parameters_{self.city}_{str(K)}_{timestamp}.png")
 
     def plot_geopersonparameter(self):
         # self.load_base()
