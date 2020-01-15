@@ -130,7 +130,7 @@ def ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_
 
     if delta_proportionality<0:
         delta_proportionality=0
-    div_cat = gc_div+ild_div/rec_list_size
+    div_cat = (gc_div*(rec_list_size-1)+ild_div)/rec_list_size
     div_geo = delta_proportionality
     div=div_geo_cat_weight*div_geo+(1-div_geo_cat_weight)*div_cat
     return (score**(1-div_weight))*(div**div_weight)
@@ -171,7 +171,7 @@ def persongeocat_objective_function(poi_id,score,
     ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
     gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
     pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
-    objective_value=NORM_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
+    objective_value=ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
     return objective_value
 
 def geodiv(uid,training_matrix,tmp_rec_list,tmp_score_list,

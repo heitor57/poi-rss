@@ -50,6 +50,7 @@ NEIGHBOR = 'neighbor/'  # neighbors of pois
 METRICS = 'result/metrics/'
 RECLIST = 'result/reclist/'
 IMG = 'result/img/'
+UTIL = 'result/util/'
 #CHKS = 40 # chunk size for process pool executor
 #CHKSL = 200 # chunk size for process pool executor largest
 
@@ -105,7 +106,8 @@ class RecRunner():
             "geodiv": self.geodiv,
             "ld": self.ld,
             "binomial": self.binomial,
-            "pm2": self.pm2
+            "pm2": self.pm2,
+            "perfectpersongeocat": self.perfectpersongeocat,
         }
         # self.BASE_RECOMMENDERS_PARAMETERS = {
         #     "mostpopular": [],
@@ -235,11 +237,12 @@ class RecRunner():
     def get_final_parameters():
         return  {
             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.75, 'heuristic': 'local_max'},
-            "persongeocat": {'div_weight':0.75,'cat_div_method':'ld'},
+            "persongeocat": {'div_weight':0.75,'cat_div_method':'ld', 'geo_div_method': 'walk'},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
             "pm2": {'lambda': 1},
+            "perfectpersongeocat": {'k': 10,'interval': 20,'div_weight': 0.75},
         }
 
     def get_base_rec_name(self):
@@ -329,7 +332,7 @@ class RecRunner():
         self.all_uids = list(range(user_num))
         self.all_lids = list(range(poi_num))
         self.test_data()
-        self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/2)
+        self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/4)
         self.CHKSL = int(len(self.all_uids)/multiprocessing.cpu_count())
         self.welcome_load()
 
@@ -391,8 +394,9 @@ class RecRunner():
 
     def persongeocat_preprocess(self):
         print("Computing geographic diversification propensity")
-        self.pgeo_div_runner = GeoDivPropensity(self.training_matrix, self.poi_coos)
-        self.geo_div_propensity = self.pgeo_div_runner.geo_div_walk()
+        self.pgeo_div_runner = GeoDivPropensity(self.training_matrix, self.poi_coos,
+                                                self.final_rec_parameters['geo_div_method'])
+        self.geo_div_propensity = self.pgeo_div_runner.compute_geo_div_propensity()
         
         self.pcat_div_runner = CatDivPropensity.getInstance(
             self.training_matrix,
@@ -403,6 +407,15 @@ class RecRunner():
         print("Computing categoric diversification propensity with",
               self.final_rec_parameters['cat_div_method'])
         self.cat_div_propensity=self.pcat_div_runner.compute_cat_div_propensity()
+
+        if self.final_rec_parameters['cat_div_method'] == None:
+            div_geo_cat_weight=self.geo_div_propensity[uid]
+        elif self.final_rec_parameters['geo_div_method'] == None:
+            div_geo_cat_weight=1-self.cat_div_propensity[uid]
+        else:
+            div_geo_cat_weight=(self.geo_div_propensity[uid])/(self.geo_div_propensity[uid]+self.cat_div_propensity[uid])
+
+
     def persongeocat(self):
         self.persongeocat_preprocess()
        #print(self.cat_div_propensity)
@@ -421,6 +434,7 @@ class RecRunner():
         results = run_parallel(self.run_ld,args,self.CHKS)
         self.save_result(results,base=False)
 
+        
     def binomial(self):
         self.binomial=Binomial(self.training_matrix,self.poi_cats,
             self.final_rec_parameters['div_weight'],self.final_rec_parameters['alpha'])
@@ -443,6 +457,58 @@ class RecRunner():
         results = run_parallel(self.run_pm2,args,self.CHKS)
         self.save_result(results,base=False)
         del self.pm2
+
+    def perfectpersongeocat(self):
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_perfectpersongeocat,args,self.CHKS)
+
+        uids = [r[1] for r in results]
+        div_geo_cat_weights = [r[2] for r in results]
+        self.perfect_parameter = dict()
+        for uid,div_geo_cat_weight in zip(uids,div_geo_cat_weights):
+            self.perfect_parameter[uid] = div_geo_cat_weight
+        # print(self.perfect_parameter)
+        results = [r[0] for r in results]
+
+        fout = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"wb")
+        pickle.dump(self.perfect_parameter,fout)
+        self.save_result(results,base=False)
+
+    @classmethod
+    def run_perfectpersongeocat(cls, uid):
+        self = cls.getInstance()
+        actual=self.ground_truth[uid]
+        max_predicted_val = -1
+        max_predicted = None
+        max_overall_scores = None
+        if uid in self.ground_truth:
+            x = 1
+            r = 1/self.final_rec_parameters['interval']
+            # for div_weight in np.append(np.arange(0, x, r),x):
+            for div_geo_cat_weight in np.append(np.arange(0, x, r),x):
+                # if not(div_weight==0 and div_weight!=div_geo_cat_weight):
+                predicted = self.user_base_predicted_lid[uid][
+                    0:self.base_rec_list_size]
+                overall_scores = self.user_base_predicted_score[uid][
+                    0:self.base_rec_list_size]
+
+                predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores,
+                                                            self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
+                                                            div_geo_cat_weight,self.final_rec_parameters['div_weight'],
+                                                                'local_max')
+
+                precision_val=metrics.precisionk(actual, predicted[:self.final_rec_parameters['k']])
+                if precision_val > max_predicted_val:
+                    max_predicted_val = precision_val
+                    max_predicted = predicted
+                    max_overall_scores = overall_scores
+                    max_div_geo_cat_weight = div_geo_cat_weight
+                    # print("%d uid with geocatweight %f" % (uid,div_geo_cat_weight))
+                    # print(self.perfect_parameter)
+            predicted, overall_scores = max_predicted, max_overall_scores
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n", uid, max_div_geo_cat_weight
+        self.not_in_ground_truth_message()
+        return ""
 
     @classmethod
     def run_pm2(cls,uid):
@@ -523,17 +589,10 @@ class RecRunner():
             overall_scores = self.user_base_predicted_score[uid][
                 0:self.base_rec_list_size]
 
-            # start_time = time.time()
-
             predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores,
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
                                                          self.final_rec_parameters['div_geo_cat_weight'],self.final_rec_parameters['div_weight'],
                                                          self.final_rec_parameters['heuristic'])
-
-            # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
-            # predicted = np.array(predicted)[list(
-            #     reversed(np.argsort(overall_scores)))]
-            # overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         self.not_in_ground_truth_message()
@@ -787,6 +846,47 @@ class RecRunner():
 
 
 
+    def plot_acc_metrics(self):
+        palette = plt.get_cmap('Set1')
+        ACC_METRICS = ['precision','recall']
+        for i,k in enumerate(experiment_constants.METRICS_K):
+            metrics_mean=dict()
+            for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                metrics=metrics[k]
+                metrics_mean[rec_using]=defaultdict(float)
+                for obj in metrics:
+                    for key in obj:
+                        if key in ACC_METRICS:
+                            if key in self.metrics_name:
+                                metrics_mean[rec_using][key]+=obj[key]
+                for j,key in enumerate(metrics_mean[rec_using]):
+                    metrics_mean[rec_using][key]/=len(metrics)
+                    #print(f"{key}:{metrics_mean[rec_using][key]}")
+            fig = plt.figure()
+            ax=fig.add_subplot(111)
+            barWidth= 1-len(self.metrics)/(1+len(self.metrics))
+            N=len(ACC_METRICS)
+            indexes=np.arange(N)
+            i=0
+            for rec_using,rec_metrics in metrics_mean.items():
+                print(f"{rec_using} at @{k}")
+                print(rec_metrics)
+                ax.bar(indexes+i*barWidth,rec_metrics.values(),barWidth,label=rec_using,color=palette(i))
+                for ind in indexes:
+                    ax.text(ind+i*barWidth-barWidth/2,0,"%.3f"%(list(rec_metrics.values())[ind]),fontsize=6)
+                i+=1
+                # ax.text(x=indexes+i*barWidth,
+                #         y=np.zeros(N),
+                #         s=['n']*N,
+                #         fontsize=18)
+            ax.set_xticks(np.arange(N+1)+barWidth*(((len(self.metrics))/2)-1)+barWidth/2)
+            ax.legend(tuple(self.metrics.keys()))
+            ax.set_xticklabels(ACC_METRICS)
+            ax.set_title(f"at @{k}, {self.city}")
+            fig.show()
+            plt.show()
+            timestamp = datetime.timestamp(datetime.now())
+            fig.savefig(self.data_directory+f"result/img/acc_met_{self.city}_{str(k)}.png")
 
     def plot_bar_metrics(self):
         palette = plt.get_cmap('Set1')
@@ -847,7 +947,7 @@ class RecRunner():
             fig.show()
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
-            fig.savefig(self.data_directory+f"result/img/all_met_{self.city}_{str(k)}_{timestamp}.png")
+            fig.savefig(self.data_directory+f"result/img/all_met_{self.city}_{str(k)}.png")
             
                 # ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean[rec_using].values())),barWidth,label=rec_using,color=palette(i))
     def test_data(self):
@@ -1051,3 +1151,14 @@ class RecRunner():
         plt.text(training_matrix.shape[0]/2,0.5,"median $\\beta$="+str(np.median(geo_div_prop/(geo_div_prop+cat_div_prop))))
         plt.savefig(self.data_directory+IMG+'beta_madison.png')
         plt.show()
+    def plot_perfect_parameters(self):
+        fin = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"rb")
+        self.perfect_parameter = pickle.load(fin)
+        # print(self.perfect_parameter)
+        vals = np.array([])
+        for uid, val in self.perfect_parameter.items():
+            vals = np.append(vals,val)
+        plt.plot(np.sort(vals))
+        plt.savefig(self.data_directory+IMG+f'perf_param_{self.get_final_rec_name()}.png')
+        # plt.savefig(self.data_directory+IMG+f'perfect_{self.city}.png')
+

@@ -11,13 +11,13 @@ import scipy
 from concurrent.futures import ProcessPoolExecutor
 
 class GeoDivPropensity():
-    def __init__(self,training_matrix,poi_coos):
+    def __init__(self,training_matrix,poi_coos,geo_div_method='walk'):
         self.training_matrix=training_matrix
         self.poi_coos=poi_coos
 
         self.mean_walk=self.cmean_dist_pois()
         self.users_mean_walk=self.cmean_dist_users()
-
+        self.geo_div_method = geo_div_method
         self.GEO_METHODS = {
             "walk": self.geo_div_walk,
         }
@@ -86,6 +86,10 @@ class GeoDivPropensity():
     def geo_div_walk(self):
         norm_prop=(self.users_mean_walk/self.mean_walk)
         norm_prop[norm_prop>1]=1
-        self.geo_div_propensity=norm_prop
+        # self.geo_div_propensity=norm_prop
         return norm_prop
-    
+    def compute_geo_div_propensity(self):
+        func = self.GEO_METHODS.get(self.geo_div_method,
+                                    lambda: "Invalid method")
+        self.geo_div_propensity = func()
+        return self.geo_div_propensity
