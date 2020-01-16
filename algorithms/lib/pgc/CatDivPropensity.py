@@ -100,7 +100,7 @@ class CatDivPropensity():
         #     futures.append(executor.submit(func, cat_visits))
         # self.cat_div_propensity = [futures[i].result()
         #                            for i in tqdm(range(len(futures)), desc='CatDivProp')]
-        return self.cat_div_propensity
+        return np.array(self.cat_div_propensity)
 
 
     def cat_div_binomial(self, poi_cats, div_weight, alpha):
