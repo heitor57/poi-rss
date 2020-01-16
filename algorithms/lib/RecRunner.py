@@ -410,7 +410,8 @@ class RecRunner():
                 cat_utils.get_users_cat_visits(self.training_matrix,
                                             self.poi_cats),
                 self.undirected_category_tree,
-                cat_div_method=self.final_rec_parameters['cat_div_method'])
+                self.final_rec_parameters['cat_div_method'],
+                self.poi_cats)
             print("Computing categoric diversification propensity with",
                 self.final_rec_parameters['cat_div_method'])
             self.cat_div_propensity=self.pcat_div_runner.compute_cat_div_propensity()
@@ -1135,10 +1136,11 @@ class RecRunner():
         fig.savefig(self.data_directory+IMG+f'gcdp_{self.city}.png')
         plt.show()
     def plot_personparameter(self):
-
-        geo_div_prop = self.geo_div_propensity
-        cat_div_prop = self.cat_div_propensity
-        training_matrix = self.training_matrix
+        self.persongeocat_preprocess()
+        # geo_div_prop = self.geo_div_propensity
+        # cat_div_prop = self.cat_div_propensity
+        # training_matrix = self.training_matrix
+        div_geo_cat_weight = self.div_geo_cat_weight
         fig=plt.figure()
         ax = fig.subplots(1,1)
         t=np.arange(0,training_matrix.shape[0],1)
@@ -1147,13 +1149,13 @@ class RecRunner():
         # ax.set_xlabel("User id")
         # ax.set_ylabel("Diversification propensity")
         # ax.set_title("Users cat and geo diversification propensity")
-        plt.plot(np.sort(geo_div_prop/(geo_div_prop+cat_div_prop)))
+        plt.plot(np.sort(div_geo_cat_weight))
         plt.xlabel("Users")
         plt.ylabel("Value of $\\beta$")
         plt.title("Value of $\\beta$ in the original formula $div_{geo-cat}(i,R)=\\beta\cdot div_{geo}(i,R)+(1-\\beta)\cdot div_{cat}(i,R)$")
 
-        plt.text(training_matrix.shape[0]/2,0.5,"median $\\beta$="+str(np.median(geo_div_prop/(geo_div_prop+cat_div_prop))))
-        plt.savefig(self.data_directory+IMG+'beta_madison.png')
+        plt.text(training_matrix.shape[0]/2,0.5,"median $\\beta$="+str(np.median(div_geo_cat_weight)))
+        plt.savefig(self.data_directory+IMG+'beta_{self.get_final_rec_name()}.png')
         plt.show()
     def plot_perfect_parameters(self):
         fin = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"rb")
