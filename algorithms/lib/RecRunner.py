@@ -1114,7 +1114,7 @@ class RecRunner():
         ax.plot(cat_div_prop[argres])
         ax.annotate('Correlation='+f"{np.corrcoef(cat_div_prop[argres],uid_cats)[0,1]:.2f}", xy=(0, 1))
         ax.legend(["Number of categories visited","$\delta$ CatDivProp"])
-        fig.savefig(self.data_directory+IMG+'cdp_nc_madison.png')
+        fig.savefig(self.data_directory+IMG+f'cdp_nc_{self.city}.png')
         plt.show()
 
     def plot_geocatdivprop(self):
@@ -1128,7 +1128,7 @@ class RecRunner():
         ax.set_xlabel("User id")
         ax.set_ylabel("Diversification propensity")
         ax.set_title("Users cat and geo diversification propensity")
-        fig.savefig(self.data_directory+IMG+'gcdp_madison.png')
+        fig.savefig(self.data_directory+IMG+f'gcdp_{self.city}.png')
         plt.show()
     def plot_personparameter(self):
 
