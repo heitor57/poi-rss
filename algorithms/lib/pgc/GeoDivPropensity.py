@@ -10,8 +10,19 @@ import collections
 import scipy
 from concurrent.futures import ProcessPoolExecutor
 
+from parallel_util import run_parallel
+
 class GeoDivPropensity():
-    METHODS = ['walk']
+    CHKS = 50 # chunk size for parallel pool executor
+    _instance = None
+    METHODS = ['walk','num_poi']
+
+    @classmethod
+    def getInstance(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance=cls(*args,**kwargs)
+        return cls._instance
+
     def __init__(self,training_matrix,poi_coos,geo_div_method='walk'):
         self.training_matrix=training_matrix
         self.poi_coos=poi_coos
@@ -21,6 +32,7 @@ class GeoDivPropensity():
         self.geo_div_method = geo_div_method
         self.GEO_METHODS = {
             "walk": self.geo_div_walk,
+            "num_poi": self.geo_div_num_poi,
         }
 
         self.geo_div_propensity=None
@@ -84,13 +96,24 @@ class GeoDivPropensity():
             users_cmean.append(md/len(lats))
         return users_cmean
 
-    def geo_div_walk(self):
-        norm_prop=(self.users_mean_walk/self.mean_walk)
-        norm_prop[norm_prop>1]=1
+    @classmethod
+    def geo_div_walk(self,uid):
+        norm_prop=max((self.users_mean_walk[uid]/self.mean_walk[uid]),1)
         # self.geo_div_propensity=norm_prop
         return norm_prop
+
+
+    @classmethod
+    def geo_div_num_poi(cls, uid):
+        self = cls.getInstance()
+        lids = self.training_matrix[uid].nonzero()[0]
+        return len(lids)/self.training_matrix.shape[1]
+
+
     def compute_geo_div_propensity(self):
         func = self.GEO_METHODS.get(self.geo_div_method,
                                     lambda: "Invalid method")
-        self.geo_div_propensity = func()
-        return self.geo_div_propensity
+        # self.geo_div_propensity = func()
+        args=[(uid,) for uid in range(self.training_matrix.shape[0])]
+        self.geo_div_propensity = run_parallel(func, args, self.CHKS)
+        return np.array(self.geo_div_propensity)

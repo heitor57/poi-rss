@@ -400,7 +400,7 @@ class RecRunner():
     def persongeocat_preprocess(self):
         print("Computing geographic diversification propensity")
         if self.final_rec_parameters['geo_div_method'] != None:
-            self.pgeo_div_runner = GeoDivPropensity(self.training_matrix, self.poi_coos,
+            self.pgeo_div_runner = GeoDivPropensity.getInstance(self.training_matrix, self.poi_coos,
                                                     self.final_rec_parameters['geo_div_method'])
             self.geo_div_propensity = self.pgeo_div_runner.compute_geo_div_propensity()
 

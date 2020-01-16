@@ -13,7 +13,7 @@ import metrics
 class CatDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
-    METHODS = ['std_norm','mad_norm','ld','raw_std','num','binomial','poi_ild']
+    METHODS = ['std_norm','mad_norm','ld','raw_std','num_cat','binomial','poi_ild', 'num_poi']
 
     @classmethod
     def getInstance(cls, *args, **kwargs):
@@ -33,9 +33,10 @@ class CatDivPropensity():
             "mad_norm": self.cat_div_mad_norm,
             "ld": self.cat_div_ld,
             "raw_std": self.cat_div_raw_std,
-            "num": self.cat_div_num,
+            "num_cat": self.cat_div_num_cat,
             "binomial": self.cat_div_binomial,
             "poi_ild": self.cat_div_poi_ild,
+            "num_poi": self.cat_div_num_poi,
         }
 
         self.poi_cats = poi_cats
@@ -75,13 +76,13 @@ class CatDivPropensity():
             return 1-std/(np.max(cats_visits)-np.min(cats_visits))
 
     @classmethod
-    def cat_div_skew(cls, cats_visits):
+    def cat_div_skew(cls, uid):
         self = cls.getInstance()
         cats_visits = self.users_categories_visits[uid]
         pass
 
     @classmethod
-    def cat_div_ld(cls, cats_visits):
+    def cat_div_ld(cls, uid):
         self = cls.getInstance()
         cats_visits = self.users_categories_visits[uid]
         dis_sum = 0
@@ -95,17 +96,23 @@ class CatDivPropensity():
         return dis_sum/(length**2-length)
 
     @classmethod
-    def cat_div_num(cls,cats_visits):
+    def cat_div_num_cat(cls, uid):
         self = cls.getInstance()
         cats_visits = self.users_categories_visits[uid]
         return len(cats_visits)/(len(self.undirected_category_tree)-1)
+
+    @classmethod
+    def cat_div_num_poi(cls, uid):
+        self = cls.getInstance()
+        lids = self.training_matrix[uid].nonzero()[0]
+        return len(lids)/self.training_matrix.shape[1]
     # @classmethod
     # def cat_div_binomial(cls):
     #     self = cls.getInstance()
     #     pass
 
     @classmethod
-    def cat_div_poi_ild(cls,uid):
+    def cat_div_poi_ild(cls, uid):
         self = cls.getInstance()
         lids = self.training_matrix[uid].nonzero()[0]
         ild = metrics.ildk(lids,self.poi_cats,self.undirected_category_tree)
