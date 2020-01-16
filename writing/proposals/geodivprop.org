@@ -27,7 +27,11 @@
 \begin{eqfloat}
 \begin{equation}
 \begin{aligned}
+div_{geo}(i,R) = PR(\{i\}\cup R) - PR(R)
+\\
 div_{geo-cat}(i,R)=\beta\cdot div_{geo}(i,R)+(1-\beta)\cdot div_{cat}(i,R)
+\\
+f_o(i,R)=rel(i)^{1-\lambda}\cdot div_{geo-cat}(i,R)^\lambda
 \\
 div_{geo-cat}(i,R)=\frac{\gamma}{\gamma+\delta}\cdot div_{geo}(i,R)+(1-\frac{\gamma}{\gamma+\delta})\cdot div_{cat}(i,R)
 \\
