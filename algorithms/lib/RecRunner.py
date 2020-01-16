@@ -269,7 +269,12 @@ class RecRunner():
         if self.final_rec == 'geocat':
             return f"{self.get_base_rec_short_name()}_{self.final_rec}_{self.final_rec_parameters['heuristic']}"
         elif self.final_rec == 'persongeocat':
-            return f"{self.get_base_rec_short_name()}_{self.final_rec}_{self.final_rec_parameters['cat_div_method']}"
+            string = f"{self.get_base_rec_short_name()}_{self.final_rec}"
+            if self.final_rec_parameters['cat_div_method']:
+                string += f"_{self.final_rec_parameters['cat_div_method']}"
+            if self.final_rec_parameters['geo_div_method']:
+                string += f"_{self.final_rec_parameters['geo_div_method']}"
+            return string
         elif self.final_rec == 'geodiv':
             return f"{self.get_base_rec_short_name()}_{self.final_rec}"
         else:
@@ -394,19 +399,21 @@ class RecRunner():
 
     def persongeocat_preprocess(self):
         print("Computing geographic diversification propensity")
-        self.pgeo_div_runner = GeoDivPropensity(self.training_matrix, self.poi_coos,
-                                                self.final_rec_parameters['geo_div_method'])
-        self.geo_div_propensity = self.pgeo_div_runner.compute_geo_div_propensity()
-        
-        self.pcat_div_runner = CatDivPropensity.getInstance(
-            self.training_matrix,
-            cat_utils.get_users_cat_visits(self.training_matrix,
-                                           self.poi_cats),
-            self.undirected_category_tree,
-            cat_div_method=self.final_rec_parameters['cat_div_method'])
-        print("Computing categoric diversification propensity with",
-              self.final_rec_parameters['cat_div_method'])
-        self.cat_div_propensity=self.pcat_div_runner.compute_cat_div_propensity()
+        if self.final_rec_parameters['geo_div_method'] != None:
+            self.pgeo_div_runner = GeoDivPropensity(self.training_matrix, self.poi_coos,
+                                                    self.final_rec_parameters['geo_div_method'])
+            self.geo_div_propensity = self.pgeo_div_runner.compute_geo_div_propensity()
+
+        if self.final_rec_parameters['cat_div_method'] != None:
+            self.pcat_div_runner = CatDivPropensity.getInstance(
+                self.training_matrix,
+                cat_utils.get_users_cat_visits(self.training_matrix,
+                                            self.poi_cats),
+                self.undirected_category_tree,
+                cat_div_method=self.final_rec_parameters['cat_div_method'])
+            print("Computing categoric diversification propensity with",
+                self.final_rec_parameters['cat_div_method'])
+            self.cat_div_propensity=self.pcat_div_runner.compute_cat_div_propensity()
 
         if self.final_rec_parameters['cat_div_method'] == None:
             self.div_geo_cat_weight=self.geo_div_propensity
@@ -843,7 +850,7 @@ class RecRunner():
                 self.metrics[rec_short_name][k].append(obj)
 
 
-    def plot_acc_metrics(self):
+    def plot_acc_metrics(self,prefix_name='acc_met'):
         palette = plt.get_cmap('Set1')
         ACC_METRICS = ['precision','recall']
         for i,k in enumerate(experiment_constants.METRICS_K):
@@ -883,9 +890,9 @@ class RecRunner():
             fig.show()
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
-            fig.savefig(self.data_directory+f"result/img/acc_met_{self.city}_{str(k)}.png")
+            fig.savefig(self.data_directory+f"{IMG}{prefix_name}_{self.city}_{str(k)}.png")
 
-    def plot_bar_metrics(self):
+    def plot_bar_metrics(self,prefix_name='all_met'):
         palette = plt.get_cmap('Set1')
         for i,k in enumerate(experiment_constants.METRICS_K):
 
@@ -944,7 +951,7 @@ class RecRunner():
             fig.show()
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
-            fig.savefig(self.data_directory+f"result/img/all_met_{self.city}_{str(k)}.png")
+            fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.city}_{str(k)}.png")
             
                 # ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean[rec_using].values())),barWidth,label=rec_using,color=palette(i))
     def test_data(self):

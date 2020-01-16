@@ -19,6 +19,7 @@ multiprocess = "*"
 pox = "*"
 ppft = "*"
 pudb = "*"
+inquirer = "*"
 
 [requires]
 python_version = "3.7"

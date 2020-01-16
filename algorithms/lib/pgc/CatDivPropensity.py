@@ -11,6 +11,8 @@ import geocat.objfunc as geocat
 class CatDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
+    METHODS = ['std_norm','mad_norm','ld','raw_std','num']
+    
     @classmethod
     def getInstance(cls, *args, **kwargs):
         if cls._instance is None:
@@ -29,10 +31,11 @@ class CatDivPropensity():
             "mad_norm": self.cat_div_mad_norm,
             "ld": self.cat_div_ld,
             "raw_std": self.cat_div_raw_std,
+            "num": self.cat_div_num,
         }
 
         self.cat_div_propensity = None
-
+    
     @classmethod
     def cat_div_raw_std(cls, cats_visits):
         self = cls.getInstance()
@@ -78,9 +81,13 @@ class CatDivPropensity():
         return dis_sum/(length**2-length)
 
     @classmethod
-    def cat_div_binomial(cls):
+    def cat_div_num(cls,cats_visits):
         self = cls.getInstance()
-        pass
+        return len(cats_visits)/(len(self.undirected_category_tree)-1)
+    # @classmethod
+    # def cat_div_binomial(cls):
+    #     self = cls.getInstance()
+    #     pass
 
     def compute_cat_div_propensity(self):
         # switcher = {
@@ -102,8 +109,9 @@ class CatDivPropensity():
         #                            for i in tqdm(range(len(futures)), desc='CatDivProp')]
         return np.array(self.cat_div_propensity)
 
-
-    def cat_div_binomial(self, poi_cats, div_weight, alpha):
+    @classmethod
+    def cat_div_binomial(cls, poi_cats, div_weight, alpha):
+        self = cls
         binomial = Binomial(self.training_matrix, poi_cats,
             div_weight, alpha)
         binomial.compute_all_probabilities()

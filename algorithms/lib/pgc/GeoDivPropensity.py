@@ -11,6 +11,7 @@ import scipy
 from concurrent.futures import ProcessPoolExecutor
 
 class GeoDivPropensity():
+    METHODS = ['walk']
     def __init__(self,training_matrix,poi_coos,geo_div_method='walk'):
         self.training_matrix=training_matrix
         self.poi_coos=poi_coos
