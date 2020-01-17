@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 plt.rcParams['font.size'] = 9
 from pympler import asizeof
 import scipy
+import pandas as pd
 
 import cat_utils
 from usg.UserBasedCF import UserBasedCF
@@ -1172,4 +1173,28 @@ class RecRunner():
         plt.plot(np.sort(vals))
         plt.savefig(self.data_directory+IMG+f'perf_param_{self.get_final_rec_name()}.png')
         # plt.savefig(self.data_directory+IMG+f'perfect_{self.city}.png')
+
+    def plot_correlation_perfectparam(self):
+
+        self.base_rec = 'usg'
+        self.final_rec = 'perfectpersongeocat'
+
+        fin = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"rb")
+        self.perfect_parameter = pickle.load(fin)
+
+        pd.DataFrame()
+        df = pd.DataFrame([],columns=['beta','visits','cats_visited'])
+        # self.persongeocat_preprocess()
+        # div_geo_cat_weight = self.div_geo_cat_weight
+        for uid in range(self.user_num):
+            beta = self.perfect_parameter[uid]
+            visited_lids = self.training_matrix[uid].nonzero()[0]
+            visits = self.training_matrix[uid,visited_lids].sum()
+            uvisits = len(visited_lids)
+            visited_cats = set()
+            for lid in visited_lids:
+                visited_cats |= set(self.poi_cats[lid])
+            df.loc[uid] = [beta,visits,len(visited_cats)]
+        print(df.corr())
+        pass
 
