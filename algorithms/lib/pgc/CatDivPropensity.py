@@ -13,7 +13,7 @@ import metrics
 class CatDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
-    METHODS = ['std_norm','mad_norm','ld','raw_std','num_cat','binomial','poi_ild', 'num_poi']
+    METHODS = ['std_norm','mad_norm','ld','raw_std','num_cat','binomial','poi_ild']
 
     @classmethod
     def getInstance(cls, *args, **kwargs):
@@ -36,7 +36,6 @@ class CatDivPropensity():
             "num_cat": self.cat_div_num_cat,
             "binomial": self.cat_div_binomial,
             "poi_ild": self.cat_div_poi_ild,
-            "num_poi": self.cat_div_num_poi,
         }
 
         self.poi_cats = poi_cats
@@ -101,11 +100,6 @@ class CatDivPropensity():
         cats_visits = self.users_categories_visits[uid]
         return len(cats_visits)/(len(self.undirected_category_tree)-1)
 
-    @classmethod
-    def cat_div_num_poi(cls, uid):
-        self = cls.getInstance()
-        lids = self.training_matrix[uid].nonzero()[0]
-        return len(lids)/self.training_matrix.shape[1]
     # @classmethod
     # def cat_div_binomial(cls):
     #     self = cls.getInstance()

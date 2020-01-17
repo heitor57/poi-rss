@@ -20,6 +20,7 @@ pox = "*"
 ppft = "*"
 pudb = "*"
 inquirer = "*"
+colorama = "*"
 
 [requires]
 python_version = "3.7"

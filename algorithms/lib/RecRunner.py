@@ -80,9 +80,9 @@ class RecRunner():
     _instance = None
     def save_result(self,results,base=True):
         if base:
-            result_out = open(self.data_directory+"result/reclist/" + self.get_base_rec_file_name(), 'w')
+            result_out = open(self.data_directory+RECLIST+ self.get_base_rec_file_name(), 'w')
         else:
-            result_out = open(self.data_directory+"result/reclist/" + self.get_final_rec_file_name(), 'w')
+            result_out = open(self.data_directory+RECLIST+ self.get_final_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
@@ -800,6 +800,13 @@ class RecRunner():
         d={'user_id':uid,'precision':precision_val,'recall':rec_val,'pr':pr_val,'ild':ild_val,'gc':gc_val,'epc':epc_val}
 
         return json.dumps(d)+'\n'
+
+    def get_file_name_metrics(self,base,k):
+        if base:
+            return self.data_directory+"result/metrics/"+self.get_base_rec_name()+f"_{str(k)}{R_FORMAT}"
+        else:
+            return self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}"
+
     def eval_rec_metrics(self,*,base=False):
         if base:
             predictions = self.user_base_predicted_lid
@@ -810,10 +817,10 @@ class RecRunner():
             print(f"running metrics at @{k}")
             self.epc_val = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids,k)
 
-            if base:
-                result_out = open(self.data_directory+"result/metrics/"+self.get_base_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
-            else:
-                result_out = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
+            # if base:
+            result_out = open(self.get_file_name_metrics(base,k), 'w')
+            # else:
+            #     result_out = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
             
             self.message_recommender(base=base)
 
@@ -840,10 +847,8 @@ class RecRunner():
 
         self.metrics[rec_short_name]={}
         for i,k in enumerate(experiment_constants.METRICS_K):
-            if base:
-                result_file = open(self.data_directory+"result/metrics/"+self.get_base_rec_name()+f"_{str(k)}{R_FORMAT}", 'r')
-            else:
-                result_file = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'r')
+
+            result_file = open(self.get_file_name_metrics(base,k), 'r')
             
             self.metrics[rec_short_name][k]=[]
             for i,line in enumerate(result_file):
