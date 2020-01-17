@@ -1181,20 +1181,47 @@ class RecRunner():
 
         fin = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"rb")
         self.perfect_parameter = pickle.load(fin)
+        self.perfect_parameter = pd.Series(self.perfect_parameter)
 
-        pd.DataFrame()
-        df = pd.DataFrame([],columns=['beta','visits','cats_visited'])
+        self.final_rec = 'persongeocat'
+
+        df = pd.DataFrame([],columns=['visits','visits_mean',
+                                      'visits_std','cats_visited',
+                                      'cats_visited_mean','cats_visited_std'])
         # self.persongeocat_preprocess()
         # div_geo_cat_weight = self.div_geo_cat_weight
         for uid in range(self.user_num):
-            beta = self.perfect_parameter[uid]
+            # beta = self.perfect_parameter[uid]
             visited_lids = self.training_matrix[uid].nonzero()[0]
+            visits_mean = self.training_matrix[uid,visited_lids].mean()
+            visits_std = self.training_matrix[uid,visited_lids].std()
             visits = self.training_matrix[uid,visited_lids].sum()
-            uvisits = len(visited_lids)
-            visited_cats = set()
+            # uvisits = len(visited_lids)
+            cats_visits = defaultdict(int)
             for lid in visited_lids:
-                visited_cats |= set(self.poi_cats[lid])
-            df.loc[uid] = [beta,visits,len(visited_cats)]
-        print(df.corr())
+                for cat in self.poi_cats[lid]:
+                    cats_visits[cat] += 1
+            cats_visits = np.array(list(cats_visits.values()))
+            cats_visits_mean = cats_visits.mean()
+            cats_visits_std = cats_visits.std()
+
+            df.loc[uid] = [visits,visits_mean,
+                           visits_std,len(cats_visits),
+                           cats_visits_mean,cats_visits_std]
+
+        from sklearn.preprocessing import PolynomialFeatures
+        poly = PolynomialFeatures(degree=6,interaction_only=True)
+        res_poly = poly.fit_transform(df)
+        # print(res_poly)
+        df_poly = pd.DataFrame(res_poly, columns=poly.get_feature_names(df.columns))
+        correlations = df_poly.corrwith(self.perfect_parameter)
+        print(correlations[correlations>0.2])
+# generate combinations
+        # from itertools import combinations
+        # columns = list(df.columns).remove('beta')
+        # for combination in combinations(columns, 2):
+        #     combination_string = "".join(combination)
+        #     new_df[combination_string] = df[combination[1]]*df[combination[0]]
+        # print(df.corr())
         pass
 

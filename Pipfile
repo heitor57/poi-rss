@@ -21,6 +21,7 @@ ppft = "*"
 pudb = "*"
 inquirer = "*"
 colorama = "*"
+sklearn = "*"
 
 [requires]
 python_version = "3.7"

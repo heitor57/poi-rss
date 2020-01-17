@@ -97,8 +97,9 @@ class GeoDivPropensity():
         return users_cmean
 
     @classmethod
-    def geo_div_walk(self,uid):
-        norm_prop=max((self.users_mean_walk[uid]/self.mean_walk[uid]),1)
+    def geo_div_walk(cls,uid):
+        self = cls.getInstance()
+        norm_prop=max((self.users_mean_walk[uid]/self.mean_walk),1)
         # self.geo_div_propensity=norm_prop
         return norm_prop
 
