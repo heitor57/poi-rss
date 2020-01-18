@@ -13,12 +13,14 @@ import metrics
 class CatDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
-    METHODS = ['std_norm','mad_norm','ld','raw_std','num_cat','binomial','poi_ild']
+    METHODS = ['std_norm','ld','raw_std','num_cat','binomial','poi_ild']
 
     @classmethod
     def getInstance(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance=cls(*args,**kwargs)
+        elif len(args) > 0 or len(kwargs) > 0:
+            cls._instance.__init__(*args,**kwargs)
         return cls._instance
 
     def __init__(self, training_matrix, users_categories_visits,
@@ -30,7 +32,7 @@ class CatDivPropensity():
 
         self.CAT_METHODS = {
             "std_norm": self.cat_div_std_norm,
-            "mad_norm": self.cat_div_mad_norm,
+            # "mad_norm": self.cat_div_mad_norm,
             "ld": self.cat_div_ld,
             "raw_std": self.cat_div_raw_std,
             "num_cat": self.cat_div_num_cat,
@@ -64,15 +66,15 @@ class CatDivPropensity():
         else:
             return 1-2*std/(np.max(cats_visits)-np.min(cats_visits))
 
-    @classmethod
-    def cat_div_mad_norm(cls, uid):
-        self = cls.getInstance()
-        cats_visits = self.users_categories_visits[uid]
-        std = scipy.stats.median_absolute_deviation(cats_visits)
-        if std == 0:
-            return 0
-        else:
-            return 1-std/(np.max(cats_visits)-np.min(cats_visits))
+    # @classmethod
+    # def cat_div_mad_norm(cls, uid):
+    #     self = cls.getInstance()
+    #     cats_visits = self.users_categories_visits[uid]
+    #     std = scipy.stats.median_absolute_deviation(cats_visits)
+    #     if std == 0:
+    #         return 0
+    #     else:
+    #         return 1-std/(np.max(cats_visits)-np.min(cats_visits))
 
     @classmethod
     def cat_div_skew(cls, uid):

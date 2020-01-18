@@ -12,29 +12,41 @@ from concurrent.futures import ProcessPoolExecutor
 
 from parallel_util import run_parallel
 
+import lib.cat_utils as cat_utils
+
 class GeoDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
-    METHODS = ['walk','num_poi']
+    METHODS = ['walk','num_poi','num_cat','visits']
 
     @classmethod
     def getInstance(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance=cls(*args,**kwargs)
+        elif len(args) > 0 or len(kwargs) > 0:
+            cls._instance.__init__(*args,**kwargs)
         return cls._instance
 
-    def __init__(self,training_matrix,poi_coos,geo_div_method='walk'):
+    def __init__(self,training_matrix,poi_coos,poi_cats,undirected_category_tree,geo_div_method):
         self.training_matrix=training_matrix
         self.poi_coos=poi_coos
-
+        self.poi_cats=poi_cats
+        self.undirected_category_tree = undirected_category_tree
+        self.users_categories_visits = cat_utils.get_users_cat_visits(self.training_matrix,
+                                                                      self.poi_cats)
         self.mean_walk=self.cmean_dist_pois()
         self.users_mean_walk=self.cmean_dist_users()
         self.geo_div_method = geo_div_method
         self.GEO_METHODS = {
             "walk": self.geo_div_walk,
             "num_poi": self.geo_div_num_poi,
+            "num_cat": self.geo_div_num_cat,
+            "visits": self.geo_div_visits,
         }
 
+
+        self.max_user_visits = self.training_matrix.sum(axis=1).max()
+        
         self.geo_div_propensity=None
 
 
@@ -99,10 +111,15 @@ class GeoDivPropensity():
     @classmethod
     def geo_div_walk(cls,uid):
         self = cls.getInstance()
-        norm_prop=max((self.users_mean_walk[uid]/self.mean_walk),1)
+        norm_prop=min((self.users_mean_walk[uid]/self.mean_walk),1)
         # self.geo_div_propensity=norm_prop
         return norm_prop
 
+    @classmethod
+    def geo_div_num_cat(cls, uid):
+        self = cls.getInstance()
+        cats_visits = self.users_categories_visits[uid]
+        return len(cats_visits)/(len(self.undirected_category_tree)-1)
 
     @classmethod
     def geo_div_num_poi(cls, uid):
@@ -110,6 +127,12 @@ class GeoDivPropensity():
         lids = self.training_matrix[uid].nonzero()[0]
         return len(lids)/self.training_matrix.shape[1]
 
+    @classmethod
+    def geo_div_visits(cls, uid):
+        self = cls.getInstance()
+        lids = self.training_matrix[uid].nonzero()[0]
+        visits = self.training_matrix[uid,lids].sum()
+        return visits/self.max_user_visits
 
     def compute_geo_div_propensity(self):
         func = self.GEO_METHODS.get(self.geo_div_method,
