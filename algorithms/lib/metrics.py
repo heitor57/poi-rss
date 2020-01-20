@@ -76,8 +76,8 @@ def ildk(pois,poi_cats,undirected_category_tree):
 
 def gck(uid,training_matrix,poi_cats,predicted):
     lids=training_matrix[uid].nonzero()[0]
-    lid_visits=training_matrix[:,lids].sum(axis=0)
-    #lid_visits=training_matrix[uid,lids]#.sum(axis=0)
+    # lid_visits=training_matrix[:,lids].sum(axis=0)
+    lid_visits=training_matrix[uid,lids]#.sum(axis=0)
     mean_visits=lid_visits.mean()
     relevant_lids=lids[lid_visits>mean_visits]
 

@@ -238,7 +238,7 @@ class RecRunner():
     def get_final_parameters():
         return  {
             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.75, 'heuristic': 'local_max'},
-            "persongeocat": {'div_weight':0.75,'cat_div_method':'ld', 'geo_div_method': 'walk'},
+            "persongeocat": {'div_weight':0.75,'cat_div_method':None, 'geo_div_method': 'walk'},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
@@ -399,8 +399,8 @@ class RecRunner():
         self.save_result(results,base=False)
 
     def persongeocat_preprocess(self):
-        print("Computing geographic diversification propensity")
         if self.final_rec_parameters['geo_div_method'] != None:
+            print("Computing geographic diversification propensity")
             self.pgeo_div_runner = GeoDivPropensity.getInstance(self.training_matrix, self.poi_coos,
                                                                 self.poi_cats,self.undirected_category_tree,
                                                                 self.final_rec_parameters['geo_div_method'])
@@ -795,6 +795,9 @@ class RecRunner():
         # if not hasattr(self,'epc_val'):
         # epc_val=metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids)
         epc_val=self.epc_val
+
+        map_val = metrics.mapk(actual,predicted_at_k,k)
+        ndcg_val = metrics.ndcgk(actual,predicted_at_k,k)
         # else:
         #     epc_val=self.epc_val
         # if uid == max(self.all_uids):
@@ -802,7 +805,8 @@ class RecRunner():
         # this epc is maded like vargas, recsys'11
         #epc_val=metrics.epck(predicted_at_k,actual,uid,self.training_matrix)
         
-        d={'user_id':uid,'precision':precision_val,'recall':rec_val,'pr':pr_val,'ild':ild_val,'gc':gc_val,'epc':epc_val}
+        d={'user_id':uid,'precision':precision_val,'recall':rec_val,'pr':pr_val,'ild':ild_val,'gc':gc_val,'epc':epc_val,
+           'map':map_val,'ndcg':ndcg_val}
 
         return json.dumps(d)+'\n'
 
@@ -863,7 +867,7 @@ class RecRunner():
 
     def plot_acc_metrics(self,prefix_name='acc_met'):
         palette = plt.get_cmap('Set1')
-        ACC_METRICS = ['precision','recall']
+        ACC_METRICS = ['precision','recall','ndcg']
         for i,k in enumerate(experiment_constants.METRICS_K):
             metrics_mean=dict()
             for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
@@ -872,8 +876,7 @@ class RecRunner():
                 for obj in metrics:
                     for key in obj:
                         if key in ACC_METRICS:
-                            if key in self.metrics_name:
-                                metrics_mean[rec_using][key]+=obj[key]
+                            metrics_mean[rec_using][key]+=obj[key]
                 for j,key in enumerate(metrics_mean[rec_using]):
                     metrics_mean[rec_using][key]/=len(metrics)
                     #print(f"{key}:{metrics_mean[rec_using][key]}")
@@ -883,9 +886,12 @@ class RecRunner():
             N=len(ACC_METRICS)
             indexes=np.arange(N)
             i=0
+
+            df = pd.DataFrame([],columns=ACC_METRICS)
+            print(f"AT @{k}")
             for rec_using,rec_metrics in metrics_mean.items():
-                print(f"{rec_using} at @{k}")
-                print(rec_metrics)
+                # print(rec_metrics)
+                df.loc[rec_using] = rec_metrics
                 ax.bar(indexes+i*barWidth,rec_metrics.values(),barWidth,label=rec_using,color=palette(i))
                 for ind in indexes:
                     ax.text(ind+i*barWidth-barWidth/2,0,"%.3f"%(list(rec_metrics.values())[ind]),fontsize=6)
@@ -894,6 +900,7 @@ class RecRunner():
                 #         y=np.zeros(N),
                 #         s=['n']*N,
                 #         fontsize=18)
+            print(df.sort_values(by=ACC_METRICS[0],ascending=False))
             ax.set_xticks(np.arange(N+1)+barWidth*(((len(self.metrics))/2)-1)+barWidth/2)
             ax.legend(tuple(self.metrics.keys()))
             ax.set_xticklabels(ACC_METRICS)
@@ -1272,3 +1279,43 @@ class RecRunner():
         #     combination_string = "".join(combination)
         #     new_df[combination_string] = df[combination[1]]*df[combination[0]]
         # print(df.corr())
+    def perfect_analysis(self):
+        self.load_base()
+
+        self.base_rec = 'usg'
+        self.final_rec = 'perfectpersongeocat'
+
+        fin = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"rb")
+        self.perfect_parameter = pickle.load(fin)
+
+
+
+
+        vals = np.array([])
+        for uid, val in self.perfect_parameter.items():
+            vals = np.append(vals,val)
+        args = np.argsort(vals)
+        vals=vals[args]
+
+        # self.metrics[self.get_final_rec_short_name()]['ild']
+        df = pd.DataFrame([])
+        df['beta'] = vals
+
+        self.final_rec = 'persongeocat'
+        self.final_rec_parameters = {'geo_div_method': 'walk', 'cat_div_method':None}
+        self.persongeocat_preprocess()
+        df['beta_walk'] = self.div_geo_cat_weight
+        self.final_rec_parameters = {'geo_div_method': None, 'cat_div_method':'poi_ild'}
+        self.persongeocat_preprocess()
+        df['beta_poi_ild'] = self.div_geo_cat_weight
+        df= df.sort_values(by='beta').reset_index(drop=True)
+        #self.perfect_parameter = pd.Series(self.perfect_parameter)
+        # plt.bar(list(range(len(vals))),height=vals)
+        print(df.head())
+        df[['beta','beta_walk','beta_poi_ild']].plot()
+        # plt.xticks(np.arange(0,len(df),200),np.arange(0,len(df),200))
+        # df[['gc']].plot.bar()
+        # plt.plot(df['beta'])
+        # plt.plot(df['ild'])
+        # plt.plot(vals)
+        plt.savefig(self.data_directory+IMG+f'analysis_{self.get_final_rec_name()}.png')
