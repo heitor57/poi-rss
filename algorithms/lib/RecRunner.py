@@ -1217,7 +1217,7 @@ class RecRunner():
         )
         # self.persongeocat_preprocess()
         # div_geo_cat_weight = self.div_geo_cat_weight
-        for uid in range(self.user_num):
+        for uid in self.all_uids:
             # beta = self.perfect_parameter[uid]
             visited_lids = self.training_matrix[uid].nonzero()[0]
             visits_mean = self.training_matrix[uid,visited_lids].mean()
@@ -1254,24 +1254,47 @@ class RecRunner():
         from sklearn.preprocessing import StandardScaler
         from sklearn.linear_model import LinearRegression
         from sklearn.neural_network import MLPRegressor
-
-        X_train, X_test, y_train, y_test = train_test_split(df_poly.to_numpy(),self.perfect_parameter,test_size=0.2,random_state=42)
+        from sklearn.neural_network import MLPClassifier
+        from sklearn.ensemble import RandomForestClassifier
+        X_train, X_test, y_train, y_test = train_test_split(df_poly.to_numpy(),self.perfect_parameter,test_size=0.5,random_state=42)
 
         sc = StandardScaler()
         X_train = sc.fit_transform(X_train)
         X_test = sc.transform(X_test)
 
-        lreg = LinearRegression().fit(X_train,y_train)
-        print("Linear regressor:")
-        print("Train score", lreg.score(X_train,y_train))
-        print("Test score", lreg.score(X_test,y_test))
+        regressor_predictors = {
+            'Linear regressor' : LinearRegression(),
+            'Neural network regressor' : MLPRegressor(hidden_layer_sizes=(20,20,20,20)),
+        }
 
-        mlp = MLPRegressor(hidden_layer_sizes=(20,20,20,20))
-        mlp.fit(X_train,y_train)
 
-        print("Neural network regressor:")
-        print("Train score", mlp.score(X_train,y_train))
-        print("Test score", mlp.score(X_test,y_test))
+        for name,rp in regressor_predictors.items():
+            rp.fit(X_train,y_train)
+            print("=======",name,"=======")
+            print("Train score", rp.score(X_train,y_train))
+            print("Test score", rp.score(X_test,y_test))
+
+        from sklearn.metrics import classification_report, confusion_matrix
+        from sklearn import preprocessing
+
+        lab_enc = preprocessing.LabelEncoder()
+        encoded_y_train = lab_enc.fit_transform(y_train)
+        encoded_y_test = lab_enc.transform(y_test)
+
+        classifier_predictors = {
+            'Random forest classifier' : RandomForestClassifier(n_estimators=200),
+            'Neural network classifier' : MLPClassifier(hidden_layer_sizes=(11,11,11),max_iter=100000),
+        }
+        for name, cp in classifier_predictors.items():
+            cp.fit(X_train,encoded_y_train)
+            pred_cp = cp.predict(X_test)
+            print("-------",name,"-------")
+            # print("Train score", cp.score(X_train,encoded_y_train))
+            # print("Test score", cp.score(X_test,encoded_y_test))
+            print(classification_report(encoded_y_test, pred_cp))
+            print(confusion_matrix(encoded_y_test, pred_cp))
+
+
 # generate combinations
         # from itertools import combinations
         # columns = list(df.columns).remove('beta')
