@@ -23,6 +23,17 @@ plt.rcParams['font.size'] = 9
 from pympler import asizeof
 import scipy
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.neural_network import MLPRegressor
+from sklearn.neural_network import MLPClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn import preprocessing
+from sklearn import svm
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn import neighbors
 
 import cat_utils
 from usg.UserBasedCF import UserBasedCF
@@ -238,7 +249,7 @@ class RecRunner():
     def get_final_parameters():
         return  {
             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.75, 'heuristic': 'local_max'},
-            "persongeocat": {'div_weight':0.75,'cat_div_method':None, 'geo_div_method': 'walk'},
+            "persongeocat": {'div_weight':0.75,'cat_div_method': 'class', 'geo_div_method': None, 'bins': 3},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
@@ -399,6 +410,50 @@ class RecRunner():
         self.save_result(results,base=False)
 
     def persongeocat_preprocess(self):
+        if self.final_rec_parameters['cat_div_method'] == 'class' and self.final_rec_parameters['geo_div_method'] == None:
+            classifier_predictors = {
+                'Random forest classifier' : RandomForestClassifier(n_estimators=200),
+                'Neural network classifier' : MLPClassifier(hidden_layer_sizes=(11,11,11),max_iter=100000),
+                'SVM' : svm.SVC(),
+                'K-NN' : neighbors.KNeighborsClassifier(),
+            }
+            bckp = vars(self).copy()
+
+            df_test = self.generate_general_user_data()
+
+            self.city = 'madison'
+            self.load_base()
+            self.load_perfect()
+            perfect_parameter_train = self.perfect_parameter
+            df = self.generate_general_user_data()
+
+            for key, val in bckp.items():
+                vars(self)[key] = val
+                
+            self.load_perfect()
+            # print(len(self.perfect_parameter))
+            # print(len(self.all_uids))
+
+            X_train, X_test, y_train = df.to_numpy(),df_test.to_numpy(), perfect_parameter_train
+
+            lab_enc = preprocessing.LabelEncoder()
+
+
+            encoded_y_train = lab_enc.fit_transform(y_train)
+
+
+            sc = StandardScaler()
+            X_train = sc.fit_transform(X_train)
+            X_test = sc.transform(X_test)
+
+            for name, cp in classifier_predictors.items():
+                cp.fit(X_train,encoded_y_train)
+                pred_cp = cp.predict(X_test)
+                print("-------",name,"-------")
+                self.div_geo_cat_weight = lab_enc.inverse_transform(pred_cp)
+            return
+
+
         if self.final_rec_parameters['geo_div_method'] != None:
             print("Computing geographic diversification propensity")
             self.pgeo_div_runner = GeoDivPropensity.getInstance(self.training_matrix, self.poi_coos,
@@ -426,9 +481,13 @@ class RecRunner():
             self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
         else:
             self.div_geo_cat_weight=(self.geo_div_propensity)/(self.geo_div_propensity+self.cat_div_propensity)
-            self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
+            self.dGiv_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
             self.div_weight[(self.geo_div_propensity==0) & (self.cat_div_propensity==0)] = 0
 
+        if self.final_rec_parameters['bins'] != None:
+            bins = np.append(np.arange(0,1,1/(self.final_rec_parameters['bins']-1)),1)
+            centers = (bins[1:]+bins[:-1])/2
+            self.div_geo_cat_weight = bins[np.digitize(self.div_geo_cat_weight, centers)]
         # fout = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"wb")
         # pickle.dump(self.div_geo_cat_weight,fout)
         # fout.close()
@@ -1186,26 +1245,21 @@ class RecRunner():
         plt.savefig(self.data_directory+IMG+f'perf_param_{self.get_final_rec_name()}.png')
         # plt.savefig(self.data_directory+IMG+f'perfect_{self.city}.png')
 
-    def plot_correlation_perfectparam(self):
 
-        self.base_rec = 'usg'
-        self.final_rec = 'perfectpersongeocat'
-
-        fin = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"rb")
-        self.perfect_parameter = pickle.load(fin)
-        self.perfect_parameter = pd.Series(self.perfect_parameter)
-
+    def generate_general_user_data(self):
+        preprocess_methods = [[None,'walk']# ,['poi_ild',None]
+        ]
+        final_rec = self.final_rec
         self.final_rec = 'persongeocat'
-
-        # div_geo_cat_weight = dict()
-        # methods_columns = []
-        # for cat_div_method in [None]+CatDivPropensity.METHODS:
-        #     for geo_div_method in [None]+GeoDivPropensity.METHODS:
-        #         if cat_div_method != geo_div_method:
-        #             self.final_rec_parameters = {'cat_div_method': cat_div_method, 'geo_div_method': geo_div_method}
-        #             self.persongeocat_preprocess()
-        #             div_geo_cat_weight[(cat_div_method,geo_div_method)] = self.div_geo_cat_weight
-        #             methods_columns.append("%s-%s" % (cat_div_method,geo_div_method))
+        div_geo_cat_weight = dict()
+        methods_columns = []
+        for cat_div_method in [None]+CatDivPropensity.METHODS:
+            for geo_div_method in [None]+GeoDivPropensity.METHODS:
+                if cat_div_method != geo_div_method and ([cat_div_method,geo_div_method] in preprocess_methods):
+                    self.final_rec_parameters = {'cat_div_method': cat_div_method, 'geo_div_method': geo_div_method}
+                    self.persongeocat_preprocess()
+                    div_geo_cat_weight[(cat_div_method,geo_div_method)] = self.div_geo_cat_weight
+                    methods_columns.append("%s-%s" % (cat_div_method,geo_div_method))
         df = pd.DataFrame([],
                           columns=[
                               'visits','visits_mean',
@@ -1213,7 +1267,7 @@ class RecRunner():
                               'cats_visited_mean','cats_visited_std',
                               'num_friends'
                           ]
-                          # + methods_columns
+                          + methods_columns
         )
         # self.persongeocat_preprocess()
         # div_geo_cat_weight = self.div_geo_cat_weight
@@ -1231,42 +1285,58 @@ class RecRunner():
             cats_visits = np.array(list(cats_visits.values()))
             cats_visits_mean = cats_visits.mean()
             cats_visits_std = cats_visits.std()
-            # methods_values = []
-            # for cat_div_method in [None]+CatDivPropensity.METHODS:
-            #     for geo_div_method in [None]+GeoDivPropensity.METHODS:
-            #         if cat_div_method != geo_div_method:
-            #             methods_values.append(div_geo_cat_weight[(cat_div_method,geo_div_method)][uid])
+            methods_values = []
+            for cat_div_method in [None]+CatDivPropensity.METHODS:
+                for geo_div_method in [None]+GeoDivPropensity.METHODS:
+                    if cat_div_method != geo_div_method and ([cat_div_method,geo_div_method] in preprocess_methods):
+                        methods_values.append(div_geo_cat_weight[(cat_div_method,geo_div_method)][uid])
             num_friends = len(self.social_relations[uid])
             df.loc[uid] = [visits,visits_mean,
                            visits_std,len(cats_visits),
-                           cats_visits_mean,cats_visits_std,num_friends] #+ methods_values
+                           cats_visits_mean,cats_visits_std,num_friends] + methods_values
 
-        from sklearn.preprocessing import PolynomialFeatures
         poly = PolynomialFeatures(degree=1,interaction_only=False)
         res_poly = poly.fit_transform(df)
         # print(res_poly)
         df_poly = pd.DataFrame(res_poly, columns=poly.get_feature_names(df.columns))
+
+        self.final_rec = final_rec
+        return df_poly
+
+    def load_perfect(self):
+        final_rec = self.final_rec
+        self.final_rec = 'perfectpersongeocat'
+        fin = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"rb")
+        self.perfect_parameter = pickle.load(fin)
+        vals = np.array([])
+        for uid, val in self.perfect_parameter.items():
+            vals = np.append(vals,val)
+        self.perfect_parameter = vals
+        # self.perfect_parameter = pd.Series(self.perfect_parameter)
+        self.final_rec = final_rec
+    
+    def plot_correlation_perfectparam(self):
+        self.base_rec = 'usg'
+
+        self.load_perfect()
+        self.perfect_parameter = pd.Series(self.perfect_parameter)
+
+        df_poly=self.generate_general_user_data()
+
         correlations = df_poly.corrwith(self.perfect_parameter)
         print(correlations)
         print(correlations.idxmax(), correlations.max())
 
-        from sklearn.model_selection import train_test_split
-        from sklearn.preprocessing import StandardScaler
-        from sklearn.linear_model import LinearRegression
-        from sklearn.neural_network import MLPRegressor
-        from sklearn.neural_network import MLPClassifier
-        from sklearn.ensemble import RandomForestClassifier
-        X_train, X_test, y_train, y_test = train_test_split(df_poly.to_numpy(),self.perfect_parameter,test_size=0.5,random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(df_poly.to_numpy(),self.perfect_parameter,test_size=0.2,random_state=42)
 
         sc = StandardScaler()
         X_train = sc.fit_transform(X_train)
         X_test = sc.transform(X_test)
 
         regressor_predictors = {
-            'Linear regressor' : LinearRegression(),
+            # 'Linear regressor' : LinearRegression(),
             'Neural network regressor' : MLPRegressor(hidden_layer_sizes=(20,20,20,20)),
         }
-
 
         for name,rp in regressor_predictors.items():
             rp.fit(X_train,y_train)
@@ -1274,24 +1344,23 @@ class RecRunner():
             print("Train score", rp.score(X_train,y_train))
             print("Test score", rp.score(X_test,y_test))
 
-        from sklearn.metrics import classification_report, confusion_matrix
-        from sklearn import preprocessing
-
         lab_enc = preprocessing.LabelEncoder()
         encoded_y_train = lab_enc.fit_transform(y_train)
         encoded_y_test = lab_enc.transform(y_test)
-
         classifier_predictors = {
             'Random forest classifier' : RandomForestClassifier(n_estimators=200),
             'Neural network classifier' : MLPClassifier(hidden_layer_sizes=(11,11,11),max_iter=100000),
+            'SVM' : svm.SVC(),
+            'K-NN' : neighbors.KNeighborsClassifier(),
         }
         for name, cp in classifier_predictors.items():
             cp.fit(X_train,encoded_y_train)
             pred_cp = cp.predict(X_test)
             print("-------",name,"-------")
+            # print(lab_enc.inverse_transform(pred_cp))
             # print("Train score", cp.score(X_train,encoded_y_train))
             # print("Test score", cp.score(X_test,encoded_y_test))
-            print(classification_report(encoded_y_test, pred_cp))
+            print(classification_report(encoded_y_test, pred_cp,zero_division=0))
             print(confusion_matrix(encoded_y_test, pred_cp))
 
 
@@ -1310,9 +1379,6 @@ class RecRunner():
 
         fin = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"rb")
         self.perfect_parameter = pickle.load(fin)
-
-
-
 
         vals = np.array([])
         for uid, val in self.perfect_parameter.items():
