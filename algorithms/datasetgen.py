@@ -343,7 +343,7 @@ for city in cities:
         user_id=users_id_to_int[users_id[i]]
         checkin_list=user_checkin_data[user_id]
         checkin_list=sorted(checkin_list, key = lambda i: i['date']) 
-        train_size=math.floor(len(checkin_list)*TRAIN_SIZE)
+        train_size=math.ceil(len(checkin_list)*TRAIN_SIZE)
         #test_size=math.floor(len(checkin_list)*TEST_SIZE)
         count=1
         te_pois=set()
