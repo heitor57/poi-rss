@@ -38,6 +38,25 @@ def delimiter_area(case):
         area['initial_latitude'] = 42.936791
         area['initial_longitude'] = -89.608990
         area['final_longitude'] = -89.179837
+    elif case == "montreal":
+        print('Area selected: Montreal')
+        city = "Montreal"
+        area = {}
+        area['city'] = city.lower()
+        area['initial_latitude'] = 45.349779
+        area['initial_longitude'] = -74.024676
+        area['final_latitude'] = 45.817165
+        area['final_longitude'] = -73.339345
+    elif case == "pittsburgh":
+        print('Area selected: %s' % (case))
+        city = case
+        area = {}
+        area['city'] = city.lower()
+        area['initial_latitude'] = 40.359118
+        area['initial_longitude'] = -80.102733
+        area['final_latitude'] = 40.502851
+        area['final_longitude'] = -79.854168
+
     return area
 def poi_in_area(area,poi):
     if (poi['latitude']>=area['initial_latitude']) and\

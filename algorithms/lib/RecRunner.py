@@ -66,6 +66,14 @@ UTIL = 'result/util/'
 #CHKS = 40 # chunk size for process pool executor
 #CHKSL = 200 # chunk size for process pool executor largest
 
+
+classifier_predictors = {
+    'RFC' : RandomForestClassifier(n_estimators=200),
+    'MLPC' : MLPClassifier(hidden_layer_sizes=(11,11,11),max_iter=100000),
+    'SVM' : svm.SVC(),
+    'KNN' : neighbors.KNeighborsClassifier(),
+}
+
 def normalize(scores):
     scores = np.array(scores, dtype=np.float128)
 
@@ -248,8 +256,8 @@ class RecRunner():
     @staticmethod
     def get_final_parameters():
         return  {
-            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.75, 'heuristic': 'local_max'},
-            "persongeocat": {'div_weight':0.75,'cat_div_method': 'class', 'geo_div_method': None, 'bins': 3},
+            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0, 'heuristic': 'local_max'},
+            "persongeocat": {'div_weight':0.75,'cat_div_method': 'MLPC', 'geo_div_method': None, 'bins': 3},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
@@ -315,6 +323,7 @@ class RecRunner():
         self.ground_truth = defaultdict(set)
         for checkin in pickle.load(open(self.data_directory+"checkin/test/"+CITY+".pickle", "rb")):
             self.ground_truth[checkin['user_id']].add(checkin['poi_id'])
+        self.ground_truth = dict(self.ground_truth)
         # Pois load
         self.poi_coos = {}
         self.poi_cats = {}
@@ -326,7 +335,7 @@ class RecRunner():
         self.social_relations = defaultdict(list)
         for user_id, friends in pickle.load(open(self.data_directory+"user/"+CITY+".pickle", "rb")).items():
             self.social_relations[user_id] = friends
-
+        self.social_relations = dict(self.social_relations)
         user_num = len(self.social_relations)
         poi_num = len(self.poi_coos)
         user_num, poi_num
@@ -342,6 +351,8 @@ class RecRunner():
         for checkin in self.data_checkin_train:
             self.training_matrix[checkin['user_id'], checkin['poi_id']] += 1
 
+        # print(len(self.data_checkin_train))
+
         # poi neighbors load
         self.poi_neighbors = pickle.load(
             open(self.data_directory+"neighbor/"+CITY+".pickle", "rb"))
@@ -349,6 +360,26 @@ class RecRunner():
         self.all_uids = list(range(user_num))
         self.all_lids = list(range(poi_num))
         self.test_data()
+
+        print("Removing invalid users")
+        # for uid in self.invalid_uids:
+        #     del self.ground_truth[uid]
+        #     del self.social_relations[uid]
+        self.training_matrix = self.training_matrix[self.all_uids]
+
+        uid_to_int = dict()
+        for i, uid in enumerate(self.all_uids):
+            uid_to_int[uid] = i
+
+        for uid in self.all_uids:
+            self.ground_truth[uid_to_int[uid]] = self.ground_truth.pop(uid)
+            self.social_relations[uid_to_int[uid]] = self.social_relations.pop(uid)
+            self.social_relations[uid_to_int[uid]] = [uid_to_int[uid] for friend_uid in self.social_relations[uid_to_int[uid]]]
+
+        self.all_uids = [uid_to_int[uid] for uid in self.all_uids]
+        self.user_num = len(self.all_uids)
+        print("Finish removing invalid users")
+
         self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/4)
         self.CHKSL = int(len(self.all_uids)/multiprocessing.cpu_count())
         self.welcome_load()
@@ -369,11 +400,11 @@ class RecRunner():
         top_k = self.base_rec_list_size
         training_matrix = training_matrix.copy()
         training_matrix[training_matrix >= 1] = 1
-        alpha = 0.1
-        beta = 0.1
+        alpha = self.base_rec_parameters['alpha']
+        beta = self.base_rec_parameters['beta']
 
         U = UserBasedCF()
-        S = FriendBasedCF(eta=0.05)
+        S = FriendBasedCF(eta=self.base_rec_parameters['eta'])
         G = PowerLaw()
 
         U.pre_compute_rec_scores(training_matrix)
@@ -391,6 +422,10 @@ class RecRunner():
         print("S memory usage:",asizeof.asizeof(S)/1024**2,"MB")
         print("G memory usage:",asizeof.asizeof(G)/1024**2,"MB")
         results = run_parallel(self.run_usg,args,self.CHKS)
+        # results = []
+        # for i, arg in enumerate(args):
+        #     print("%d/%d" % (i,len(args)))
+        #     results.append(self.run_usg(*arg))
         print("usg terminated")
 
         self.save_result(results,base=True)
@@ -410,13 +445,7 @@ class RecRunner():
         self.save_result(results,base=False)
 
     def persongeocat_preprocess(self):
-        if self.final_rec_parameters['cat_div_method'] == 'class' and self.final_rec_parameters['geo_div_method'] == None:
-            classifier_predictors = {
-                'Random forest classifier' : RandomForestClassifier(n_estimators=200),
-                'Neural network classifier' : MLPClassifier(hidden_layer_sizes=(11,11,11),max_iter=100000),
-                'SVM' : svm.SVC(),
-                'K-NN' : neighbors.KNeighborsClassifier(),
-            }
+        if self.final_rec_parameters['cat_div_method'] in list(classifier_predictors.keys()) and self.final_rec_parameters['geo_div_method'] == None:
             bckp = vars(self).copy()
 
             df_test = self.generate_general_user_data()
@@ -429,8 +458,7 @@ class RecRunner():
 
             for key, val in bckp.items():
                 vars(self)[key] = val
-                
-            self.load_perfect()
+
             # print(len(self.perfect_parameter))
             # print(len(self.all_uids))
 
@@ -438,19 +466,19 @@ class RecRunner():
 
             lab_enc = preprocessing.LabelEncoder()
 
-
             encoded_y_train = lab_enc.fit_transform(y_train)
-
 
             sc = StandardScaler()
             X_train = sc.fit_transform(X_train)
             X_test = sc.transform(X_test)
 
-            for name, cp in classifier_predictors.items():
-                cp.fit(X_train,encoded_y_train)
-                pred_cp = cp.predict(X_test)
-                print("-------",name,"-------")
-                self.div_geo_cat_weight = lab_enc.inverse_transform(pred_cp)
+            name = self.final_rec_parameters['cat_div_method']
+            cp = classifier_predictors[name]
+            cp.fit(X_train,encoded_y_train)
+            pred_cp = cp.predict(X_test)
+            print("-------",name,"-------")
+            self.div_geo_cat_weight = lab_enc.inverse_transform(pred_cp)
+            self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
             return
 
 
@@ -605,6 +633,7 @@ class RecRunner():
         U = self.cache[self.base_rec]['U']
         S = self.cache[self.base_rec]['S']
         G = self.cache[self.base_rec]['G']
+
         if uid in self.ground_truth:
 
             U_scores = normalize([U.predict(uid, lid)
@@ -1032,17 +1061,19 @@ class RecRunner():
             
                 # ax.bar(indexes[j+1]+i*barWidth,np.mean(list(metrics_mean[rec_using].values())),barWidth,label=rec_using,color=palette(i))
     def test_data(self):
+        self.invalid_uids = []
         self.message_start_section("TESTING DATA SET")
         has_some_error_global = False
         for i in self.all_uids:
             has_some_error = False
-            test_size = len(self.ground_truth[i])
+            test_size = len(self.ground_truth.get(i,[]))
             train_size = np.count_nonzero(self.training_matrix[i])
             if test_size == 0:
                 print(f"user {i} with empty ground truth")
                 has_some_error = True
                 # remove from tests
                 self.all_uids.remove(i)
+                self.invalid_uids.append(i)
             if train_size == 0:
                 print(f"user {i} with empty training data!!!!! Really bad error")
                 has_some_error = True
@@ -1347,12 +1378,12 @@ class RecRunner():
         lab_enc = preprocessing.LabelEncoder()
         encoded_y_train = lab_enc.fit_transform(y_train)
         encoded_y_test = lab_enc.transform(y_test)
-        classifier_predictors = {
-            'Random forest classifier' : RandomForestClassifier(n_estimators=200),
-            'Neural network classifier' : MLPClassifier(hidden_layer_sizes=(11,11,11),max_iter=100000),
-            'SVM' : svm.SVC(),
-            'K-NN' : neighbors.KNeighborsClassifier(),
-        }
+        # classifier_predictors = {
+        #     'Random forest classifier' : RandomForestClassifier(n_estimators=200),
+        #     'Neural network classifier' : MLPClassifier(hidden_layer_sizes=(11,11,11),max_iter=100000),
+        #     'SVM' : svm.SVC(),
+        #     'K-NN' : neighbors.KNeighborsClassifier(),
+        # }
         for name, cp in classifier_predictors.items():
             cp.fit(X_train,encoded_y_train)
             pred_cp = cp.predict(X_test)

@@ -1,5 +1,5 @@
 class experiment_constants:
-    CITIES=['lasvegas','phoenix','charlotte','madison']
+    CITIES=['madison','charlotte','lasvegas','phoenix','montreal','pittsburgh']
     CITY="madison" # city source of checkins
     TRAIN_SIZE=0.7
     N=80
