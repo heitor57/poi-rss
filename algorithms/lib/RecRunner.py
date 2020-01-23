@@ -53,10 +53,11 @@ DATA_DIRECTORY = '../data'  # directory with all data
 R_FORMAT = '.json'  # Results format is json, metrics, rec lists, etc
 D_FORMAT = '.pickle'  # data set format is pickle
 
-TRAIN = 'checkin/train'  # train data sets
-TEST = 'checkin/test'  # test data sets
+TRAIN = 'checkin/train/'  # train data sets
+TEST = 'checkin/test/'  # test data sets
 POI = 'poi/'  # poi data sets with cats and coos
-USER = 'user/'  # users and friends
+USER_FRIEND = 'user/friend/'  # users and friends
+USER = 'user/' # user general data
 NEIGHBOR = 'neighbor/'  # neighbors of pois
 
 METRICS = 'result/metrics/'
@@ -312,28 +313,35 @@ class RecRunner():
     def get_final_metrics_name(self):
         return self.data_directory+METRICS+self.get_final_rec_name()+f"{R_FORMAT}"
 
-    def load_base(self):
+    def load_base(self,user_data=False):
         CITY = self.city
+
         print(f"{CITY} city base loading")
+        if user_data:
+            self.user_data = pickle.load(open(self.data_directory+USER+CITY+'.pickle','rb'))
+            self.user_data = pd.DataFrame(self.user_data).T
+            self.user_data['yelping_since'] = self.user_data['yelping_since'].apply(lambda date: pd.Timestamp(date).year)
+            self.user_data = pd.get_dummies(self.user_data, columns=['yelping_since'])
+            print("User data memory usage:",asizeof.asizeof(self.user_data)/1024**2,"MB")
         # Train load
         self.data_checkin_train = pickle.load(
-            open(self.data_directory+"checkin/train/"+CITY+".pickle", "rb"))
+            open(self.data_directory+TRAIN+CITY+".pickle", "rb"))
 
         # Test load
         self.ground_truth = defaultdict(set)
-        for checkin in pickle.load(open(self.data_directory+"checkin/test/"+CITY+".pickle", "rb")):
+        for checkin in pickle.load(open(self.data_directory+TEST+CITY+".pickle", "rb")):
             self.ground_truth[checkin['user_id']].add(checkin['poi_id'])
         self.ground_truth = dict(self.ground_truth)
         # Pois load
         self.poi_coos = {}
         self.poi_cats = {}
-        for poi_id, poi in pickle.load(open(self.data_directory+"poi/"+CITY+".pickle", "rb")).items():
+        for poi_id, poi in pickle.load(open(self.data_directory+POI+CITY+".pickle", "rb")).items():
             self.poi_coos[poi_id] = tuple([poi['latitude'], poi['longitude']])
             self.poi_cats[poi_id] = poi['categories']
 
         # Social relations load
         self.social_relations = defaultdict(list)
-        for user_id, friends in pickle.load(open(self.data_directory+"user/"+CITY+".pickle", "rb")).items():
+        for user_id, friends in pickle.load(open(self.data_directory+USER_FRIEND+CITY+".pickle", "rb")).items():
             self.social_relations[user_id] = friends
         self.social_relations = dict(self.social_relations)
         user_num = len(self.social_relations)
@@ -355,7 +363,7 @@ class RecRunner():
 
         # poi neighbors load
         self.poi_neighbors = pickle.load(
-            open(self.data_directory+"neighbor/"+CITY+".pickle", "rb"))
+            open(self.data_directory+NEIGHBOR+CITY+".pickle", "rb"))
         print(f"{CITY} city base loaded")
         self.all_uids = list(range(user_num))
         self.all_lids = list(range(poi_num))
@@ -1278,7 +1286,8 @@ class RecRunner():
 
 
     def generate_general_user_data(self):
-        preprocess_methods = [[None,'walk']# ,['poi_ild',None]
+        preprocess_methods = [# [None,'walk']
+                              # ,['poi_ild',None]
         ]
         final_rec = self.final_rec
         self.final_rec = 'persongeocat'
@@ -1325,7 +1334,7 @@ class RecRunner():
             df.loc[uid] = [visits,visits_mean,
                            visits_std,len(cats_visits),
                            cats_visits_mean,cats_visits_std,num_friends] + methods_values
-
+        df = pd.concat([df,self.user_data],axis=1)
         poly = PolynomialFeatures(degree=1,interaction_only=False)
         res_poly = poly.fit_transform(df)
         # print(res_poly)
@@ -1378,19 +1387,10 @@ class RecRunner():
         lab_enc = preprocessing.LabelEncoder()
         encoded_y_train = lab_enc.fit_transform(y_train)
         encoded_y_test = lab_enc.transform(y_test)
-        # classifier_predictors = {
-        #     'Random forest classifier' : RandomForestClassifier(n_estimators=200),
-        #     'Neural network classifier' : MLPClassifier(hidden_layer_sizes=(11,11,11),max_iter=100000),
-        #     'SVM' : svm.SVC(),
-        #     'K-NN' : neighbors.KNeighborsClassifier(),
-        # }
         for name, cp in classifier_predictors.items():
             cp.fit(X_train,encoded_y_train)
             pred_cp = cp.predict(X_test)
             print("-------",name,"-------")
-            # print(lab_enc.inverse_transform(pred_cp))
-            # print("Train score", cp.score(X_train,encoded_y_train))
-            # print("Test score", cp.score(X_test,encoded_y_test))
             print(classification_report(encoded_y_test, pred_cp,zero_division=0))
             print(confusion_matrix(encoded_y_test, pred_cp))
 
@@ -1417,25 +1417,31 @@ class RecRunner():
         args = np.argsort(vals)
         vals=vals[args]
 
-        # self.metrics[self.get_final_rec_short_name()]['ild']
         df = pd.DataFrame([])
         df['beta'] = vals
 
-        self.final_rec = 'persongeocat'
-        self.final_rec_parameters = {'geo_div_method': 'walk', 'cat_div_method':None}
-        self.persongeocat_preprocess()
-        df['beta_walk'] = self.div_geo_cat_weight
-        self.final_rec_parameters = {'geo_div_method': None, 'cat_div_method':'poi_ild'}
-        self.persongeocat_preprocess()
-        df['beta_poi_ild'] = self.div_geo_cat_weight
-        df= df.sort_values(by='beta').reset_index(drop=True)
-        #self.perfect_parameter = pd.Series(self.perfect_parameter)
-        # plt.bar(list(range(len(vals))),height=vals)
-        print(df.head())
-        df[['beta','beta_walk','beta_poi_ild']].plot()
-        # plt.xticks(np.arange(0,len(df),200),np.arange(0,len(df),200))
-        # df[['gc']].plot.bar()
-        # plt.plot(df['beta'])
-        # plt.plot(df['ild'])
-        # plt.plot(vals)
+        self.load_metrics(base=False)
+        df_metrics = pd.DataFrame(self.metrics[self.get_final_rec_short_name()][10])
+        df_metrics = df_metrics.set_index('user_id')
+        
+        # print(df_metrics)
+        df['precision'] = df_metrics['precision']
+        
+        # self.final_rec = 'persongeocat'
+        # self.final_rec_parameters = {'geo_div_method': 'walk', 'cat_div_method':None}
+        # self.persongeocat_preprocess()
+        # df['beta_walk'] = self.div_geo_cat_weight
+        # self.final_rec_parameters = {'geo_div_method': None, 'cat_div_method':'poi_ild'}
+        # self.persongeocat_preprocess()
+        # df['beta_poi_ild'] = self.div_geo_cat_weight
+        # df= df.sort_values(by='beta').reset_index(drop=True)
+
+
+        # print(df.head())
+        print()
+        print("Number of each beta with precision greather than 0:")
+        print(df[df['precision']>0]['beta'].value_counts())
+        print()
+        # print(df[df['precision']>0].describe())
+        df[['beta','precision']].plot()
         plt.savefig(self.data_directory+IMG+f'analysis_{self.get_final_rec_name()}.png')

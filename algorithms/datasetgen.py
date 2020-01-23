@@ -19,8 +19,9 @@ import math
 
 SPLIT_YEAR=2017
 
-cities=['lasvegas','phoenix','charlotte','madison']
-#cities=['madison']
+# cities=['lasvegas','phoenix','charlotte','madison']
+cities=experiment_constants.CITIES
+# cities=['pittsburgh']
 
 dict_alias_title,category_tree,dict_alias_depth=cat_utils.cat_structs("../data/categories.json")
 undirected_category_tree=category_tree.to_undirected()
@@ -93,13 +94,20 @@ print(time.time()-start_time)
 
 
 fuser=open("../data/user.json")
+user_friend = dict()
 user_data = dict()
 start_time=time.time()
 for i, line in enumerate(fuser):  
     # json to dict
     obj_json = json.loads(line)
     # add to the data collection
-    user_data[obj_json['user_id']]=obj_json['friends'].split(', ')
+    user_friend[obj_json['user_id']]=obj_json['friends'].split(', ')
+    custom_obj = dict()
+    for key, value in obj_json.items():
+        if key not in ['friends','elite','name','user_id']:
+            custom_obj[key] = value
+
+    user_data[obj_json['user_id']] = custom_obj
 
 print(time.time()-start_time)
 
@@ -184,8 +192,10 @@ print(time.time()-start_time)
 # In[7]:
 
 
-genoptions=['poi','neighbor','user','checkin','test','train']
-genoptions=['checkin']
+genoptions=['poi','neighbor','user','checkin'# ,'test','train'
+            ,'user_data']
+genoptions=['checkin',
+            'user_data']
 
 
 # In[ ]:
@@ -197,7 +207,7 @@ for city in cities:
     print("CITY: %s" % (city))
     # Pega os checkins da cidade
     checkin_data=cities_checkin_data[city]
-
+    print("checkin_data size: %d"%(len(checkin_data)))
     # transforma em dataframe
     df_checkin=pd.DataFrame.from_dict(checkin_data)
     df_checkin.head(1)
@@ -284,7 +294,7 @@ for city in cities:
         pickle.dump(poi_neighbors,fneighbors)
         fneighbors.close()
     
-    city_user_data=dict()
+    city_user_friend=dict()
     countusf=0
     print("Inicio Amigos...")
     users_id = list(users_id)
@@ -292,20 +302,30 @@ for city in cities:
         for i in tqdm(range(len(users_id))):
             user_id=users_id[i]
             ucity_friends=list()
-            for friend_id in user_data[user_id]:
+            for friend_id in user_friend[user_id]:
                 try:
                     ucity_friends.append(users_id_to_int[friend_id])
                     countusf+=1
                 except:
                     pass
 
-            city_user_data[users_id_to_int[user_id]]=ucity_friends
-        fuser=open('../data/user/'+city+'.pickle','wb')
-        pickle.dump(city_user_data,fuser)
-        fuser.close()    
+            city_user_friend[users_id_to_int[user_id]]=ucity_friends
+        fuser=open('../data/user/friend/'+city+'.pickle','wb')
+        pickle.dump(city_user_friend,fuser)
+        fuser.close()
     
     print("Fim Amigos...")
     print("Friends: %d"%(countusf))
+
+    city_user_data = dict()
+    if 'user_data' in genoptions:
+        for i in tqdm(range(len(users_id))):
+            user_id=users_id[i]
+            city_user_data[users_id_to_int[user_id]]=user_data[user_id].copy()
+        fuser=open('../data/user/'+city+'.pickle','wb')
+        pickle.dump(city_user_data,fuser)
+        fuser.close()
+
     if 'checkin' in genoptions:
         for checkin in checkin_data:
             checkin['user_id'] = users_id_to_int[checkin['user_id']]
