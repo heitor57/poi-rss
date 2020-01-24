@@ -70,7 +70,7 @@ UTIL = 'result/util/'
 
 classifier_predictors = {
     'RFC' : RandomForestClassifier(n_estimators=200),
-    'MLPC' : MLPClassifier(hidden_layer_sizes=(11,11,11),max_iter=100000),
+    'MLPC' : MLPClassifier(hidden_layer_sizes=(11,11,11),max_iter=10000),
     'SVM' : svm.SVC(),
     'KNN' : neighbors.KNeighborsClassifier(),
 }
@@ -258,7 +258,7 @@ class RecRunner():
     def get_final_parameters():
         return  {
             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0, 'heuristic': 'local_max'},
-            "persongeocat": {'div_weight':0.75,'cat_div_method': 'MLPC', 'geo_div_method': None, 'bins': 3},
+            "persongeocat": {'div_weight':0.75,'cat_div_method': 'KNN', 'geo_div_method': None, 'bins': 3},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
@@ -313,16 +313,11 @@ class RecRunner():
     def get_final_metrics_name(self):
         return self.data_directory+METRICS+self.get_final_rec_name()+f"{R_FORMAT}"
 
-    def load_base(self,user_data=False):
+    def load_base(self,user_data=True):
         CITY = self.city
 
         print(f"{CITY} city base loading")
-        if user_data:
-            self.user_data = pickle.load(open(self.data_directory+USER+CITY+'.pickle','rb'))
-            self.user_data = pd.DataFrame(self.user_data).T
-            self.user_data['yelping_since'] = self.user_data['yelping_since'].apply(lambda date: pd.Timestamp(date).year)
-            self.user_data = pd.get_dummies(self.user_data, columns=['yelping_since'])
-            print("User data memory usage:",asizeof.asizeof(self.user_data)/1024**2,"MB")
+
         # Train load
         self.data_checkin_train = pickle.load(
             open(self.data_directory+TRAIN+CITY+".pickle", "rb"))
@@ -367,26 +362,43 @@ class RecRunner():
         print(f"{CITY} city base loaded")
         self.all_uids = list(range(user_num))
         self.all_lids = list(range(poi_num))
+
+        if user_data:
+            self.user_data = pickle.load(open(self.data_directory+USER+CITY+'.pickle','rb'))
+
         self.test_data()
 
         print("Removing invalid users")
-        # for uid in self.invalid_uids:
-        #     del self.ground_truth[uid]
-        #     del self.social_relations[uid]
+
         self.training_matrix = self.training_matrix[self.all_uids]
 
         uid_to_int = dict()
         for i, uid in enumerate(self.all_uids):
             uid_to_int[uid] = i
 
+        for uid in self.invalid_uids:
+            del self.social_relations[uid]
+            del self.user_data[uid]
+
+        self.ground_truth = dict((uid_to_int[key], value) for (key, value) in self.ground_truth.items())
+        self.social_relations = dict((uid_to_int[key], value) for (key, value) in self.social_relations.items())
+        self.user_data = dict((uid_to_int[key], value) for (key, value) in self.user_data.items())
         for uid in self.all_uids:
-            self.ground_truth[uid_to_int[uid]] = self.ground_truth.pop(uid)
-            self.social_relations[uid_to_int[uid]] = self.social_relations.pop(uid)
+            # self.ground_truth[uid_to_int[uid]] = self.ground_truth.pop(uid)
+            # self.social_relations[uid_to_int[uid]] = self.social_relations.pop(uid)
             self.social_relations[uid_to_int[uid]] = [uid_to_int[uid] for friend_uid in self.social_relations[uid_to_int[uid]]]
+            # self.user_data[uid_to_int[uid]] = self.user_data.pop(uid)
+
 
         self.all_uids = [uid_to_int[uid] for uid in self.all_uids]
         self.user_num = len(self.all_uids)
         print("Finish removing invalid users")
+
+        if user_data:
+            self.user_data = pd.DataFrame(self.user_data).T
+            self.user_data['yelping_since'] = self.user_data['yelping_since'].apply(lambda date: pd.Timestamp(date).year)
+            self.user_data = pd.get_dummies(self.user_data, columns=['yelping_since'])
+            print("User data memory usage:",asizeof.asizeof(self.user_data)/1024**2,"MB")
 
         self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/4)
         self.CHKSL = int(len(self.all_uids)/multiprocessing.cpu_count())
@@ -1335,9 +1347,9 @@ class RecRunner():
                            visits_std,len(cats_visits),
                            cats_visits_mean,cats_visits_std,num_friends] + methods_values
         df = pd.concat([df,self.user_data],axis=1)
+
         poly = PolynomialFeatures(degree=1,interaction_only=False)
         res_poly = poly.fit_transform(df)
-        # print(res_poly)
         df_poly = pd.DataFrame(res_poly, columns=poly.get_feature_names(df.columns))
 
         self.final_rec = final_rec
