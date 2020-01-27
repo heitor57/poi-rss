@@ -14,6 +14,7 @@ import time
 from datetime import datetime
 import itertools
 import multiprocessing
+from collections import Counter
 
 import numpy as np
 from tqdm import tqdm
@@ -34,6 +35,9 @@ from sklearn import preprocessing
 from sklearn import svm
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn import neighbors
+import imblearn
+import imblearn.datasets
+import imblearn.over_sampling
 
 import cat_utils
 from usg.UserBasedCF import UserBasedCF
@@ -70,7 +74,7 @@ UTIL = 'result/util/'
 
 classifier_predictors = {
     'RFC' : RandomForestClassifier(n_estimators=200),
-    'MLPC' : MLPClassifier(hidden_layer_sizes=(11,11,11),max_iter=10000),
+    'MLPC' : MLPClassifier(hidden_layer_sizes=(11,11,11)),
     'SVM' : svm.SVC(),
     'KNN' : neighbors.KNeighborsClassifier(),
 }
@@ -1352,6 +1356,8 @@ class RecRunner():
         res_poly = poly.fit_transform(df)
         df_poly = pd.DataFrame(res_poly, columns=poly.get_feature_names(df.columns))
 
+        
+        
         self.final_rec = final_rec
         return df_poly
 
@@ -1367,7 +1373,7 @@ class RecRunner():
         # self.perfect_parameter = pd.Series(self.perfect_parameter)
         self.final_rec = final_rec
     
-    def plot_correlation_perfectparam(self):
+    def print_correlation_perfectparam(self):
         self.base_rec = 'usg'
 
         self.load_perfect()
@@ -1379,14 +1385,22 @@ class RecRunner():
         print(correlations)
         print(correlations.idxmax(), correlations.max())
 
-        X_train, X_test, y_train, y_test = train_test_split(df_poly.to_numpy(),self.perfect_parameter,test_size=0.2,random_state=42)
+        X, y = df_poly, self.perfect_parameter
+        lab_enc = preprocessing.LabelEncoder()
+        y = lab_enc.fit_transform(y)
+
+        X, y = imblearn.over_sampling.SMOTE().fit_resample(X, y)
+
+        print(sorted(Counter(y).items()))
+
+        X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2,random_state=42)
 
         sc = StandardScaler()
         X_train = sc.fit_transform(X_train)
         X_test = sc.transform(X_test)
 
         regressor_predictors = {
-            # 'Linear regressor' : LinearRegression(),
+            'Linear regressor' : LinearRegression(),
             'Neural network regressor' : MLPRegressor(hidden_layer_sizes=(20,20,20,20)),
         }
 
@@ -1396,16 +1410,12 @@ class RecRunner():
             print("Train score", rp.score(X_train,y_train))
             print("Test score", rp.score(X_test,y_test))
 
-        lab_enc = preprocessing.LabelEncoder()
-        encoded_y_train = lab_enc.fit_transform(y_train)
-        encoded_y_test = lab_enc.transform(y_test)
         for name, cp in classifier_predictors.items():
-            cp.fit(X_train,encoded_y_train)
+            cp.fit(X_train,y_train)
             pred_cp = cp.predict(X_test)
             print("-------",name,"-------")
-            print(classification_report(encoded_y_test, pred_cp,zero_division=0))
-            print(confusion_matrix(encoded_y_test, pred_cp))
-
+            print(classification_report(y_test, pred_cp,zero_division=0))
+            print(confusion_matrix(y_test, pred_cp))
 
 # generate combinations
         # from itertools import combinations

@@ -22,6 +22,7 @@ pudb = "*"
 inquirer = "*"
 colorama = "*"
 sklearn = "*"
+imblearn = "*"
 
 [requires]
 python_version = "3.7"
