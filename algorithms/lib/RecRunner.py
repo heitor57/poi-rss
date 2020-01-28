@@ -38,6 +38,7 @@ from sklearn import neighbors
 import imblearn
 import imblearn.datasets
 import imblearn.over_sampling
+import imblearn.under_sampling 
 
 import cat_utils
 from usg.UserBasedCF import UserBasedCF
@@ -71,10 +72,14 @@ UTIL = 'result/util/'
 #CHKS = 40 # chunk size for process pool executor
 #CHKSL = 200 # chunk size for process pool executor largest
 
+regressor_predictors = {
+    # 'Linear regressor' : LinearRegression(),
+    # 'Neural network regressor' : MLPRegressor(hidden_layer_sizes=(20,20,20,20)),
+}
 
 classifier_predictors = {
-    'RFC' : RandomForestClassifier(n_estimators=200),
-    'MLPC' : MLPClassifier(hidden_layer_sizes=(11,11,11)),
+    'RFC' : RandomForestClassifier(n_estimators=500),
+    # 'MLPC' : MLPClassifier(hidden_layer_sizes=(20,20,20,20,20,20)),
     'SVM' : svm.SVC(),
     'KNN' : neighbors.KNeighborsClassifier(),
 }
@@ -262,7 +267,7 @@ class RecRunner():
     def get_final_parameters():
         return  {
             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0, 'heuristic': 'local_max'},
-            "persongeocat": {'div_weight':0.75,'cat_div_method': 'KNN', 'geo_div_method': None, 'bins': 3},
+            "persongeocat": {'div_weight':0.75,'cat_div_method': None, 'geo_div_method': 'walk', 'bins': 3},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
@@ -401,12 +406,16 @@ class RecRunner():
         if user_data:
             self.user_data = pd.DataFrame(self.user_data).T
             self.user_data['yelping_since'] = self.user_data['yelping_since'].apply(lambda date: pd.Timestamp(date).year)
+            years = list(range(2004,2019))
             self.user_data = pd.get_dummies(self.user_data, columns=['yelping_since'])
+            for year in years:
+                if f'yelping_since_{year}' not in self.user_data.columns:
+                    self.user_data[f'yelping_since_{year}'] = 0
             print("User data memory usage:",asizeof.asizeof(self.user_data)/1024**2,"MB")
-
         self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/4)
         self.CHKSL = int(len(self.all_uids)/multiprocessing.cpu_count())
         self.welcome_load()
+    
 
     def welcome_load(self):
         self.message_start_section("LOAD FINAL MESSAGE")
@@ -511,7 +520,7 @@ class RecRunner():
             self.pgeo_div_runner = GeoDivPropensity.getInstance(self.training_matrix, self.poi_coos,
                                                                 self.poi_cats,self.undirected_category_tree,
                                                                 self.final_rec_parameters['geo_div_method'])
-            self.geo_div_propensity = self.pgeo_div_runner.compute_geo_div_propensity()
+            self.geo_div_propensity = self.pgeo_div_runner.compute_div_propensity()
 
         if self.final_rec_parameters['cat_div_method'] != None:
             self.pcat_div_runner = CatDivPropensity.getInstance(
@@ -523,7 +532,7 @@ class RecRunner():
                 self.poi_cats)
             print("Computing categoric diversification propensity with",
                 self.final_rec_parameters['cat_div_method'])
-            self.cat_div_propensity=self.pcat_div_runner.compute_cat_div_propensity()
+            self.cat_div_propensity=self.pcat_div_runner.compute_div_propensity()
 
         if self.final_rec_parameters['cat_div_method'] == None:
             self.div_geo_cat_weight=self.geo_div_propensity
@@ -1352,10 +1361,10 @@ class RecRunner():
                            cats_visits_mean,cats_visits_std,num_friends] + methods_values
         df = pd.concat([df,self.user_data],axis=1)
 
-        poly = PolynomialFeatures(degree=1,interaction_only=False)
-        res_poly = poly.fit_transform(df)
-        df_poly = pd.DataFrame(res_poly, columns=poly.get_feature_names(df.columns))
-
+        # poly = PolynomialFeatures(degree=1,interaction_only=False)
+        # res_poly = poly.fit_transform(df)
+        # df_poly = pd.DataFrame(res_poly, columns=poly.get_feature_names(df.columns))
+        df_poly = df
         
         
         self.final_rec = final_rec
@@ -1399,10 +1408,7 @@ class RecRunner():
         X_train = sc.fit_transform(X_train)
         X_test = sc.transform(X_test)
 
-        regressor_predictors = {
-            'Linear regressor' : LinearRegression(),
-            'Neural network regressor' : MLPRegressor(hidden_layer_sizes=(20,20,20,20)),
-        }
+
 
         for name,rp in regressor_predictors.items():
             rp.fit(X_train,y_train)
@@ -1417,13 +1423,71 @@ class RecRunner():
             print(classification_report(y_test, pred_cp,zero_division=0))
             print(confusion_matrix(y_test, pred_cp))
 
-# generate combinations
-        # from itertools import combinations
-        # columns = list(df.columns).remove('beta')
-        # for combination in combinations(columns, 2):
-        #     combination_string = "".join(combination)
-        #     new_df[combination_string] = df[combination[1]]*df[combination[0]]
-        # print(df.corr())
+
+    def print_real_perfectparam(self):
+        old_city = self.city
+        bckp = vars(self).copy()
+
+        df_test = self.generate_general_user_data()
+        self.load_perfect()
+        perfect_parameter_test = self.perfect_parameter
+        perfect_parameter_train = np.array([])
+        df = pd.DataFrame()
+        for city in experiment_constants.CITIES:
+            if city != old_city:
+                self.city = city
+                self.load_base()
+                self.load_perfect()
+                perfect_parameter_train = np.append(perfect_parameter_train,self.perfect_parameter)
+                df = df.append(self.generate_general_user_data(), ignore_index=True)
+
+        # print(perfect_parameter_train)
+        # print(df)
+        # print(df[df.isna().any(axis=1)])
+        # print(df.shape,df_test.shape)
+        # print(df_test.columns)
+
+        for key, val in bckp.items():
+            vars(self)[key] = val
+
+        # print(len(self.perfect_parameter))
+        # print(len(self.all_uids))
+        X_train, X_test, y_train, y_test = df.to_numpy(),df_test.to_numpy(), perfect_parameter_train, perfect_parameter_test
+
+        lab_enc = preprocessing.LabelEncoder()
+
+        y_train = lab_enc.fit_transform(y_train)
+        y_test = lab_enc.transform(y_test)
+
+        prep_data = imblearn.over_sampling.SMOTE()
+        # prep_data = imblearn.under_sampling.RandomUnderSampler(random_state=0)
+        # prep_data = imblearn.under_sampling.NearMiss()
+
+        X_train, y_train = prep_data.fit_resample(X_train, y_train)
+
+        sc = StandardScaler()
+        X_train = sc.fit_transform(X_train)
+        X_test = sc.transform(X_test)
+
+        for name,rp in regressor_predictors.items():
+            rp.fit(X_train,y_train)
+            print("=======",name,"=======")
+            print("Train score", rp.score(X_train,y_train))
+            print("Test score", rp.score(X_test,y_test))
+
+        for name, cp in classifier_predictors.items():
+            cp.fit(X_train,y_train)
+            pred_cp = cp.predict(X_test)
+            print("-------",name,"-------")
+            print(classification_report(y_test, pred_cp,zero_division=0))
+            print(confusion_matrix(y_test, pred_cp))
+
+
+        self.base_rec = 'usg'
+
+        self.load_perfect()
+        self.perfect_parameter = pd.Series(self.perfect_parameter)
+
     def perfect_analysis(self):
         self.load_base()
 
@@ -1449,15 +1513,19 @@ class RecRunner():
         # print(df_metrics)
         df['precision'] = df_metrics['precision']
         
-        # self.final_rec = 'persongeocat'
-        # self.final_rec_parameters = {'geo_div_method': 'walk', 'cat_div_method':None}
-        # self.persongeocat_preprocess()
+        self.final_rec = 'persongeocat'
+        self.final_rec_parameters = {'geo_div_method': None, 'cat_div_method': None}
+        self.persongeocat_preprocess()
+        self.load_metrics(base=False)
+        df_p_metrics = pd.DataFrame(self.metrics[self.get_final_rec_short_name()][10])
+        df_p_metrics = df_p_metrics.set_index('user_id')
+        df['p_precision'] = df_p_metrics['precision']
+        df['p_beta'] = self.div_geo_cat_weight
         # df['beta_walk'] = self.div_geo_cat_weight
         # self.final_rec_parameters = {'geo_div_method': None, 'cat_div_method':'poi_ild'}
         # self.persongeocat_preprocess()
         # df['beta_poi_ild'] = self.div_geo_cat_weight
         # df= df.sort_values(by='beta').reset_index(drop=True)
-
 
         # print(df.head())
         print()
@@ -1465,5 +1533,5 @@ class RecRunner():
         print(df[df['precision']>0]['beta'].value_counts())
         print()
         # print(df[df['precision']>0].describe())
-        df[['beta','precision']].plot()
+        df.plot()
         plt.savefig(self.data_directory+IMG+f'analysis_{self.get_final_rec_name()}.png')

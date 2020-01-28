@@ -134,7 +134,7 @@ class GeoDivPropensity():
         visits = self.training_matrix[uid,lids].sum()
         return visits/self.max_user_visits
 
-    def compute_geo_div_propensity(self):
+    def compute_div_propensity(self):
         func = self.GEO_METHODS.get(self.geo_div_method,
                                     lambda: "Invalid method")
         # self.geo_div_propensity = func()
