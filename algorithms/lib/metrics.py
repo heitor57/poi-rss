@@ -1,7 +1,7 @@
 import numpy as np
 import networkx as nx
 import geocat.objfunc
-
+import geo_utils
 np.seterr(all='raise')
 
 def mapk(actual, predicted, k):
@@ -52,7 +52,7 @@ def ildk(pois,poi_cats,undirected_category_tree):
     local_ild=0
     local_ild_km=0
     count=0
-    
+ 
     if num_pois==0:
         min_dissim=1.0
     else:
@@ -71,8 +71,22 @@ def ildk(pois,poi_cats,undirected_category_tree):
                     #min_dissim=min(min_dissim,local_min_distance)
                     local_ild+=local_min_distance
                     count+=1
-    
+
     return local_ild/count
+
+def ildgk(pois,poi_coos):
+    local_ild_km=0
+    count=0
+    num_pois=len(pois)
+    if num_pois!=0:
+        for lid1 in pois:
+            lat1, lon1 = poi_coos[lid1]
+            for lid2 in pois:
+                if lid1 != lid2:
+                    lat2, lon2 = poi_coos[lid2]
+                    local_ild_km += geo_utils.haversine(lat1,lon1,lat2,lon2)
+                    count+=1
+    return local_ild_km/count
 
 def gck(uid,training_matrix,poi_cats,predicted):
     lids=training_matrix[uid].nonzero()[0]
@@ -192,7 +206,7 @@ def epck(rec_list,actual,uid,training_matrix):
     return EPC
 
 def divgeocatk(ild_value,gc_value,pr_value,div_geo_cat_weight,K):
-    div_cat = gc_value+ild_value/K
+    div_cat = (K-1)*gc_value/K+ild_value/K
     div_geo = pr_value
     div=div_geo_cat_weight*div_geo+(1-div_geo_cat_weight)*div_cat
     return div

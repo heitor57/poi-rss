@@ -16,3 +16,37 @@ class geocat_constants:
 
 class usg_constants:
     eta=0.05
+
+
+METRICS_PRETTY = {'precision':'Prec',
+                  'recall':'Rec',
+                  'ild': 'ILD',
+                  'gc': 'GC',
+                  'pr':'PRg',
+                  'epc':'EPC',
+                  'ndcg':'NDCG',
+                  'map':'MAP',
+                  'ildg':'ILDg',
+}
+
+RECS_PRETTY = {
+    "usg": "USG",
+    "mostpopular": "MostPopular",
+    "geocat": "GeoCat",
+    "pgeocat": "PersonGeoCat",
+    "geodiv": "Geo-Div",
+    "ld": "LD",
+    "binomial": "Binom",
+    "pm2": "PM2",
+    "perfectpgeocat": "PPGC",
+    "pdpgeocat": "PDPGC",
+}
+
+CITIES_PRETTY = {
+    'madison':'Madison',
+    'charlotte':'Charlotte',
+    'lasvegas':'Las Vegas',
+    'phoenix':'Phoenix',
+    'montreal':'Montreal',
+    'pittsburgh':'Pittsburgh'
+}

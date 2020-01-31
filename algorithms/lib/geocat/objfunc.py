@@ -2,6 +2,8 @@
 import networkx as nx
 import lib.heuristics as heuristics
 
+
+
 def category_dis_sim(category1,category2,undirected_category_tree):
     dissim=0.0
     spd=nx.shortest_path_length(undirected_category_tree,category1,category2)
@@ -291,3 +293,83 @@ def geocat(uid,training_matrix,tmp_rec_list,tmp_score_list,
         return None, None
     
     return rec_list,final_scores
+
+
+def new_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight):
+    delta_proportionality=max(0,pr-current_proportionality)
+    #delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy(),poi_neighbors)-current_proportionality)
+    #print(poi.business_id,ild_div,gc_div,delta_proportionality)
+    if delta_proportionality<0:
+        delta_proportionality=0
+    div_cat = gc_div*ild_div
+    div_geo = delta_proportionality
+    div=div_geo_cat_weight*div_geo+(1-div_geo_cat_weight)*div_cat
+    return (score**(1-div_weight))*(div**div_weight)
+
+
+def new_geocat_objective_function(poi_id,score,
+                                rec_list,rec_list_size,
+                                poi_cats,undirected_category_tree,relevant_cats,
+                                log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                div_geo_cat_weight,div_weight,current_proportionality):
+    ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
+    if len(rec_list) > 0:
+        ild_old_div = min_dist_to_list_cat(rec_list[-1],rec_list[:-1],poi_cats,undirected_category_tree)
+    else:
+        ild_old_div = 0
+    ild_div = max(0,ild_div-ild_old_div)
+
+    gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
+    if len(rec_list) > 0:
+        gc_old_div = gc(rec_list[-1],rec_list[:-1],relevant_cats,poi_cats)
+    else:
+        gc_old_div = 0
+
+    gc_div = max(0,gc_div-gc_old_div)
+    # gc_old_div=gc(,rec_list,relevant_cats,poi_cats)
+    pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
+    objective_value=new_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
+    return objective_value
+
+
+def rdiff_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight):
+    delta_proportionality=max(0,pr-current_proportionality)
+    #delta_proportionality=max(0,update_geo_cov(poi,df_user_review,rec_list_size,business_cover.copy(),poi_neighbors)-current_proportionality)
+    #print(poi.business_id,ild_div,gc_div,delta_proportionality)
+    if delta_proportionality<0:
+        delta_proportionality=0
+    div_cat = gc_div*ild_div
+    div_geo = delta_proportionality
+    div=(div_geo**div_geo_cat_weight)*(div_cat**(1-div_geo_cat_weight))
+    return (score**(1-div_weight))*(div**div_weight)
+
+
+def rdiff_geocat_objective_function(poi_id,score,
+                                rec_list,rec_list_size,
+                                poi_cats,undirected_category_tree,relevant_cats,
+                                log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                div_geo_cat_weight,div_weight,current_proportionality):
+    ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
+    if len(rec_list) > 0:
+        ild_old_div = min_dist_to_list_cat(rec_list[-1],rec_list[:-1],poi_cats,undirected_category_tree)
+    else:
+        ild_old_div = 0
+    ild_div = max(0,ild_div-ild_old_div)
+
+    gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
+    if len(rec_list) > 0:
+        gc_old_div = gc(rec_list[-1],rec_list[:-1],relevant_cats,poi_cats)
+    else:
+        gc_old_div = 0
+
+    gc_div = max(0,gc_div-gc_old_div)
+    # gc_old_div=gc(,rec_list,relevant_cats,poi_cats)
+    pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
+    objective_value=rdiff_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
+    return objective_value
+
+OBJECTIVE_FUNCTIONS = {
+    'og' : geocat_objective_function,
+    'diff' : new_geocat_objective_function,
+    'rdiff' : rdiff_geocat_objective_function,
+}
