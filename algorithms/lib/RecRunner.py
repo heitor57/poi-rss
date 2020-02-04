@@ -1822,11 +1822,13 @@ class RecRunner():
         df[['precision','p_precision','p_beta','beta']].plot()
         plt.savefig(self.data_directory+IMG+f'analysis_{self.get_final_rec_name()}.png')
 
-    def print_latex_metrics_table(self,prefix_name=''):
+    def print_latex_metrics_table(self,prefix_name='',references=[]):
         num_metrics = len(self.metrics_name)
         result_str = r"\begin{table}[]" + "\n"
         result_str += r"\begin{tabular}{" +'l|'+'l'*(num_metrics) + "}\n"
         # result_str += "\begin{tabular}{" + 'l'*(num_metrics+1) + "}\n"
+        if not references:
+            references = [list(self.metrics.keys())[0]]
         CITIES = [self.city]
         for city in CITIES:
             result_str += "\t&"+'\multicolumn{%d}{c}{%s}\\\\\n' % (num_metrics,CITIES_PRETTY[city])
@@ -1836,9 +1838,8 @@ class RecRunner():
 
                 metrics_mean=dict()
                 metrics_gain=dict()
+                
 
-                reference_name = list(self.metrics.keys())[0]
-                base_metrics = list(self.metrics.values())[0]
                 for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
                     metrics=metrics[k]
 
@@ -1852,13 +1853,13 @@ class RecRunner():
                         metrics_mean[rec_using][key]/=len(metrics)
 
                 for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
-                    metrics=metrics[k]
-                    if i != 0:
+                    metrics_k=metrics[k]
+                    if rec_using not in references:
                         metrics_gain[rec_using] = dict()
                         for metric_name in self.metrics_name:
                             statistic, pvalue = scipy.stats.wilcoxon(
-                                                                     [ms[metric_name] for ms in base_metrics[k]],
-                                [ms[metric_name] for ms in metrics],
+                                [ms[metric_name] for ms in base_metrics[k]],
+                                [ms[metric_name] for ms in metrics_k],
                             )
                             if pvalue > 0.05:
                                 metrics_gain[rec_using][metric_name] = r'\textcolor[rgb]{0.7,0.7,0.0}{$\bullet$}'
@@ -1870,6 +1871,8 @@ class RecRunner():
                                 else:
                                     metrics_gain[rec_using][metric_name] = r'\textcolor[rgb]{0.7,0.7,0.0}{$\bullet$}'
                     else:
+                        reference_name = rec_using
+                        base_metrics = metrics
                         metrics_gain[rec_using] = dict()
                         for metric_name in self.metrics_name:
                             metrics_gain[rec_using][metric_name] = ''
@@ -1883,7 +1886,6 @@ class RecRunner():
         fout = open(self.data_directory+UTIL+'_'.join([prefix_name]+CITIES)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
-        print(result_str)
 
     def plot_bar_exclusive_metrics(self,prefix_name='all_met',ncol=3):
         palette = plt.get_cmap(CMAP_NAME)
@@ -1996,5 +1998,3 @@ class RecRunner():
         plt.show()
         timestamp = datetime.timestamp(datetime.now())
         fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.city}.png",bbox_inches="tight")
-    def plot_gc_ild_corr(self):
-        pass
