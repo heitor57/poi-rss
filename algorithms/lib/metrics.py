@@ -50,19 +50,18 @@ def ildk(pois,poi_cats,undirected_category_tree):
     min_dissim=1.0
     num_pois=len(pois)
     local_ild=0
-    local_ild_km=0
     count=0
  
     if num_pois==0:
         min_dissim=1.0
     else:
-        for index_1 in pois:
-            for index_2 in pois:
-                if index_1 != index_2:
+        for i, poi_1 in enumerate(pois):
+            for j, poi_2 in enumerate(pois):
+                if j < i:
                     local_min_distance=1
                     cur_distance=0
-                    for category1 in poi_cats[index_1]:
-                        for category2 in poi_cats[index_2]:
+                    for category1 in poi_cats[poi_1]:
+                        for category2 in poi_cats[poi_2]:
                             cur_distance=category_dis_sim(
                                 category1,
                                 category2,undirected_category_tree)
