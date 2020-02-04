@@ -2,7 +2,7 @@
 import networkx as nx
 import lib.heuristics as heuristics
 
-
+HEURISTICS = ['local_max', 'tabu_search', 'particle_swarm']
 
 def category_dis_sim(category1,category2,undirected_category_tree):
     dissim=0.0
@@ -368,8 +368,176 @@ def rdiff_geocat_objective_function(poi_id,score,
     objective_value=rdiff_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
     return objective_value
 
+def dir_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight):
+    div_cat = gc_div*ild_div
+    div_geo = pr
+    div=(div_geo*div_geo_cat_weight)+(div_cat*(1-div_geo_cat_weight))
+    return (score**(1-div_weight))*(div**div_weight)
+
+
+def dir_geocat_objective_function(poi_id,score,
+                                rec_list,rec_list_size,
+                                poi_cats,undirected_category_tree,relevant_cats,
+                                log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                div_geo_cat_weight,div_weight,current_proportionality):
+    ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
+    gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
+    pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
+    objective_value=dir_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
+    return objective_value
+
+def mult_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight):
+    delta_proportionality=max(0,pr-current_proportionality)
+    if delta_proportionality<0:
+        delta_proportionality=0
+    div_cat = gc_div*ild_div
+    div_geo = delta_proportionality
+    div=(div_geo*div_geo_cat_weight)+(div_cat*(1-div_geo_cat_weight))
+    return (score**(1-div_weight))*(div**div_weight)
+
+
+def mult_geocat_objective_function(poi_id,score,
+                                rec_list,rec_list_size,
+                                poi_cats,undirected_category_tree,relevant_cats,
+                                log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                div_geo_cat_weight,div_weight,current_proportionality):
+    ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
+    gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
+    # gc_old_div=gc(,rec_list,relevant_cats,poi_cats)
+    pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
+    objective_value=mult_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
+    return objective_value
+
+def mult_sqrt_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight):
+    delta_proportionality=max(0,pr-current_proportionality)
+    if delta_proportionality<0:
+        delta_proportionality=0
+    div_cat = (gc_div**(0.5))*(ild_div**(0.5))
+    div_geo = delta_proportionality
+    div=(div_geo*div_geo_cat_weight)+(div_cat*(1-div_geo_cat_weight))
+    return (score**(1-div_weight))*(div**div_weight)
+
+
+def mult_sqrt_geocat_objective_function(poi_id,score,
+                                rec_list,rec_list_size,
+                                poi_cats,undirected_category_tree,relevant_cats,
+                                log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                div_geo_cat_weight,div_weight,current_proportionality):
+    ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
+    gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
+    # gc_old_div=gc(,rec_list,relevant_cats,poi_cats)
+    pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
+    objective_value=mult_sqrt_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
+    return objective_value
+
+
+def div_2_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight):
+    delta_proportionality=max(0,pr-current_proportionality)
+    if delta_proportionality<0:
+        delta_proportionality=0
+    div_cat = (gc_div+ild_div)/2
+    div_geo = delta_proportionality
+    div=(div_geo*div_geo_cat_weight)+(div_cat*(1-div_geo_cat_weight))
+    return (score**(1-div_weight))*(div**div_weight)
+
+
+def div_2_geocat_objective_function(poi_id,score,
+                                rec_list,rec_list_size,
+                                poi_cats,undirected_category_tree,relevant_cats,
+                                log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                div_geo_cat_weight,div_weight,current_proportionality):
+    ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
+    gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
+    # gc_old_div=gc(,rec_list,relevant_cats,poi_cats)
+    pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
+    objective_value=mult_sqrt_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
+    return objective_value
+
+
+def no_div_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight):
+    delta_proportionality=max(0,pr-current_proportionality)
+    if delta_proportionality<0:
+        delta_proportionality=0
+    div_cat = (gc_div+ild_div)
+    div_geo = delta_proportionality
+    div=(div_geo*div_geo_cat_weight)+(div_cat*(1-div_geo_cat_weight))
+    return (score**(1-div_weight))*(div**div_weight)
+
+
+def no_div_geocat_objective_function(poi_id,score,
+                                rec_list,rec_list_size,
+                                poi_cats,undirected_category_tree,relevant_cats,
+                                log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                div_geo_cat_weight,div_weight,current_proportionality):
+    ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
+    gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
+    # gc_old_div=gc(,rec_list,relevant_cats,poi_cats)
+    pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
+    objective_value=no_div_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
+    return objective_value
+
+
+def no_ild_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight):
+    delta_proportionality=max(0,pr-current_proportionality)
+    if delta_proportionality<0:
+        delta_proportionality=0
+    div_cat = gc_div
+    div_geo = delta_proportionality
+    div=(div_geo*div_geo_cat_weight)+(div_cat*(1-div_geo_cat_weight))
+    return (score**(1-div_weight))*(div**div_weight)
+
+
+def no_ild_geocat_objective_function(poi_id,score,
+                                rec_list,rec_list_size,
+                                poi_cats,undirected_category_tree,relevant_cats,
+                                log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                div_geo_cat_weight,div_weight,current_proportionality):
+    ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
+    gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
+    # gc_old_div=gc(,rec_list,relevant_cats,poi_cats)
+    pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
+    objective_value=no_ild_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
+    return objective_value
+
+def gc_diff_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight):
+    delta_proportionality=max(0,pr-current_proportionality)
+    if delta_proportionality<0:
+        delta_proportionality=0
+    div_cat = (gc_div + ild_div)/2
+    div_geo = delta_proportionality
+    div=(div_geo*div_geo_cat_weight)+(div_cat*(1-div_geo_cat_weight))
+    return (score**(1-div_weight))*(div**div_weight)
+
+
+def gc_diff_geocat_objective_function(poi_id,score,
+                                rec_list,rec_list_size,
+                                poi_cats,undirected_category_tree,relevant_cats,
+                                log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                div_geo_cat_weight,div_weight,current_proportionality):
+    ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
+
+    gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
+    if len(rec_list) > 0:
+        gc_old_div = gc(rec_list[-1],rec_list[:-1],relevant_cats,poi_cats)
+    else:
+        gc_old_div = 0
+
+    gc_div = max(0,gc_div-gc_old_div)
+    # gc_old_div=gc(,rec_list,relevant_cats,poi_cats)
+    pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
+    objective_value=gc_diff_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight)
+    return objective_value
+
+
 OBJECTIVE_FUNCTIONS = {
     'og' : geocat_objective_function,
     'diff' : new_geocat_objective_function,
     'rdiff' : rdiff_geocat_objective_function,
+    'dir': dir_geocat_objective_function,
+    'mult': mult_geocat_objective_function,
+    'mult_sqrt': mult_sqrt_geocat_objective_function,
+    'div_2': div_2_geocat_objective_function,
+    'no_div': no_div_geocat_objective_function,
+    'no_ild': no_ild_geocat_objective_function,
+    'gc_diff': gc_diff_geocat_objective_function,
 }

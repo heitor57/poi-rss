@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 from cycler import cycler
 # PALETTE = plt.get_cmap('Greys')
 # monochrome = (cycler('color', ['k']) * cycler('linestyle', ['-.', '--','-', ':', ]) * cycler('marker', [',','.','^']))
-plt.rcParams['font.size'] = 16
+plt.rcParams['font.size'] = 11
 plt.rcParams['legend.frameon'] = True
 plt.rcParams['legend.framealpha'] = 0.5
 # plt.rcParams['axes.grid'] = True
@@ -112,6 +112,9 @@ import metrics
 from geocat.Binomial import Binomial
 from geocat.Pm2 import Pm2
 from parallel_util import run_parallel
+from geosoca.AdaptiveKernelDensityEstimation import AdaptiveKernelDensityEstimation
+from geosoca.SocialCorrelation import SocialCorrelation
+from geosoca.CategoricalCorrelation import CategoricalCorrelation
 
 CMAP_NAME = 'Set1'
 
@@ -190,7 +193,8 @@ class RecRunner():
                  base_rec_parameters={}, final_rec_parameters={},except_final_rec=[]):
         self.BASE_RECOMMENDERS = {
             "mostpopular": self.mostpopular,
-            "usg": self.usg
+            "usg": self.usg,
+            "geosoca": self.geosoca,
         }
         self.FINAL_RECOMMENDERS = {
             "geocat": self.geocat,
@@ -229,7 +233,7 @@ class RecRunner():
         # buffers de resultado do metodo final
         self.user_final_predicted_lid = {}
         self.user_final_predicted_score = {}
-
+        
         self.metrics = {}
         self.metrics_name = ['precision', 'recall', 'gc', 'ild', 'epc','pr']
         self.except_final_rec = except_final_rec
@@ -323,7 +327,8 @@ class RecRunner():
     def get_base_parameters():
         return {
             "mostpopular": {},
-            "usg": {'alpha': 0.1, 'beta': 0.1, 'eta': 0.05}
+            "usg": {'alpha': 0.1, 'beta': 0.1, 'eta': 0.05},
+            "geosoca": {'alpha': 0.5},
         }
 
     @staticmethod
@@ -482,13 +487,16 @@ class RecRunner():
                 if f'yelping_since_{year}' not in self.user_data.columns:
                     self.user_data[f'yelping_since_{year}'] = 0
             print("User data memory usage:",asizeof.asizeof(self.user_data)/1024**2,"MB")
+
         self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/4)
         self.CHKSL = int(len(self.all_uids)/multiprocessing.cpu_count())
         self.welcome_load()
-    
+        
+
 
     def welcome_load(self):
         self.message_start_section("LOAD FINAL MESSAGE")
+        print('user num: %d, poi num: %d, checkin num: %d' % (self.training_matrix.shape[0],self.training_matrix.shape[1],self.training_matrix.sum().sum()))
         print("Chunk size set to %d for this base" %(self.CHKSL))
 
     def not_in_ground_truth_message(uid):
@@ -695,6 +703,73 @@ class RecRunner():
         fout = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"wb")
         pickle.dump(self.perfect_div_weight,fout)
         self.save_result(results,base=False)
+
+    def pdpgeocat(self):
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_pdpgeocat,args,self.CHKS)
+
+        uids = [r[1] for r in results]
+        div_weights = [r[2] for r in results]
+        self.perfect_div_weight = dict()
+        for uid,div_weight in zip(uids,div_weights):
+            self.perfect_div_weight[uid] = div_weight
+        # print(self.perfect_parameter)
+        results = [r[0] for r in results]
+
+        fout = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"wb")
+        pickle.dump(self.perfect_div_weight,fout)
+        self.save_result(results,base=False)
+
+    def geosoca(self):
+
+        social_matrix = np.zeros((self.user_num, self.user_num))
+        for uid1, friends in self.social_relations.items():
+            for uid2 in friends:
+                social_matrix[uid1, uid2] = 1.0
+                social_matrix[uid2, uid1] = 1.0
+        all_cats = set()
+        for lid, cats in self.poi_cats.items():
+            all_cats.update(cats)
+        cat_to_int_id = dict()
+        for i, cat in enumerate(all_cats):
+            cat_to_int_id[cat] = i
+
+        poi_cat_matrix = np.zeros((self.poi_num,len(all_cats)))
+
+        for lid, cats in self.poi_cats.items():
+            for cat in cats:
+                poi_cat_matrix[lid, cat_to_int_id[cat]] = 1.0
+
+        self.AKDE = AdaptiveKernelDensityEstimation(alpha=self.base_rec_parameters['alpha'])
+        self.SC = SocialCorrelation()
+        self.CC = CategoricalCorrelation()
+        self.AKDE.precompute_kernel_parameters(self.training_matrix, self.poi_coos)
+        self.SC.compute_beta(self.training_matrix, social_matrix)
+        self.CC.compute_gamma(self.training_matrix, poi_cat_matrix)
+
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_geosoca,args,self.CHKS)
+        self.save_result(results,base=False)
+
+    @classmethod
+    def run_geosoca(cls, uid):
+        self = cls.getInstance()
+        AKDE = self.AKDE
+        SC = self.SC
+        CC = self.CC
+
+        if uid in self.ground_truth:
+            overall_scores = [AKDE.predict(uid, lid) * SC.predict(uid, lid) * CC.predict(uid, lid)
+                            if self.training_matrix[uid, lid] == 0 else -1
+                            for lid in self.all_lids]
+            overall_scores = np.array(overall_scores)
+
+            predicted = list(reversed(overall_scores.argsort()))[:self.base_rec_list_size]
+            actual = self.ground_truth[uid]
+
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
+        self.not_in_ground_truth_message()
+        return ""
 
     @classmethod
     def run_pdpgeocat(cls, uid):
@@ -1169,9 +1244,8 @@ class RecRunner():
                 
                 metrics_mean[rec_using]=defaultdict(float)
                 for obj in metrics:
-                    for key in obj:
-                        if key in self.metrics_name:
-                            metrics_mean[rec_using][key]+=obj[key]
+                    for key in self.metrics_name:
+                        metrics_mean[rec_using][key]+=obj[key]
                 
                 
                 for j,key in enumerate(metrics_mean[rec_using]):
@@ -1204,6 +1278,7 @@ class RecRunner():
             for rec_using,rec_metrics in metrics_mean.items():
                 print(f"{rec_using} at @{k}")
                 print(rec_metrics)
+
                 ax.bar(indexes+i*barWidth,-100+100*np.array(list(rec_metrics.values()))/reference_vals,barWidth,label=rec_using,**next(styles))
                 #ax.bar(indexes[j]+i*barWidth,np.mean(list(rec_metrics.values())),barWidth,label=rec_using,color=palette(i))
                 i+=1
@@ -1747,7 +1822,7 @@ class RecRunner():
         df[['precision','p_precision','p_beta','beta']].plot()
         plt.savefig(self.data_directory+IMG+f'analysis_{self.get_final_rec_name()}.png')
 
-    def print_latex_metrics_table(self):
+    def print_latex_metrics_table(self,prefix_name=''):
         num_metrics = len(self.metrics_name)
         result_str = r"\begin{table}[]" + "\n"
         result_str += r"\begin{tabular}{" +'l|'+'l'*(num_metrics) + "}\n"
@@ -1770,9 +1845,8 @@ class RecRunner():
                         # self.metrics[rec_using]
                     metrics_mean[rec_using]=defaultdict(float)
                     for obj in metrics:
-                        for key in obj:
-                            if key in self.metrics_name:
-                                metrics_mean[rec_using][key]+=obj[key]
+                        for key in self.metrics_name:
+                            metrics_mean[rec_using][key]+=obj[key]
 
                     for j,key in enumerate(metrics_mean[rec_using]):
                         metrics_mean[rec_using][key]/=len(metrics)
@@ -1806,12 +1880,12 @@ class RecRunner():
 
         result_str += "\\end{tabular}\n"
         result_str += "\\end{table}\n"
-        fout = open(self.data_directory+UTIL+'_'.join(CITIES)+'.tex', 'w')
+        fout = open(self.data_directory+UTIL+'_'.join([prefix_name]+CITIES)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
         print(result_str)
 
-    def plot_bar_exclusive_metrics(self,prefix_name='all_met'):
+    def plot_bar_exclusive_metrics(self,prefix_name='all_met',ncol=3):
         palette = plt.get_cmap(CMAP_NAME)
         for i,k in enumerate(experiment_constants.METRICS_K):
             metrics_mean=dict()
@@ -1822,7 +1896,6 @@ class RecRunner():
                 for obj in metrics:
                     for key in self.metrics_name:
                         metrics_mean[rec_using][key]+=obj[key]
-                
                 
                 for j,key in enumerate(metrics_mean[rec_using]):
                     metrics_mean[rec_using][key]/=len(metrics)
@@ -1838,7 +1911,6 @@ class RecRunner():
             for rec_using,rec_metrics in metrics_mean.items():
                 print(f"{rec_using} at @{k}")
                 print(rec_metrics)
-
                 ax.bar(indexes+i*barWidth,rec_metrics.values(),barWidth,label=rec_using,**next(styles))
                 #ax.bar(indexes[j]+i*barWidth,np.mean(list(rec_metrics.values())),barWidth,label=rec_using,color=palette(i))
                 i+=1
@@ -1847,7 +1919,7 @@ class RecRunner():
             ax.set_xticks(np.arange(N+1)+barWidth*(((len(self.metrics))/2)-1)+barWidth/2)
             # ax.legend((p1[0], p2[0]), self.metrics_name)
             ax.legend(tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
-                mode="expand", borderaxespad=0, ncol=3)
+                      mode="expand", borderaxespad=0, ncol=ncol)
             # ax.legend(tuple(map(lambda name: METRICS_PRETTY[name],self.metrics.keys())))
             ax.set_xticklabels(list(map(lambda name: METRICS_PRETTY[name],self.metrics_name)))
             # ax.set_title(f"at @{k}, {self.city}")
@@ -1859,7 +1931,7 @@ class RecRunner():
             timestamp = datetime.timestamp(datetime.now())
             fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.city}_{str(k)}.png",bbox_inches="tight")
 
-    def plot_maut(self,prefix_name='maut'):
+    def plot_maut(self,prefix_name='maut',ncol=3):
         # palette = plt.get_cmap(CMAP_NAME)
         fig = plt.figure()
         ax=fig.add_subplot(111)
@@ -1913,7 +1985,7 @@ class RecRunner():
         ax.set_xticks(np.arange(N+1)+barWidth*(((len(self.metrics))/2)-1)+barWidth/2)
         # ax.legend((p1[0], p2[0]), self.metrics_name)
         ax.legend(tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
-                mode="expand", borderaxespad=0, ncol=4)
+                  mode="expand", borderaxespad=0, ncol=ncol)
         # ax.legend(tuple(map(lambda name: METRICS_PRETTY[name],self.metrics.keys())))
         ax.set_xticklabels(['MAUT@5','MAUT@10','MAUT@20'])
         # ax.set_title(f"at @{k}, {self.city}")
@@ -1924,3 +1996,5 @@ class RecRunner():
         plt.show()
         timestamp = datetime.timestamp(datetime.now())
         fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.city}.png",bbox_inches="tight")
+    def plot_gc_ild_corr(self):
+        pass
