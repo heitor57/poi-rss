@@ -346,6 +346,8 @@ class RecRunner():
             print("Auto setting obj_func to None")
             parameters_result['obj_func'] = None
 
+        self._final_rec_parameters = parameters_result
+
     @property
     def base_rec_parameters(self):
         return self._base_rec_parameters
