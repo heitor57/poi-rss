@@ -37,6 +37,11 @@ def category_filter(categories):
         tmp_cat_list=cat_utils.get_most_detailed_categories(tmp_cat_list,dict_alias_title,dict_alias_depth)
     return tmp_cat_list
 
+def category_normalization(categories):
+    if categories != None:
+        return categories
+    else:
+        return []
 
 TRAIN_SIZE=experiment_constants.TRAIN_SIZE
 TEST_SIZE=1-TRAIN_SIZE
@@ -195,6 +200,7 @@ print(time.time()-start_time)
 genoptions=['poi','neighbor','user','checkin'# ,'test','train'
             ,'user_data']
 genoptions=['checkin',
+            'poi',
             ]
 
 
@@ -267,6 +273,16 @@ for city in cities:
         
     # cria dicionario de "objetos" ou dicionarios de pois da cidade
     # alem de aplicar filtragem categorica
+
+    city_poi_data=dict()
+    if 'poi' in genoptions:
+        for poi_id in pois_id:
+            city_poi_data[pois_id_to_int[poi_id]]=poi_data[poi_id].copy()
+            city_poi_data[pois_id_to_int[poi_id]] = {'categories':category_normalization(city_poi_data[pois_id_to_int[poi_id]]['categories'])}
+        fpoi=open('../data/poi_full/'+city+'.pickle','wb')
+        pickle.dump(city_poi_data,fpoi)
+        fpoi.close()
+
     city_poi_data=dict()
     if 'poi' in genoptions:
         for poi_id in pois_id:
@@ -275,8 +291,7 @@ for city in cities:
         fpoi=open('../data/poi/'+city+'.pickle','wb')
         pickle.dump(city_poi_data,fpoi)
         fpoi.close()
-    
-    
+
     # pega os vizinhos de cada poi
 #     print("Pegando vizinhos...")
     if 'neighbor' in genoptions:

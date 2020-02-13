@@ -8,46 +8,59 @@ from sys import exit
 
 def local_max(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirected_category_tree,
                 rec_list, relevant_cats, log_poi_ids, log_neighbors, poi_cover, current_proportionality,
-                div_geo_cat_weight, div_weight, final_scores, objective_function):
+                div_geo_cat_weight, div_weight, final_scores, objective_function,div_cat_weight):
 
     range_K = range(K)
-
+    current_gc = 0
+    need_gc_diff = objective_function == objfunc.gc_diff_geocat_objective_function or\
+                   objective_function == objfunc.gc_diff_og_geocat_objective_function
+    need_div_cat_weight = objective_function == objfunc.cat_weight_geocat_objective_function
     for i in range_K:
-            #print(i)
-            poi_to_insert=None
-            max_objective_value=-200
-            for j in range(len(tmp_rec_list)):
-                candidate_poi_id=tmp_rec_list[j]
-                candidate_score=tmp_score_list[j]
-                # ild_div=objfunc.min_dist_to_list_cat(candidate_poi_id,rec_list,poi_cats,undirected_category_tree)
-                # gc_div=objfunc.gc(candidate_poi_id,rec_list,relevant_cats,poi_cats)
-                # pr=objfunc.update_geo_cov(candidate_poi_id,log_poi_ids,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id])
+        #print(i)
+        poi_to_insert=None
+        max_objective_value=-200
+        for j in range(len(tmp_rec_list)):
+            candidate_poi_id=tmp_rec_list[j]
+            candidate_score=tmp_score_list[j]
 
-                # objective_value=objfunc.ILD_GC_PR(candidate_score,ild_div,gc_div,pr,current_proportionality,K,div_geo_cat_weight,div_weight)
+            if need_div_cat_weight:
                 objective_value = objective_function(candidate_poi_id,candidate_score,
-                                   rec_list,K,
-                                   poi_cats,undirected_category_tree,relevant_cats,
-                                   log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
-                                   div_geo_cat_weight,div_weight,current_proportionality)
-                #print(candidate_poi_id,ild_div,gc_div,max(0,pr-current_proportionality),objective_value)
-                #print(candidate_poi_id,objective_value)
+                                                    rec_list,K,
+                                                    poi_cats,undirected_category_tree,relevant_cats,
+                                                    log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                                    div_geo_cat_weight,div_weight,current_proportionality,
+                                                     div_cat_weight)
+            elif need_gc_diff:
+                objective_value = objective_function(candidate_poi_id,candidate_score,
+                                                    rec_list,K,
+                                                    poi_cats,undirected_category_tree,relevant_cats,
+                                                    log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                                    div_geo_cat_weight,div_weight,current_proportionality,
+                                                    current_gc)
+            else:
+                objective_value = objective_function(candidate_poi_id,candidate_score,
+                                                    rec_list,K,
+                                                    poi_cats,undirected_category_tree,relevant_cats,
+                                                    log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
+                                                    div_geo_cat_weight,div_weight,current_proportionality)
 
-                if objective_value > max_objective_value:
-                    max_objective_value=objective_value
-                    poi_to_insert=candidate_poi_id
-                pass
-            if poi_to_insert is not None:
-                #print(poi_to_insert,max_objective_value)
+            if objective_value > max_objective_value:
+                max_objective_value=objective_value
+                poi_to_insert=candidate_poi_id
+            pass
+        if poi_to_insert is not None:
 
-                rm_idx=tmp_rec_list.index(poi_to_insert)
+            rm_idx=tmp_rec_list.index(poi_to_insert)
 
-                tmp_rec_list.pop(rm_idx)
-                tmp_score_list.pop(rm_idx)
-                rec_list.append(poi_to_insert)
-                final_scores.append(max_objective_value)
-                # remove from tmp_rec_list
-                current_proportionality=objfunc.update_geo_cov(poi_to_insert,log_poi_ids,K,poi_cover,poi_neighbors,log_neighbors[poi_to_insert])
-                #print(current_proportionality)
+            tmp_rec_list.pop(rm_idx)
+            tmp_score_list.pop(rm_idx)
+            rec_list.append(poi_to_insert)
+            final_scores.append(max_objective_value)
+            # remove from tmp_rec_list
+            current_proportionality=objfunc.update_geo_cov(poi_to_insert,log_poi_ids,K,poi_cover,poi_neighbors,log_neighbors[poi_to_insert])
+            if need_gc_diff:
+                current_gc = objfunc.gc_list(rec_list,relevant_cats,poi_cats)
+            #print(current_proportionality)
     
     return rec_list,final_scores
 

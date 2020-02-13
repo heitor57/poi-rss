@@ -205,7 +205,7 @@ def epck(rec_list,actual,uid,training_matrix):
     return EPC
 
 def divgeocatk(ild_value,gc_value,pr_value,div_geo_cat_weight,K):
-    div_cat = (K-1)*gc_value/K+ild_value/K
+    div_cat = (gc_value+ild_value)/2
     div_geo = pr_value
     div=div_geo_cat_weight*div_geo+(1-div_geo_cat_weight)*div_cat
     return div

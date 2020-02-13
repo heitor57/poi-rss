@@ -1,7 +1,7 @@
 import time
 import math
 import numpy as np
-
+np.seterr('warn')
 from collections import defaultdict
 
 
@@ -38,7 +38,7 @@ class AdaptiveKernelDensityEstimation(object):
         H1, H2 = {}, {}
         for uid in R:
             mean_coo = np.sum([check_in_matrix[uid, lid] * coo
-                               for lid, coo in R[uid]], axis=0) / N[uid]
+                               for lid, coo in R[uid]], axis=0, dtype=np.float64) / N[uid]
 
             # The equation (5) in the paper is not correct.
             mean_coo_sq_diff = np.sum([check_in_matrix[uid, lid] * (coo - mean_coo) ** 2
@@ -51,7 +51,7 @@ class AdaptiveKernelDensityEstimation(object):
         for uid in R:
             if not H1[uid] == 0 and not H2[uid] == 0:
                 f_geo_vals = {li[0]: self.f_geo_with_fixed_bandwidth(uid, li, R) for li in R[uid]}
-                g = np.prod(list(f_geo_vals.values()),dtype=np.float128) ** (1.0 / len(R[uid]))
+                g = np.prod(list(f_geo_vals.values()),dtype=np.float64) ** (1.0 / len(R[uid]))
                 for lid, f_geo_val in f_geo_vals.items():
                     h[uid][lid] = (g / f_geo_val) ** self.alpha
         self.h = h
@@ -70,12 +70,12 @@ class AdaptiveKernelDensityEstimation(object):
     def K_H(self, u, lat, lng, lat_i, lng_i):
         return (1.0 / (2 * math.pi * self.H1[u] * self.H2[u]) *
                 np.exp(-((lat - lat_i)**2 / (2 * self.H1[u]**2)) -
-                       ((lng - lng_i)**2 / (2 * self.H2[u]**2))))
+                       ((lng - lng_i)**2 / (2 * self.H2[u]**2)),dtype=np.float64))
 
     def K_Hh(self, u, lat, lng, lat_i, lng_i, li):
         return (1.0 / (2 * math.pi * self.H1[u] * self.H2[u] * self.h[u][li]**2) *
                 np.exp(-((lat - lat_i)**2 / (2 * self.H1[u]**2 * self.h[u][li]**2)) -
-                       ((lng - lng_i)**2 / (2 * self.H2[u]**2 * self.h[u][li]**2))))
+                       ((lng - lng_i)**2 / (2 * self.H2[u]**2 * self.h[u][li]**2)),dtype=np.float64))
 
     def predict(self, u, l):
         if not self.H1[u] == 0 and not self.H2[u] == 0 and not sum(self.h[u].values()) == 0:
