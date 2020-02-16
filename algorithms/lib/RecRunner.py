@@ -42,6 +42,7 @@ import multiprocessing
 from collections import Counter
 import os
 
+import inquirer
 import numpy as np
 from tqdm import tqdm
 from scipy.stats import describe
@@ -377,8 +378,9 @@ class RecRunner():
     @staticmethod
     def get_final_parameters():
         return  {
-            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.75, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': None},
-            "pgeocat": {'div_weight':0.75,'cat_div_method': None, 'geo_div_method': 'walk', 'bins': 3},
+            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+            "pgeocat": {'div_weight':0.75,'cat_div_method': None, 'geo_div_method': 'walk', 'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': 3,
+                        'norm_method': 'median_quad'},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
@@ -460,7 +462,7 @@ class RecRunner():
         for poi_id, poi in pickle.load(open(self.data_directory+POI+CITY+".pickle", "rb")).items():
             self.poi_coos[poi_id] = tuple([poi['latitude'], poi['longitude']])
             self.poi_cats[poi_id] = poi['categories']
-
+#4.3 parametros corretos
         # self.poi_cats_full = {}
         # for poi_id, poi in pickle.load(open(self.data_directory+POI_FULL+CITY+".pickle", "rb")).items():
         #     self.poi_cats_full[poi_id] = poi['categories']
@@ -653,8 +655,6 @@ class RecRunner():
         if self.final_rec_parameters['cat_div_method'] != None:
             self.pcat_div_runner = CatDivPropensity.getInstance(
                 self.training_matrix,
-                cat_utils.get_users_cat_visits(self.training_matrix,
-                                            self.poi_cats),
                 self.undirected_category_tree,
                 self.final_rec_parameters['cat_div_method'],
                 self.poi_cats)
@@ -662,17 +662,29 @@ class RecRunner():
                 self.final_rec_parameters['cat_div_method'])
             self.cat_div_propensity=self.pcat_div_runner.compute_div_propensity()
 
-        if self.final_rec_parameters['cat_div_method'] == None:
-            self.div_geo_cat_weight=self.geo_div_propensity
+        if self.final_rec_parameters['norm_method'] == 'default':
+            if self.final_rec_parameters['cat_div_method'] == None:
+                self.div_geo_cat_weight=self.geo_div_propensity
+                self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
+            elif self.final_rec_parameters['geo_div_method'] == None:
+                self.div_geo_cat_weight=1-self.cat_div_propensity
+                self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
+            else:
+                self.div_geo_cat_weight=(self.geo_div_propensity)/(self.geo_div_propensity+self.cat_div_propensity)
+                self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
+                self.div_weight[(self.geo_div_propensity==0) & (self.cat_div_propensity==0)] = 0
+        elif self.final_rec_parameters['norm_method'] == 'median_quad':
+            cat_div_propensity = self.cat_div_propensity
+            geo_div_propensity = self.geo_div_propensity
+            groups = dict()
+            groups['geo_preference'] = (cat_div_propensity <= cat_median) & (geo_div_propensity > geo_median)
+            groups['no_preference'] = ((cat_div_propensity <= cat_median) & (geo_div_propensity <= geo_median)) | ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
+            groups['cat_preference'] = (cat_div_propensity > cat_median) & (geo_div_propensity <= geo_median)
+            self.div_geo_cat_weight=np.zeros(self.training_matrix.shape[0])
+            self.div_geo_cat_weight[groups['geo_preference']] = 0
+            self.div_geo_cat_weight[groups['no_preference']] = 0.5
+            self.div_geo_cat_weight[groups['cat_preference']] = 1
             self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
-        elif self.final_rec_parameters['geo_div_method'] == None:
-            self.div_geo_cat_weight=1-self.cat_div_propensity
-            self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
-        else:
-            self.div_geo_cat_weight=(self.geo_div_propensity)/(self.geo_div_propensity+self.cat_div_propensity)
-            self.dGiv_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
-            self.div_weight[(self.geo_div_propensity==0) & (self.cat_div_propensity==0)] = 0
-
         if self.final_rec_parameters['bins'] != None:
             bins = np.append(np.arange(0,1,1/(self.final_rec_parameters['bins']-1)),1)
             centers = (bins[1:]+bins[:-1])/2
@@ -1006,7 +1018,8 @@ class RecRunner():
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
                                                          div_geo_cat_weight,div_weight,
                                                          'local_max',
-                                                         gcobjfunc.persongeocat_objective_function)
+                                                         gcobjfunc.OBJECTIVE_FUNCTIONS[self.final_rec_parameters['obj_func']],
+                                                         self.final_rec_parameters['div_cat_weight'])
 
             # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
 
@@ -2270,4 +2283,117 @@ class RecRunner():
             self.load_metrics(base=False,short_name=False)
         self.plot_geocat_div_cat_weights_metrics(l)
         self.plot_geocat_div_cat_weights_maut(l)
+
+
+
+    # def plot_geo_cat_methods_vs(self):
+    #     questions = [
+    #         inquirer.Checkbox('geo_div_method',
+    #                           message="Geographical diversification method",
+    #                           choices=GeoDivPropensity.METHODS,
+    #         )]
+
+    #     answers = inquirer.prompt(questions)
+    #     geo_div_methods = answers['geo_div_method']
+
+    #     self.pgeo_div_runner = GeoDivPropensity.getInstance(self.training_matrix, self.poi_coos,
+    #                                                         self.poi_cats,self.undirected_category_tree,
+    #                                                         '')
+    #     for i, geo_div_method1 in enumerate(geo_div_methods):
+    #         self.pgeo_div_runner.geo_div_method = geo_div_method1
+    #         geo_div_propensity1 = self.pgeo_div_runner.compute_div_propensity()
+    #         for j, geo_div_method2 in enumerate(geo_div_methods):
+    #             if j < i:
+    #                 self.pgeo_div_runner.geo_div_method = geo_div_method2
+    #                 geo_div_propensity2 = self.pgeo_div_runner.compute_div_propensity()
+    #                 args = np.argsort(geo_div_propensity1)
+    #                 fig = plt.figure(figsize=(8,8))
+    #                 ax = fig.add_subplot(111)
+    #                 ax.plot(geo_div_propensity1)
+    #                 ax.plot(geo_div_propensity2)
+    #                 ax.annotate("Correlation: %f"%(scipy.stats.pearsonr(geo_div_method1,geo_div_method2)[0]), xy=(0, 0), xytext=(0,0),zorder = 21)
+    #                 fig.savefig(self.data_directory+IMG+f"{self.city}_{geo_div_method1}_{geo_div_method2}_corr.png")
+    
+    def plot_geo_cat_methods(self):
+        questions = [
+        inquirer.Checkbox('geo_div_method',
+                            message="Geographical diversification method",
+                            choices=GeoDivPropensity.METHODS,
+                            ),
+        inquirer.Checkbox('cat_div_method',
+                            message="Categorical diversification method",
+                            choices=CatDivPropensity.METHODS,
+                            ),
+        ]
+        answers = inquirer.prompt(questions)
+        geo_div_methods, cat_div_methods = answers['geo_div_method'], answers['cat_div_method']
+        df = pd.DataFrame([])
+        geo_div_propensities = dict()
+
+        for geo_div_method in geo_div_methods:
+            self.pgeo_div_runner = GeoDivPropensity.getInstance(self.training_matrix, self.poi_coos,
+                                                                self.poi_cats,self.undirected_category_tree,
+                                                                geo_div_method)
+            geo_div_propensities[geo_div_method] = self.pgeo_div_runner.compute_div_propensity()
+
+        cat_div_propensities = dict()
+        for cat_div_method in cat_div_methods:
+            self.pcat_div_runner = CatDivPropensity.getInstance(
+                self.training_matrix,
+                self.undirected_category_tree,
+                cat_div_method,
+                self.poi_cats)
+            cat_div_propensities[cat_div_method]=self.pcat_div_runner.compute_div_propensity()
+
+        # print("Geographical diversification propensity methods correlation")
+        # print(pd.DataFrame(geo_div_propensties).corr())
+
+        # print("Categorical diversification propensity methods correlation")
+        # print(pd.DataFrame(cat_div_propensties).corr())
+        print(pd.concat([pd.DataFrame(geo_div_propensities),pd.DataFrame(cat_div_propensities)],axis=1).corr())
+        
+        for geo_div_method in geo_div_methods:
+            for cat_div_method in cat_div_methods:
+                geo_div_propensity = geo_div_propensities[geo_div_method]
+                cat_div_propensity = cat_div_propensities[cat_div_method]
+                fig = plt.figure(figsize=(8,8))
+                ax = fig.add_subplot(111)
+                # ax.set_ylim(0,1)
+                cat_median = np.median(cat_div_propensity)
+                geo_median = np.median(geo_div_propensity)
+                groups = dict()
+                
+                groups['geo_preference'] = (cat_div_propensity <= cat_median) & (geo_div_propensity > geo_median)
+
+                groups['no_preference'] = ((cat_div_propensity <= cat_median) & (geo_div_propensity <= geo_median)) | ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
+
+                groups['cat_preference'] = (cat_div_propensity > cat_median) & (geo_div_propensity <= geo_median)
+
+                assert(np.max(groups['no_preference'] & groups['cat_preference'] & groups['geo_preference']) == 0)
+                color = 0.8
+                for group, mask in groups.items():
+                    # print(mask)
+                    # print(len(cat_div_propensity[mask]))
+                    # print(len(geo_div_propensity[mask]))
+                    ax.scatter(cat_div_propensity[mask],geo_div_propensity[mask],color=str(color))
+                    color -= 0.2
+                # ax.plot([cat_median]*2,[0,1],color='k')
+                # ax.plot([0,1],[geo_median]*2,color='k')
+                # ax.plot([cat_median]*2,ax.get_ylim(),color='k')
+                # ax.plot(ax.get_ylim(),[geo_median]*2,color='k')
+                # ax.set_xlim([min(cat_div_propensity),max(cat_div_propensity)])
+                # ax.set_ylim([min(geo_div_propensity),max(geo_div_propensity)])
+                ax.set_xlabel('Categorical method ('+CatDivPropensity.CAT_DIV_PROPENSITY_METHODS_PRETTY_NAME[cat_div_method]+')')
+                ax.set_ylabel('Geographic method ('+GeoDivPropensity.GEO_DIV_PROPENSITY_METHODS_PRETTY_NAME[geo_div_method]+')')
+                # ax.set_xlim(min(np.min(cat_div_propensity),0),max(np.max(cat_div_propensity),1))
+                # ax.set_ylim(min(np.min(geo_div_propensity),0),max(np.max(geo_div_propensity),1))
+
+                ax.set_title("Correlation: %f"%(scipy.stats.pearsonr(cat_div_propensity,geo_div_propensity)[0]))
+                ax.legend((f"Geographical preference ({np.count_nonzero(groups['geo_preference'])} people's)",
+                           f"No preference ({np.count_nonzero(groups['no_preference'])} people's)",
+                           f"Categorical preference ({np.count_nonzero(groups['cat_preference'])} people's)"))
+                ax.plot([cat_median]*2,[min(geo_div_propensity),max(geo_div_propensity)],color='k')
+                ax.plot([min(cat_div_propensity),max(cat_div_propensity)],[geo_median]*2,color='k')
+
+                fig.savefig(self.data_directory+IMG+f"{self.city}_{geo_div_method}_{cat_div_method}.png")
         

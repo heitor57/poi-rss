@@ -5,16 +5,24 @@ import scipy
 from tqdm import tqdm
 from parallel_util import run_parallel
 
+import cat_utils
 import geocat.objfunc as geocat
 from geocat.Binomial import Binomial
 import metrics
+import cat_utils
+
+
 
 
 class CatDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
-    METHODS = ['std_norm','ld','raw_std','num_cat','binomial','poi_ild']
-
+    METHODS = ['std_norm','ild','raw_std','num_cat','binomial','poi_ild']
+    CAT_DIV_PROPENSITY_METHODS_PRETTY_NAME = {
+        'poi_ild': 'ILD',
+        'num_cat': 'Number of categories visited',
+        'binomial': 'Binomial',
+    }
     @classmethod
     def getInstance(cls, *args, **kwargs):
         if cls._instance is None:
@@ -23,17 +31,15 @@ class CatDivPropensity():
             cls._instance.__init__(*args,**kwargs)
         return cls._instance
 
-    def __init__(self, training_matrix, users_categories_visits,
-                 undirected_category_tree, cat_div_method, poi_cats):
+    def __init__(self, training_matrix, undirected_category_tree, cat_div_method, poi_cats):
         self.training_matrix = training_matrix
-        self.users_categories_visits = users_categories_visits
         self.undirected_category_tree = undirected_category_tree
         self.cat_div_method = cat_div_method
 
         self.CAT_METHODS = {
             "std_norm": self.cat_div_std_norm,
             # "mad_norm": self.cat_div_mad_norm,
-            "ld": self.cat_div_ld,
+            "ild": self.cat_div_ild,
             "raw_std": self.cat_div_raw_std,
             "num_cat": self.cat_div_num_cat,
             "binomial": self.cat_div_binomial,
@@ -41,6 +47,9 @@ class CatDivPropensity():
         }
 
         self.poi_cats = poi_cats
+
+        self.users_categories_visits = cat_utils.get_users_cat_visits(self.training_matrix,
+                                                                      self.poi_cats)
 
         self.cat_div_propensity = None
     
@@ -83,7 +92,7 @@ class CatDivPropensity():
         pass
 
     @classmethod
-    def cat_div_ld(cls, uid):
+    def cat_div_ild(cls, uid):
         self = cls.getInstance()
         cats_visits = self.users_categories_visits[uid]
         dis_sum = 0
@@ -113,6 +122,7 @@ class CatDivPropensity():
         lids = self.training_matrix[uid].nonzero()[0]
         ild = metrics.ildk(lids,self.poi_cats,self.undirected_category_tree)
         return ild
+
 
     def compute_div_propensity(self,div_weight=0.75,alpha=0.5):
         # switcher = {

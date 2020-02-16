@@ -13,11 +13,18 @@ from concurrent.futures import ProcessPoolExecutor
 from parallel_util import run_parallel
 
 import lib.cat_utils as cat_utils
+import metrics
+
 
 class GeoDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
-    METHODS = ['walk','num_poi','num_cat','visits']
+    METHODS = ['walk','num_poi','num_cat','visits','walk_raw','ildg']
+    GEO_DIV_PROPENSITY_METHODS_PRETTY_NAME = {
+        'walk': 'Mean radius of visited POIs',
+        'num_poi': 'Number of visited POIs',
+        'ildg': 'Geographical ILD',
+    }
 
     @classmethod
     def getInstance(cls, *args, **kwargs):
@@ -42,6 +49,8 @@ class GeoDivPropensity():
             "num_poi": self.geo_div_num_poi,
             "num_cat": self.geo_div_num_cat,
             "visits": self.geo_div_visits,
+            "walk_raw": self.geo_div_walk_raw,
+            "ildg": self.geo_div_ildg,
         }
 
 
@@ -116,6 +125,13 @@ class GeoDivPropensity():
         return norm_prop
 
     @classmethod
+    def geo_div_walk_raw(cls,uid):
+        self = cls.getInstance()
+        norm_prop=self.mean_walk.copy()
+        # self.geo_div_propensity=norm_prop
+        return norm_prop
+
+    @classmethod
     def geo_div_num_cat(cls, uid):
         self = cls.getInstance()
         cats_visits = self.users_categories_visits[uid]
@@ -126,6 +142,13 @@ class GeoDivPropensity():
         self = cls.getInstance()
         lids = self.training_matrix[uid].nonzero()[0]
         return len(lids)/self.training_matrix.shape[1]
+
+    @classmethod
+    def geo_div_ildg(cls, uid):
+        self = cls.getInstance()
+        lids = self.training_matrix[uid].nonzero()[0]
+        ildg = metrics.ildgk(lids,self.poi_coos)
+        return ildg
 
     @classmethod
     def geo_div_visits(cls, uid):
@@ -140,4 +163,6 @@ class GeoDivPropensity():
         # self.geo_div_propensity = func()
         args=[(uid,) for uid in range(self.training_matrix.shape[0])]
         self.geo_div_propensity = run_parallel(func, args, self.CHKS)
+        if self.geo_div_method == 'ildg':
+            self.geo_div_propensity = self.geo_div_propensity/np.max(self.geo_div_propensity)
         return np.array(self.geo_div_propensity)

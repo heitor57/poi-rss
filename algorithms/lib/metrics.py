@@ -52,8 +52,9 @@ def ildk(pois,poi_cats,undirected_category_tree):
     local_ild=0
     count=0
  
-    if num_pois==0:
-        min_dissim=1.0
+    if num_pois == 0 or num_pois == 1:
+        print("Number of pois:",num_pois)
+        return 1.0
     else:
         for i, poi_1 in enumerate(pois):
             for j, poi_2 in enumerate(pois):
@@ -77,7 +78,11 @@ def ildgk(pois,poi_coos):
     local_ild_km=0
     count=0
     num_pois=len(pois)
-    if num_pois!=0:
+
+    if num_pois == 0 or num_pois == 1:
+        print("Number of pois:",num_pois)
+        return 0
+    else:
         for lid1 in pois:
             lat1, lon1 = poi_coos[lid1]
             for lid2 in pois:

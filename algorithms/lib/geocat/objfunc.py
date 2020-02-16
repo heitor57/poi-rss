@@ -556,9 +556,9 @@ def cat_weight_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_lis
     delta_proportionality=max(0,pr-current_proportionality)
     if delta_proportionality<0:
         delta_proportionality=0
-    div_cat = div_cat_weight*gc_div+ild_div*(1-div_cat_weight)
+    div_cat = (1-div_cat_weight)*gc_div+ild_div*(div_cat_weight)
     div_geo = delta_proportionality
-    div=(div_geo*div_geo_cat_weight)+(div_cat*(1-div_geo_cat_weight))
+    div=(div_geo*(1-div_geo_cat_weight))+(div_cat*div_geo_cat_weight)
     return (score**(1-div_weight))*(div**div_weight)
 
 
