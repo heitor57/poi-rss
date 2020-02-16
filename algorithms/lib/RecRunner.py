@@ -541,7 +541,7 @@ class RecRunner():
                     self.user_data[f'yelping_since_{year}'] = 0
             print("User data memory usage:",asizeof.asizeof(self.user_data)/1024**2,"MB")
 
-        self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/4)
+        self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/8)
         self.CHKSL = int(len(self.all_uids)/multiprocessing.cpu_count())
         self.welcome_load()
         
@@ -550,7 +550,8 @@ class RecRunner():
     def welcome_load(self):
         self.message_start_section("LOAD FINAL MESSAGE")
         print('user num: %d, poi num: %d, checkin num: %d' % (self.training_matrix.shape[0],self.training_matrix.shape[1],self.training_matrix.sum().sum()))
-        print("Chunk size set to %d for this base" %(self.CHKSL))
+        print("Chunk size set to %d for this base" %(self.CHKS))
+        print("Large chunk size set to %d for this base" %(self.CHKSL))
 
     def not_in_ground_truth_message(uid):
         print(f"{uid} not in ground_truth [ERROR]")
