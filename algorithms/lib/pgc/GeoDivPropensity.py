@@ -19,11 +19,12 @@ import metrics
 class GeoDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
-    METHODS = ['walk','num_poi','num_cat','visits','walk_raw','ildg']
+    METHODS = ['walk','num_poi','num_cat','visits','walk_raw','ildg','inverse_walk']
     GEO_DIV_PROPENSITY_METHODS_PRETTY_NAME = {
         'walk': 'Mean radius of visited POIs',
         'num_poi': 'Number of visited POIs',
         'ildg': 'Geographical ILD',
+        'inverse_walk': 'Inverse of mean radius of visited POIs'
     }
 
     @classmethod
@@ -51,6 +52,7 @@ class GeoDivPropensity():
             "visits": self.geo_div_visits,
             "walk_raw": self.geo_div_walk_raw,
             "ildg": self.geo_div_ildg,
+            "inverse_walk": self.geo_div_inverse_walk,
         }
 
 
@@ -156,6 +158,13 @@ class GeoDivPropensity():
         lids = self.training_matrix[uid].nonzero()[0]
         visits = self.training_matrix[uid,lids].sum()
         return visits/self.max_user_visits
+
+    @classmethod
+    def geo_div_inverse_walk(cls, uid):
+        self = cls.getInstance()
+        norm_prop=min((self.users_mean_walk[uid]/self.mean_walk),1)
+        # self.geo_div_propensity=norm_prop
+        return 1-norm_prop
 
     def compute_div_propensity(self):
         func = self.GEO_METHODS.get(self.geo_div_method,
