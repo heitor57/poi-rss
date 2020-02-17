@@ -13,6 +13,7 @@ import numpy as np
 import pickle
 import lib.cat_utils as cat_utils
 import lib.geo_utils as geo_utils
+from lib.parallel_util import run_parallel
 from lib.constants import geocat_constants,experiment_constants
 from tqdm import tqdm
 import math
@@ -200,7 +201,8 @@ print(time.time()-start_time)
 genoptions=['poi','neighbor','user','checkin'# ,'test','train'
             ,'user_data']
 genoptions=['checkin',
-            'poi','user','user_data'
+            'poi','neighbor',
+            'user','user_data'
             ]
 
 
@@ -297,13 +299,16 @@ for city in cities:
     if 'neighbor' in genoptions:
         poi_neighbors={}
         pois_id=[pois_id_to_int[pid] for pid in pois_id]
-        for i in tqdm(range(len(pois_id))):
-            poi_id = pois_id[i]
+        args=[(lid,) for lid in pois_id]
+        def neighbors_searcher(poi_id):
             neighbors=list()
-            poi_neighbors[poi_id]=neighbors
             for npoi_id in pois_id:
-                if geo_utils.haversine(city_poi_data[poi_id]['latitude'],city_poi_data[poi_id]['longitude'],                                      city_poi_data[npoi_id]['latitude'],city_poi_data[npoi_id]['longitude'])                <= geocat_constants.NEIGHBOR_DISTANCE:
+                if geo_utils.dist((city_poi_data[poi_id]['latitude'],city_poi_data[poi_id]['longitude']),(city_poi_data[npoi_id]['latitude'],city_poi_data[npoi_id]['longitude'])) <= geocat_constants.NEIGHBOR_DISTANCE:
                     neighbors.append(npoi_id)
+            return neighbors
+        poi_neighbors = run_parallel(neighbors_searcher,args,chunksize=60)
+        # list to dict
+        poi_neighbors = {i: poi_neighbors[i] for i in range(len(poi_neighbors))}
         print("Terminou vizinhos...")
         fneighbors=open('../data/neighbor/'+city+'.pickle','wb')
         pickle.dump(poi_neighbors,fneighbors)
