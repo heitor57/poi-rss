@@ -374,8 +374,8 @@ class RecRunner():
     def get_base_parameters():
         return {
             "mostpopular": {},
-            "usg": {'alpha': 0.1, 'beta': 0.1, 'eta': 0.05},
-            # "usg": {'alpha': 0, 'beta': 0.2, 'eta': 0},
+            # "usg": {'alpha': 0.1, 'beta': 0.1, 'eta': 0.05},
+            "usg": {'alpha': 0, 'beta': 0.2, 'eta': 0},
             "geosoca": {'alpha': 0.5},
         }
 
