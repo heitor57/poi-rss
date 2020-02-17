@@ -446,7 +446,7 @@ class RecRunner():
     def get_final_metrics_name(self):
         return self.data_directory+METRICS+self.get_final_rec_name()+f"{R_FORMAT}"
 
-    def load_base(self,user_data=True):
+    def load_base(self,user_data=False):
         CITY = self.city
 
         print(f"{CITY} city base loading")
@@ -516,11 +516,13 @@ class RecRunner():
 
         for uid in self.invalid_uids:
             del self.social_relations[uid]
-            del self.user_data[uid]
+            if user_data:
+                del self.user_data[uid]
 
         self.ground_truth = dict((uid_to_int[key], value) for (key, value) in self.ground_truth.items())
         self.social_relations = dict((uid_to_int[key], value) for (key, value) in self.social_relations.items())
-        self.user_data = dict((uid_to_int[key], value) for (key, value) in self.user_data.items())
+        if user_data:
+            self.user_data = dict((uid_to_int[key], value) for (key, value) in self.user_data.items())
 
         
         for uid, i in uid_to_int.items():
