@@ -1,7 +1,7 @@
 import time
 import math
 import numpy as np
-np.seterr('warn')
+# np.seterr('warn')
 from collections import defaultdict
 
 
