@@ -30,6 +30,9 @@ LATEX_FOOT = r"""\bibliographystyle{plain}
 \bibliography{references}
 \end{document}"""
 
+LATEX_HEADER = ''
+LATEX_FOOT = ''
+
 from abc import ABC, abstractmethod
 from collections import defaultdict, OrderedDict
 import pickle
@@ -1234,7 +1237,7 @@ class RecRunner():
                 result_out.write(json_string_result)
             result_out.close()
 
-    def load_metrics(self,*,base=False,pretty_name=False,short_name=True):
+    def load_metrics(self,*,base=False,pretty_with_base_name=False,pretty_name=True,short_name=True):
         if base:
             rec_using=self.base_rec
             if pretty_name:
@@ -1245,7 +1248,9 @@ class RecRunner():
                 rec_short_name=self.get_base_rec_name()
         else:
             rec_using=self.final_rec
-            if pretty_name:
+            if pretty_with_base_name:
+                rec_short_name=self.get_final_rec_pretty_name()+'('+self.get_base_rec_pretty_name()+')'
+            elif pretty_name:
                 rec_short_name=self.get_final_rec_pretty_name()
             elif short_name:
                 rec_short_name=self.get_final_rec_short_name()
@@ -1963,7 +1968,7 @@ class RecRunner():
         result_str += "\\end{table}\n"
         result_str = LATEX_HEADER + result_str
         result_str += LATEX_FOOT
-        fout = open(self.data_directory+UTIL+'_'.join([prefix_name]+CITIES)+'.tex', 'w')
+        fout = open(self.data_directory+UTIL+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+CITIES)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
 

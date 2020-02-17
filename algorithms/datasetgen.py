@@ -200,7 +200,7 @@ print(time.time()-start_time)
 genoptions=['poi','neighbor','user','checkin'# ,'test','train'
             ,'user_data']
 genoptions=['checkin',
-            'poi',
+            'poi','user','user_data'
             ]
 
 

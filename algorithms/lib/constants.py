@@ -40,6 +40,7 @@ RECS_PRETTY = {
     "pm2": "PM2",
     "perfectpgeocat": "PPGC",
     "pdpgeocat": "PDPGC",
+    "geosoca": "GeoSoCa",
 }
 
 CITIES_PRETTY = {
