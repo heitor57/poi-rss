@@ -96,10 +96,10 @@ def gen_line_cycle(num=6):
     return (color_cycler + linestyle + marker) * linewidth * markerwidth
 
 def gen_bar_cycle(num=6):
-    
+    arrange = np.linspace(0,1,num)
     hatch_cycler = cycler('hatch', ['///', '--', '...','\///', 'xxx', '\\\\','None','*'][:num])
     base_cycler = cycler('zorder', [10])*cycler('edgecolor',[BAR_EDGE_COLOR])
-    color_cycler = cycler('color', reversed([str(i/(num-1)) for i in range(num)]))
+    color_cycler = cycler('color', reversed(list(map(str,arrange))))
     bar_cycle = (hatch_cycler + color_cycler)*base_cycler
     return bar_cycle
 GEOCAT_BAR_STYLE = {'color': 'k', 'zorder': 10,'edgecolor':BAR_EDGE_COLOR}
@@ -375,6 +375,7 @@ class RecRunner():
         return {
             "mostpopular": {},
             "usg": {'alpha': 0.1, 'beta': 0.1, 'eta': 0.05},
+            # "usg": {'alpha': 0, 'beta': 0.2, 'eta': 0},
             "geosoca": {'alpha': 0.5},
         }
 
@@ -1232,7 +1233,7 @@ class RecRunner():
 
             args=[(uid,base,k) for uid in self.all_uids]
             results = run_parallel(self.eval,args,self.CHKSL)
-            
+            print(pd.DataFrame([json.loads(result) for result in results]).mean().T)
             for json_string_result in results:
                 result_out.write(json_string_result)
             result_out.close()
@@ -1261,13 +1262,17 @@ class RecRunner():
 
         self.metrics[rec_short_name]={}
         for i,k in enumerate(experiment_constants.METRICS_K):
+            try:
+                result_file = open(self.get_file_name_metrics(base,k), 'r')
 
-            result_file = open(self.get_file_name_metrics(base,k), 'r')
-            
-            self.metrics[rec_short_name][k]=[]
-            for i,line in enumerate(result_file):
-                obj=json.loads(line)
-                self.metrics[rec_short_name][k].append(obj)
+                self.metrics[rec_short_name][k]=[]
+                for i,line in enumerate(result_file):
+                    obj=json.loads(line)
+                    self.metrics[rec_short_name][k].append(obj)
+            except Exception as e:
+                print(e)
+        if self.metrics[rec_short_name] == {}:
+            del self.metrics[rec_short_name]
 
 
     def plot_acc_metrics(self,prefix_name='acc_met'):
