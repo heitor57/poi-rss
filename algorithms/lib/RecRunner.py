@@ -547,7 +547,7 @@ class RecRunner():
                     self.user_data[f'yelping_since_{year}'] = 0
             print("User data memory usage:",asizeof.asizeof(self.user_data)/1024**2,"MB")
 
-        self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/8)
+        self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/4)
         self.CHKSL = int(len(self.all_uids)/multiprocessing.cpu_count())
         self.welcome_load()
         
@@ -1129,7 +1129,11 @@ class RecRunner():
         print(f"Base rec list size = {self.base_rec_list_size}")
         print(f"Final rec list size = {self.final_rec_list_size}")
 
-    def run_base_recommender(self):
+    def run_base_recommender(self,check_already_exists=False):
+
+        if check_already_exists == True and os.path.exists(self.data_directory+RECLIST+self.get_base_rec_file_name()):
+            print("recommender not going to be ran, already generated %s" % (self.get_base_rec_name()))
+            return
         base_recommender=self.BASE_RECOMMENDERS[self.base_rec]
         self.message_recommender(base=True)
         base_recommender()
@@ -1194,8 +1198,8 @@ class RecRunner():
         # epc_val=metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids)
         epc_val=self.epc_val
 
-        map_val = metrics.mapk(actual,predicted_at_k,k)
-        ndcg_val = metrics.ndcgk(actual,predicted_at_k,k)
+        # map_val = metrics.mapk(actual,predicted_at_k,k)
+        # ndcg_val = metrics.ndcgk(actual,predicted_at_k,k)
         ildg_val = metrics.ildgk(predicted_at_k,self.poi_coos)
         # else:
         #     epc_val=self.epc_val
@@ -1205,7 +1209,7 @@ class RecRunner():
         #epc_val=metrics.epck(predicted_at_k,actual,uid,self.training_matrix)
         
         d={'user_id':uid,'precision':precision_val,'recall':rec_val,'pr':pr_val,'ild':ild_val,'gc':gc_val,'epc':epc_val,
-           'map':map_val,'ndcg':ndcg_val,
+           # 'map':map_val,'ndcg':ndcg_val,
            'ildg': ildg_val}
 
         return json.dumps(d)+'\n'
@@ -1216,13 +1220,13 @@ class RecRunner():
         else:
             return self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}"
 
-    def eval_rec_metrics(self,*,base=False):
+    def eval_rec_metrics(self,*,base=False,METRICS_KS = experiment_constants.METRICS_K):
         if base:
             predictions = self.user_base_predicted_lid
         else:
             predictions = self.user_final_predicted_lid
 
-        for i,k in enumerate(experiment_constants.METRICS_K):
+        for i,k in enumerate(METRICS_KS):
             print(f"running metrics at @{k}")
             self.epc_val = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids,k)
 
@@ -1240,7 +1244,7 @@ class RecRunner():
                 result_out.write(json_string_result)
             result_out.close()
 
-    def load_metrics(self,*,base=False,pretty_with_base_name=False,pretty_name=True,short_name=True):
+    def load_metrics(self,*,base=False,pretty_with_base_name=False,pretty_name=True,short_name=True,METRICS_KS=experiment_constants.METRICS_K):
         if base:
             rec_using=self.base_rec
             if pretty_name:
@@ -1263,7 +1267,7 @@ class RecRunner():
         print("Loading %s..." % (rec_short_name))
 
         self.metrics[rec_short_name]={}
-        for i,k in enumerate(experiment_constants.METRICS_K):
+        for i,k in enumerate(METRICS_KS):
             try:
                 result_file = open(self.get_file_name_metrics(base,k), 'r')
 
@@ -2409,4 +2413,36 @@ class RecRunner():
                 ax.plot([min(cat_div_propensity),max(cat_div_propensity)],[geo_median]*2,color='k')
 
                 fig.savefig(self.data_directory+IMG+f"{self.city}_{geo_div_method}_{cat_div_method}.png")
-        
+    def plot_usg_hyperparameter(self):
+        KS = [10]
+        inl = np.around(np.linspace(0,1,6),2)
+        l = []
+        for i in inl:
+            for j in inl:
+                for k in inl:
+                    l.append((i,j,k))
+                    self.base_rec_parameters['alpha'], self.base_rec_parameters['beta'], self.base_rec_parameters['eta'] = i, j, k 
+                    self.load_metrics(base=True,pretty_name=False,short_name=False,METRICS_KS=KS)
+        METRIC = 'recall'
+        for i,k in enumerate(KS):
+            # palette = plt.get_cmap(CMAP_NAME)
+            # fig = plt.figure(figsize=(8,8))
+            # ax=fig.add_subplot(111)
+            # ax.grid(alpha=MPL_ALPHA)
+            # plt.xticks(rotation=90)
+            #K = max(experiment_constants.METRICS_K)
+            #K = 10
+            metrics_mean=dict()
+            for i,params,metrics in zip(range(len(self.metrics)),l,self.metrics.values()):
+                metrics=metrics[k]
+                metrics_mean[params]=0
+                for obj in metrics:
+                    metrics_mean[params]+=obj[METRIC]
+                metrics_mean[params]/=len(metrics)
+            print(f"at @{k}")
+            df = pd.Series(metrics_mean)
+            print(df.unstack().unstack())
+            print(df.groupby(level=0).apply(max))
+            print(df.groupby(level=1).apply(max))
+            print(df.groupby(level=2).apply(max))
+
