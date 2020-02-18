@@ -376,7 +376,7 @@ class RecRunner():
             "mostpopular": {},
             # "usg": {'alpha': 0.1, 'beta': 0.1, 'eta': 0.05},
             "usg": {'alpha': 0, 'beta': 0.2, 'eta': 0},
-            "geosoca": {'alpha': 0.5},
+            "geosoca": {'alpha': 0.3},
         }
 
     @staticmethod
@@ -2445,4 +2445,32 @@ class RecRunner():
             print(df.groupby(level=0).apply(max))
             print(df.groupby(level=1).apply(max))
             print(df.groupby(level=2).apply(max))
+
+    def plot_geosoca_hyperparameter(self):
+        KS = [10]
+        lp = np.around(np.linspace(0, 1, 11),decimals=2)
+        l = []
+        for alpha in lp:
+            l.append(alpha)
+            self.base_rec_parameters['alpha'] = alpha
+            self.load_metrics(base=True,pretty_name=False,short_name=False,METRICS_KS=KS)
+        METRIC = 'recall'
+        for i,k in enumerate(KS):
+            # palette = plt.get_cmap(CMAP_NAME)
+            # fig = plt.figure(figsize=(8,8))
+            # ax=fig.add_subplot(111)
+            # ax.grid(alpha=MPL_ALPHA)
+            # plt.xticks(rotation=90)
+            #K = max(experiment_constants.METRICS_K)
+            #K = 10
+            metrics_mean=dict()
+            for i,params,metrics in zip(range(len(self.metrics)),l,self.metrics.values()):
+                metrics=metrics[k]
+                metrics_mean[params]=0
+                for obj in metrics:
+                    metrics_mean[params]+=obj[METRIC]
+                metrics_mean[params]/=len(metrics)
+            print(f"at @{k}")
+            df = pd.Series(metrics_mean)
+            print(df.sort_values(ascending=False))
 
