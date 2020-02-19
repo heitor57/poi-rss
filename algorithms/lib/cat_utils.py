@@ -16,7 +16,7 @@ def get_most_detailed_categories(categories,dict_alias_title,dict_alias_depth):
     return new_categories
 
 
-def cat_structs_igraph(catfilename)
+def cat_structs_igraph(catfilename):
     df_categories=pd.read_json(catfilename)
 
     dict_alias_title=dict()
@@ -36,11 +36,11 @@ def cat_structs_igraph(catfilename)
             for parent_label in row['parents']:
                 category_tree.add_edge(row['alias'],parent_label)
 
-    undirected_category_tree=category_tree.to_undirected()
+    # undirected_category_tree=category_tree.to_undirected()
     # dict alias depth
     dict_alias_depth=dict()
     for index, row in df_categories.iterrows():
-        dict_alias_depth[row['alias']]=category_tree.shortest_paths(category_tree,row['alias'],'root')[0][0]
+        dict_alias_depth[row['alias']]=category_tree.shortest_paths(row['alias'],'root')[0][0]
 
     df_categories=None
 

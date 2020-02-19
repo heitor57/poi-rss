@@ -2,6 +2,7 @@ import numpy as np
 import networkx as nx
 import geocat.objfunc
 import geo_utils
+from geocat.objfunc import category_dis_sim
 np.seterr(all='raise')
 
 def mapk(actual, predicted, k):
@@ -35,15 +36,6 @@ def ndcgk(actual, predicted, k):
             dcg += 1.0 / np.log(i+2)
         idcg += 1.0 / np.log(i+2)
     return dcg / idcg
-
-
-def category_dis_sim(category1,category2,undirected_category_tree):
-    dissim=0.0
-    spd=nx.shortest_path_length(undirected_category_tree,category1,category2)
-    sim = 1.0 / (1.0 + spd)
-    dissim=1.0-sim
-    return dissim
-    
 
 def ildk(pois,poi_cats,undirected_category_tree):
     

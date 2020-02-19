@@ -23,7 +23,7 @@ inquirer = "*"
 colorama = "*"
 sklearn = "*"
 imblearn = "*"
-igraph = "*"
+python-igraph = "*"
 
 [requires]
 python_version = "3.7"
