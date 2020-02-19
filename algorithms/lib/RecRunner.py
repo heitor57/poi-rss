@@ -50,6 +50,7 @@ import numpy as np
 from tqdm import tqdm
 from scipy.stats import describe
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from cycler import cycler
 # PALETTE = plt.get_cmap('Greys')
 # monochrome = (cycler('color', ['k']) * cycler('linestyle', ['-.', '--','-', ':', ]) * cycler('marker', [',','.','^']))
@@ -547,7 +548,7 @@ class RecRunner():
                     self.user_data[f'yelping_since_{year}'] = 0
             print("User data memory usage:",asizeof.asizeof(self.user_data)/1024**2,"MB")
 
-        self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/4)
+        self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/8)
         self.CHKSL = int(len(self.all_uids)/multiprocessing.cpu_count())
         self.welcome_load()
         
@@ -1917,6 +1918,12 @@ class RecRunner():
         plt.savefig(self.data_directory+IMG+f'analysis_{self.get_final_rec_name()}.png')
 
     def print_latex_metrics_table(self,prefix_name='',references=[]):
+        # bullet_str = r'\textcolor[rgb]{0.25,0.25,0.25}{$\bullet$}'
+        # triangle_up_str = r'\textcolor[rgb]{0.0,0.0,0.0}{$\blacktriangle$}'
+        # triangle_down_str = r'\textcolor[rgb]{0.5,0.5,0.5}{$\blacktriangledown$}'
+        bullet_str = r'\textcolor[rgb]{0.7,0.7,0.0}{$\bullet$}'
+        triangle_up_str = r'\textcolor[rgb]{00,0.45,0.10}{$\blacktriangle$}'
+        triangle_down_str = r'\textcolor[rgb]{0.7,00,00}{$\blacktriangledown$}'
         num_metrics = len(self.metrics_name)
         result_str = r"\begin{table}[]" + "\n"
         result_str += r"\begin{tabular}{" +'l|'+'l'*(num_metrics) + "}\n"
@@ -1956,14 +1963,14 @@ class RecRunner():
                                 [ms[metric_name] for ms in metrics_k],
                             )
                             if pvalue > 0.05:
-                                metrics_gain[rec_using][metric_name] = r'\textcolor[rgb]{0.7,0.7,0.0}{$\bullet$}'
+                                metrics_gain[rec_using][metric_name] = bullet_str
                             else:
                                 if metrics_mean[rec_using][metric_name] < metrics_mean[reference_name][metric_name]:
-                                    metrics_gain[rec_using][metric_name] = r'\textcolor[rgb]{0.7,00,00}{$\blacktriangledown$}'
+                                    metrics_gain[rec_using][metric_name] = triangle_down_str
                                 elif metrics_mean[rec_using][metric_name] > metrics_mean[reference_name][metric_name]:
-                                    metrics_gain[rec_using][metric_name] = r'\textcolor[rgb]{00,0.45,0.10}{$\blacktriangle$}'
+                                    metrics_gain[rec_using][metric_name] = triangle_up_str
                                 else:
-                                    metrics_gain[rec_using][metric_name] = r'\textcolor[rgb]{0.7,0.7,0.0}{$\bullet$}'
+                                    metrics_gain[rec_using][metric_name] = bullet_str 
                     else:
                         reference_name = rec_using
                         base_metrics = metrics
@@ -2080,7 +2087,7 @@ class RecRunner():
                 val = np.sum(list(utility_scores.values()))/len(utility_scores)
                 ax.bar(count+i*barWidth,val,barWidth,**next(styles),label=rec_using)
                     # ax.bar(count+i*barWidth,val,barWidth,**GEOCAT_BAR_STYLE,label=rec_using)
-                ax.text(count+i*barWidth-barWidth/2+barWidth*0.1,val+val*0.05,"%.2f"%(val),rotation=90)
+                ax.text(count+i*barWidth-barWidth/2+barWidth*0.1,val+0.025,"%.2f"%(val),rotation=90)
                 i+=1
             #ax.set_xticks(np.arange(N+1)+barWidth*(np.floor((len(self.metrics))/2)-1)+barWidth/2)
         # ax.set_xticks(np.arange(N+1)+barWidth*len(metrics_utility_score)/2+barWidth/2)
@@ -2426,12 +2433,13 @@ class RecRunner():
         METRIC = 'recall'
         for i,k in enumerate(KS):
             # palette = plt.get_cmap(CMAP_NAME)
-            # fig = plt.figure(figsize=(8,8))
-            # ax=fig.add_subplot(111)
+            fig = plt.figure(figsize=(16,8))
+            ax = plt.axes(projection="3d")
             # ax.grid(alpha=MPL_ALPHA)
-            # plt.xticks(rotation=90)
+            plt.xticks(rotation=90)
             #K = max(experiment_constants.METRICS_K)
             #K = 10
+            
             metrics_mean=dict()
             for i,params,metrics in zip(range(len(self.metrics)),l,self.metrics.values()):
                 metrics=metrics[k]
@@ -2439,12 +2447,32 @@ class RecRunner():
                 for obj in metrics:
                     metrics_mean[params]+=obj[METRIC]
                 metrics_mean[params]/=len(metrics)
+            # for k, v in metrics_mean.items():
+            #     print(k,v)
             print(f"at @{k}")
-            df = pd.Series(metrics_mean)
-            print(df.unstack().unstack())
-            print(df.groupby(level=0).apply(max))
-            print(df.groupby(level=1).apply(max))
-            print(df.groupby(level=2).apply(max))
+            l_tmp = list(zip(*l))
+            p1 = list(zip(*l_tmp[:2]))
+            alpha_beta = list(map(lambda pair: "%.2f-%.2f"%(pair[0],pair[1]),p1))
+            eta = l_tmp[-1]
+            # print(len(alpha_beta),len(eta),)
+            xlabels = list(map(lambda pair: "%.2f-%.2f"%(pair[0],pair[1]),list(itertools.product(inl,repeat=2))))
+            xticks = np.linspace(0,1,len(xlabels))
+            d_label_tick = {label: tick for label, tick in zip(xlabels,xticks)}
+            alpha_beta_like_xticks = list(map(d_label_tick.get,alpha_beta))
+            print(alpha_beta_like_xticks)
+            surf = ax.plot_trisurf(alpha_beta_like_xticks, eta, list(metrics_mean.values()),cmap=plt.get_cmap('Greys'),linewidth=0.1, vmin=0, vmax=np.max(list(metrics_mean.values())))
+            fig.colorbar(surf, shrink=0.5, aspect=5)
+            ax.scatter(alpha_beta_like_xticks, eta, list(metrics_mean.values()),color='k')
+            ax.set(xticks=xticks, xticklabels=xlabels)
+            ax.set_xlabel(r"$\alpha$-$\beta$",labelpad=50)
+            ax.set_ylabel(r"$\eta$")
+            ax.set_zlabel(METRICS_PRETTY[METRIC]+f"@{k}")
+            fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_usg_hyperparameter.png")
+            # df = pd.Series(metrics_mean)
+            # print(df.unstack().unstack())
+            # print(df.groupby(level=0).apply(max))
+            # print(df.groupby(level=1).apply(max))
+            # print(df.groupby(level=2).apply(max))
 
     def plot_geosoca_hyperparameter(self):
         KS = [10]
