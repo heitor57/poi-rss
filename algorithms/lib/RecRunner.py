@@ -276,6 +276,7 @@ class RecRunner():
         self.CHKS = 50 # chunk size for process pool executor
         self.CHKSL = 100# chunk size for process pool executor largest
         self.cache = defaultdict(dict)
+        self.metrics_cities = dict()
 
     def message_start_section(self,string):
         print("------===%s===------" % (string))
@@ -1278,6 +1279,7 @@ class RecRunner():
         print("Loading %s..." % (rec_short_name))
 
         self.metrics[rec_short_name]={}
+        self.metrics_cities[rec_short_name] = self.city
         for i,k in enumerate(METRICS_KS):
             try:
                 result_file = open(self.get_file_name_metrics(base,k), 'r')
@@ -1927,7 +1929,7 @@ class RecRunner():
         df[['precision','p_precision','p_beta','beta']].plot()
         plt.savefig(self.data_directory+IMG+f'analysis_{self.get_final_rec_name()}.png')
 
-    def print_latex_metrics_table(self,prefix_name='',references=[]):
+    def print_latex_metrics_table(self,prefix_name='',references=[],cities=[self.city]):
         # bullet_str = r'\textcolor[rgb]{0.25,0.25,0.25}{$\bullet$}'
         # triangle_up_str = r'\textcolor[rgb]{0.0,0.0,0.0}{$\blacktriangle$}'
         # triangle_down_str = r'\textcolor[rgb]{0.5,0.5,0.5}{$\blacktriangledown$}'
@@ -1940,8 +1942,7 @@ class RecRunner():
         # result_str += "\begin{tabular}{" + 'l'*(num_metrics+1) + "}\n"
         if not references:
             references = [list(self.metrics.keys())[0]]
-        CITIES = [self.city]
-        for city in CITIES:
+        for city in cities:
             result_str += "\t&"+'\multicolumn{%d}{c}{%s}\\\\\n' % (num_metrics,CITIES_PRETTY[city])
 
             for i,k in enumerate(experiment_constants.METRICS_K):
@@ -1996,14 +1997,9 @@ class RecRunner():
         result_str += "\\end{table}\n"
         result_str = LATEX_HEADER + result_str
         result_str += LATEX_FOOT
-        fout = open(self.data_directory+UTIL+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+CITIES)+'.tex', 'w')
+        fout = open(self.data_directory+UTIL+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
-
-        # plt.figure(figsize=(4,5))
-        # ax=plt.subplot2grid((1,1),(0,0))
-        # ax.text(0.5,0.8,result_str,ha="center",va="center",transform=ax.transAxes)
-        # plt.savefig(self.data_directory+IMG+'_'.join([prefix_name]+CITIES)+'.png',bbox_inches="tight")
 
     def plot_bar_exclusive_metrics(self,prefix_name='all_met',ncol=3):
         palette = plt.get_cmap(CMAP_NAME)
@@ -2517,26 +2513,26 @@ class RecRunner():
         KS = [10]
         num_l_cat = 6
         num_l_geocat_div = 5
-        l_cat = np.append(np.around(np.linspace(0, 1, num_l_cat),decimals=2),[0.05,0.1,0.9,0.95])
+        l_cat = np.sort(np.append(np.around(np.linspace(0, 1, 6),decimals=2),[0.05,0.1,0.9,0.95]))
         num_l_cat += 4
         l_geocat_div = np.around(np.linspace(0,1,num_l_geocat_div),decimals=2)
         args = []
         l_geocat_div_2 = []
         for div_weight in l_geocat_div:
-            rr.final_rec_parameters['div_weight'] = div_weight
+            self.final_rec_parameters['div_weight'] = div_weight
             for div_geo_cat_weight in l_geocat_div:
                 if not(div_weight==0.0 and div_geo_cat_weight!=div_weight):
                     l_geocat_div_2.append((div_weight,div_geo_cat_weight))
 
-                rr.final_rec_parameters['div_geo_cat_weight'] = div_geo_cat_weight
+                self.final_rec_parameters['div_geo_cat_weight'] = div_geo_cat_weight
                 for div_cat_weight in l_cat:
-                    rr.final_rec_parameters['div_cat_weight'] = div_cat_weight
+                    self.final_rec_parameters['div_cat_weight'] = div_cat_weight
                     if not(div_weight==0.0 and (div_geo_cat_weight!=div_weight or div_cat_weight!=div_weight)):
                         args.append((div_weight,div_geo_cat_weight,div_cat_weight))
                         self.load_metrics(base=False,pretty_name=False,short_name=False,METRICS_KS=KS)
 
         for i,k in enumerate(KS):
-            fig = plt.figure(figsize=(16,8))
+            fig = plt.figure(figsize=(10.5,6.3))
             ax = plt.axes(projection="3d")
             plt.xticks(rotation=90)
             
@@ -2581,12 +2577,13 @@ class RecRunner():
             d_label_tick = {label: tick for label, tick in zip(xlabels,xticks)}
             lambda_delta_like_xticks = list(map(d_label_tick.get,lambda_delta))
             print(lambda_delta_like_xticks)
-            surf = ax.plot_trisurf(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.get_cmap('Greys'),linewidth=0.1, vmin=0, vmax=np.max(list(mauts.values())))
-            fig.colorbar(surf, shrink=0.5, aspect=5)
-            ax.scatter(lambda_delta_like_xticks, phi, list(mauts.values()),color='k')
+            surf = ax.plot_trisurf(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.cm.CMRmap,linewidth=1, vmin=np.min(list(mauts.values())), vmax=np.max(list(mauts.values())))
+            fig.colorbar(surf, shrink=0.75, aspect=20)
+            # ax.scatter(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.cm.CMRmap,vmin=np.min(list(mauts.values())), vmax=np.max(list(mauts.values())))
             ax.set(xticks=xticks, xticklabels=xlabels)
-            ax.set_xlabel(r"$\lambda$-$\delta$",labelpad=50)
+            ax.set_xlabel(r"$\lambda$-$\delta$",labelpad=35)
             ax.set_ylabel(r"$\phi$")
             ax.set_zlabel(f"MAUT@{k}")
-            fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_geocat_hyperparameter.png")
+            fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.png")
+            fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.eps")
 
