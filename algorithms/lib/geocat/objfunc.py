@@ -568,10 +568,26 @@ def cat_weight_geocat_objective_function(poi_id,score,
                                       log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
                                       div_geo_cat_weight,div_weight,current_proportionality,
                                       div_cat_weight):
-    ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
-    gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
-    # gc_old_div=gc(,rec_list,relevant_cats,poi_cats)
-    pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
+    NO_MEANING_VALUE = 32131
+    if div_geo_cat_weight!=0:
+        if div_cat_weight != 0:
+            ild_div=min_dist_to_list_cat(poi_id,rec_list,poi_cats,undirected_category_tree)
+        else:
+            ild_div=NO_MEANING_VALUE# ANY VALUE, no weight so it doenst matter
+        if div_cat_weight != 1:
+            gc_div=gc(poi_id,rec_list,relevant_cats,poi_cats)
+        else:
+            gc_div=NO_MEANING_VALUE# ANY VALUE, no weight so it doenst matter
+        # gc_old_div=gc(,rec_list,relevant_cats,poi_cats)
+    else:
+        ild_div=NO_MEANING_VALUE# ANY VALUE, no weight so it doenst matter
+        gc_div=NO_MEANING_VALUE# ANY VALUE, no weight so it doenst matter
+
+    if div_geo_cat_weight != 1:
+        pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover.copy(),poi_neighbors,log_neighbors[poi_id])
+    else:
+        pr=NO_MEANING_VALUE# ANY VALUE, no weight so it doenst matter
+
     objective_value=cat_weight_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight,div_cat_weight)
     return objective_value
 
