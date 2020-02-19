@@ -1210,7 +1210,7 @@ class RecRunner():
 
         # map_val = metrics.mapk(actual,predicted_at_k,k)
         # ndcg_val = metrics.ndcgk(actual,predicted_at_k,k)
-        ildg_val = metrics.ildgk(predicted_at_k,self.poi_coos)
+        # ildg_val = metrics.ildgk(predicted_at_k,self.poi_coos)
         # else:
         #     epc_val=self.epc_val
         # if uid == max(self.all_uids):
@@ -1220,7 +1220,8 @@ class RecRunner():
         
         d={'user_id':uid,'precision':precision_val,'recall':rec_val,'pr':pr_val,'ild':ild_val,'gc':gc_val,'epc':epc_val,
            # 'map':map_val,'ndcg':ndcg_val,
-           'ildg': ildg_val}
+           # 'ildg': ildg_val
+        }
 
         return json.dumps(d)+'\n'
 
@@ -2510,4 +2511,82 @@ class RecRunner():
             print(f"at @{k}")
             df = pd.Series(metrics_mean)
             print(df.sort_values(ascending=False))
+
+
+    def plot_geocat_hyperparameter(self):
+        KS = [10]
+        num_l_cat = 6
+        num_l_geocat_div = 5
+        l_cat = np.append(np.around(np.linspace(0, 1, num_l_cat),decimals=2),[0.05,0.1,0.9,0.95])
+        num_l_cat += 4
+        l_geocat_div = np.around(np.linspace(0,1,num_l_geocat_div),decimals=2)
+        args = []
+        l_geocat_div_2 = []
+        for div_weight in l_geocat_div:
+            rr.final_rec_parameters['div_weight'] = div_weight
+            for div_geo_cat_weight in l_geocat_div:
+                if not(div_weight==0.0 and div_geo_cat_weight!=div_weight):
+                    l_geocat_div_2.append((div_weight,div_geo_cat_weight))
+
+                rr.final_rec_parameters['div_geo_cat_weight'] = div_geo_cat_weight
+                for div_cat_weight in l_cat:
+                    rr.final_rec_parameters['div_cat_weight'] = div_cat_weight
+                    if not(div_weight==0.0 and (div_geo_cat_weight!=div_weight or div_cat_weight!=div_weight)):
+                        args.append((div_weight,div_geo_cat_weight,div_cat_weight))
+                        self.load_metrics(base=False,pretty_name=False,short_name=False,METRICS_KS=KS)
+
+        for i,k in enumerate(KS):
+            fig = plt.figure(figsize=(16,8))
+            ax = plt.axes(projection="3d")
+            plt.xticks(rotation=90)
+            
+            metrics_mean=dict()
+            for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                metrics=metrics[k]
+
+                metrics_mean[rec_using]=defaultdict(float)
+                for obj in metrics:
+                    for key in self.metrics_name:
+                        metrics_mean[rec_using][key]+=obj[key]
+
+
+                for j,key in enumerate(metrics_mean[rec_using]):
+                    metrics_mean[rec_using][key]/=len(metrics)
+
+            metrics_utility_score=dict()
+            for rec_using in metrics_mean:
+                metrics_utility_score[rec_using]=dict()
+            for metric_name in self.metrics_name:
+                max_metric_value=0
+                min_metric_value=1
+                for rec_using,rec_metrics in metrics_mean.items():
+                    max_metric_value=max(max_metric_value,rec_metrics[metric_name])
+                    min_metric_value=min(min_metric_value,rec_metrics[metric_name])
+                for rec_using,rec_metrics in metrics_mean.items():
+                    metrics_utility_score[rec_using][metric_name]=(rec_metrics[metric_name]-min_metric_value)\
+                        /(max_metric_value-min_metric_value)
+            mauts = dict()
+            for rec_using,utility_scores in metrics_utility_score.items():
+                mauts[rec_using] = np.sum(list(utility_scores.values()))/len(utility_scores)
+
+            print(pd.Series(mauts).sort_values(ascending=False))
+            print(f"at @{k}")
+            args_separated = list(zip(*args))
+            lambda_delta = list(zip(*args_separated[:2]))
+            lambda_delta = list(map(lambda pair: "%.2f-%.2f"%(pair[0],pair[1]),lambda_delta))
+            phi = args_separated[-1]
+            # print(len(alpha_beta),len(eta),)
+            xlabels = list(map(lambda pair: "%.2f-%.2f"%(pair[0],pair[1]),l_geocat_div_2))
+            xticks = np.linspace(0,1,len(xlabels))
+            d_label_tick = {label: tick for label, tick in zip(xlabels,xticks)}
+            lambda_delta_like_xticks = list(map(d_label_tick.get,lambda_delta))
+            print(lambda_delta_like_xticks)
+            surf = ax.plot_trisurf(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.get_cmap('Greys'),linewidth=0.1, vmin=0, vmax=np.max(list(mauts.values())))
+            fig.colorbar(surf, shrink=0.5, aspect=5)
+            ax.scatter(lambda_delta_like_xticks, phi, list(mauts.values()),color='k')
+            ax.set(xticks=xticks, xticklabels=xlabels)
+            ax.set_xlabel(r"$\lambda$-$\delta$",labelpad=50)
+            ax.set_ylabel(r"$\phi$")
+            ax.set_zlabel(f"MAUT@{k}")
+            fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_geocat_hyperparameter.png")
 
