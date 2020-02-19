@@ -6,7 +6,7 @@ HEURISTICS = ['local_max', 'tabu_search', 'particle_swarm']
 
 def category_dis_sim(category1,category2,undirected_category_tree):
     dissim=0.0
-    spd=nx.shortest_path_length(undirected_category_tree,category1,category2)
+    spd=undirected_category_tree[category1][category2]
     sim = 1.0 / (1.0 + spd)
     dissim=1.0-sim
     return dissim

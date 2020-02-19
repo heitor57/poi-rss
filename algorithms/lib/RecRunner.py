@@ -467,6 +467,8 @@ class RecRunner():
         for poi_id, poi in pickle.load(open(self.data_directory+POI+CITY+".pickle", "rb")).items():
             self.poi_coos[poi_id] = tuple([poi['latitude'], poi['longitude']])
             self.poi_cats[poi_id] = poi['categories']
+
+        
 #4.3 parametros corretos
         # self.poi_cats_full = {}
         # for poi_id, poi in pickle.load(open(self.data_directory+POI_FULL+CITY+".pickle", "rb")).items():
@@ -484,9 +486,16 @@ class RecRunner():
         self.user_num=user_num
         self.poi_num=poi_num
         # Cat Hierarchy load
-        self.dict_alias_title, self.category_tree, self.dict_alias_depth = cat_utils.cat_structs(
+        self.dict_alias_title, self.category_tree, self.dict_alias_depth = cat_utils.cat_structs_igraph(
             self.data_directory+"categories.json")
-        self.undirected_category_tree = self.category_tree.to_undirected()
+        # self.undirected_category_tree = self.category_tree.to_undirected()
+        self.undirected_category_tree = self.category_tree.shortest_paths()
+
+        cats = self.category_tree.vs['name']
+        cats_to_int = dict()
+        for i, cat in enumerate(cats):
+            cats_to_int[cat] = i
+        self.poi_cats = {poi_id: [cats_to_int[cat] for cat in cats] for poi_id, cats in self.poi_cats.items()}
 
         # Training matrix create
         self.training_matrix = np.zeros((user_num, poi_num))
