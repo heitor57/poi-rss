@@ -33,6 +33,14 @@ LATEX_FOOT = r"""\bibliographystyle{plain}
 LATEX_HEADER = ''
 LATEX_FOOT = ''
 
+# bullet_str = r'\textcolor[rgb]{0.25,0.25,0.25}{$\bullet$}'
+# triangle_up_str = r'\textcolor[rgb]{0.0,0.0,0.0}{$\blacktriangle$}'
+# triangle_down_str = r'\textcolor[rgb]{0.5,0.5,0.5}{$\blacktriangledown$}'
+bullet_str = r'\textcolor[rgb]{0.7,0.7,0.0}{$\bullet$}'
+triangle_up_str = r'\textcolor[rgb]{00,0.45,0.10}{$\blacktriangle$}'
+triangle_down_str = r'\textcolor[rgb]{0.7,00,00}{$\blacktriangledown$}'
+
+
 from abc import ABC, abstractmethod
 from collections import defaultdict, OrderedDict
 import pickle
@@ -147,6 +155,7 @@ from parallel_util import run_parallel
 from geosoca.AdaptiveKernelDensityEstimation import AdaptiveKernelDensityEstimation
 from geosoca.SocialCorrelation import SocialCorrelation
 from geosoca.CategoricalCorrelation import CategoricalCorrelation
+from Text import Text
 
 CMAP_NAME = 'Set1'
 
@@ -1929,19 +1938,14 @@ class RecRunner():
         df[['precision','p_precision','p_beta','beta']].plot()
         plt.savefig(self.data_directory+IMG+f'analysis_{self.get_final_rec_name()}.png')
 
-    def print_latex_metrics_table(self,prefix_name='',references=[],cities=[self.city]):
-        # bullet_str = r'\textcolor[rgb]{0.25,0.25,0.25}{$\bullet$}'
-        # triangle_up_str = r'\textcolor[rgb]{0.0,0.0,0.0}{$\blacktriangle$}'
-        # triangle_down_str = r'\textcolor[rgb]{0.5,0.5,0.5}{$\blacktriangledown$}'
-        bullet_str = r'\textcolor[rgb]{0.7,0.7,0.0}{$\bullet$}'
-        triangle_up_str = r'\textcolor[rgb]{00,0.45,0.10}{$\blacktriangle$}'
-        triangle_down_str = r'\textcolor[rgb]{0.7,00,00}{$\blacktriangledown$}'
+    def print_latex_metrics_table(self,prefix_name='',references=[]):
         num_metrics = len(self.metrics_name)
         result_str = r"\begin{table}[]" + "\n"
         result_str += r"\begin{tabular}{" +'l|'+'l'*(num_metrics) + "}\n"
         # result_str += "\begin{tabular}{" + 'l'*(num_metrics+1) + "}\n"
         if not references:
             references = [list(self.metrics.keys())[0]]
+        cities=[self.city]
         for city in cities:
             result_str += "\t&"+'\multicolumn{%d}{c}{%s}\\\\\n' % (num_metrics,CITIES_PRETTY[city])
 
@@ -2586,4 +2590,87 @@ class RecRunner():
             ax.set_zlabel(f"MAUT@{k}")
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.png")
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.eps")
+
+    def print_latex_cities_metrics_table(self,cities,prefix_name='',references=[]):
+        num_cities = len(cities)
+        num_metrics = len(self.metrics_name)
+        result_str = Text()
+        result_str += r"\begin{table}[]"
+        result_str += r"\begin{tabular}{" +'l|'+'l'*(num_metrics*num_cities) + "}"
+        line_start = len(result_str)
+        for city in cities:
+            rr.load_metrics(base=True,pretty_name=True)
+            for rec in ['ld','binomial','pm2','geodiv','geocat']:
+                self.final_rec = rec
+                self.load_metrics(base=False,pretty_name=True)
+            if not references:
+                references = [list(self.metrics.keys())[0]]
+            line_num = line_start
+            result_str[line_num] += "\t&"+'\multicolumn{%d}{c}{%s}' % (num_metrics,CITIES_PRETTY[city])
+            if city == cities[-1]:
+                result_str[line_num] += '\\\\'
+            line_num += 1
+            for i,k in enumerate(experiment_constants.METRICS_K):
+                if len(result_str[line_num]) == 0:
+                    result_str[line_num] += "\\hline \\textbf{Algorithm} & "+'& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
+                else:
+                    result_str[line_num] += '& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
+                if city == cities[-1]:
+                    result_str[line_num] += "\\\\"
+                line_num += 1
+                metrics_mean=dict()
+                metrics_gain=dict()
+                
+
+                for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                    metrics=metrics[k]
+
+                        # self.metrics[rec_using]
+                    metrics_mean[rec_using]=defaultdict(float)
+                    for obj in metrics:
+                        for key in self.metrics_name:
+                            metrics_mean[rec_using][key]+=obj[key]
+
+                    for j,key in enumerate(metrics_mean[rec_using]):
+                        metrics_mean[rec_using][key]/=len(metrics)
+
+                for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                    metrics_k=metrics[k]
+                    if rec_using not in references:
+                        metrics_gain[rec_using] = dict()
+                        for metric_name in self.metrics_name:
+                            statistic, pvalue = scipy.stats.wilcoxon(
+                                [ms[metric_name] for ms in base_metrics[k]],
+                                [ms[metric_name] for ms in metrics_k],
+                            )
+                            if pvalue > 0.05:
+                                metrics_gain[rec_using][metric_name] = bullet_str
+                            else:
+                                if metrics_mean[rec_using][metric_name] < metrics_mean[reference_name][metric_name]:
+                                    metrics_gain[rec_using][metric_name] = triangle_down_str
+                                elif metrics_mean[rec_using][metric_name] > metrics_mean[reference_name][metric_name]:
+                                    metrics_gain[rec_using][metric_name] = triangle_up_str
+                                else:
+                                    metrics_gain[rec_using][metric_name] = bullet_str 
+                    else:
+                        reference_name = rec_using
+                        base_metrics = metrics
+                        metrics_gain[rec_using] = dict()
+                        for metric_name in self.metrics_name:
+                            metrics_gain[rec_using][metric_name] = ''
+
+                for rec_using,rec_metrics in metrics_mean.items():
+                    gain = metrics_gain[rec_using]
+                    result_str[line_num] += rec_using +' &'+ '& '.join(map(lambda x: "%.4f%s"%(x[0],x[1]) ,zip(rec_metrics.values(),gain.values()) ))
+                    if city == cities[-1]:
+                        result_str[line_num] += "\\\\"
+                    line_num += 1
+
+        result_str += "\\end{tabular}"
+        result_str += "\\end{table}"
+        result_str = LATEX_HEADER + result_str
+        result_str += LATEX_FOOT
+        fout = open(self.data_directory+UTIL+'side_'+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
+        fout.write(result_str.__str__())
+        fout.close()
 
