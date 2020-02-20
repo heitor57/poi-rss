@@ -2581,16 +2581,26 @@ class RecRunner():
             d_label_tick = {label: tick for label, tick in zip(xlabels,xticks)}
             lambda_delta_like_xticks = list(map(d_label_tick.get,lambda_delta))
             print(lambda_delta_like_xticks)
-            surf = ax.plot_trisurf(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.cm.CMRmap,linewidth=1, vmin=np.min(list(mauts.values())), vmax=np.max(list(mauts.values())))
-            fig.colorbar(surf, shrink=0.75, aspect=20)
+            surf = ax.plot_trisurf(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.cm.CMRmap,linewidth=10, vmin=np.min(list(mauts.values())), vmax=np.max(list(mauts.values())))
+
+            # from mpl_toolkits.axes_grid1 import make_axes_locatable
+            # divider = make_axes_locatable(ax)
+            # cax = divider.append_axes("right", size="5%",pad=0.05)
+
+            fig.colorbar(surf, shrink=0.8, aspect=20,
+                         pad= -0.02)
+            # fig.colorbar(surf, fraction=0.046, pad=0.04)
             # ax.scatter(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.cm.CMRmap,vmin=np.min(list(mauts.values())), vmax=np.max(list(mauts.values())))
             ax.set(xticks=xticks, xticklabels=xlabels)
-            ax.set_xlabel(r"$\lambda$-$\delta$",labelpad=35)
+            ax.set_xlabel(r"$\lambda$-$\delta$",labelpad=53)
             ax.set_ylabel(r"$\phi$")
             ax.set_zlabel(f"MAUT@{k}")
+            orientation='horizontal'
+            plt.subplots_adjust(left=-0.09,top=1.05,right=1.1)
+
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.png")
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.eps")
-
+            
     def print_latex_cities_metrics_table(self,cities,prefix_name='',references=[]):
         num_cities = len(cities)
         num_metrics = len(self.metrics_name)
