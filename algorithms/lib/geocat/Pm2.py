@@ -114,7 +114,13 @@ class Pm2:
                 rec_list.append(poi_to_insert)
                 final_scores.append(max_objective_value)
                 poi_num_cats = len(self.poi_cats[poi_to_insert])
-                for cat in self.poi_cats[poi_to_insert]:
-                    cat_id = self.cat_to_id[cat]
-                    s[cat_id] += old_score/(old_score*poi_num_cats)
+                if poi_num_cats != 0:
+                    if old_score != 0:
+                        for cat in self.poi_cats[poi_to_insert]:
+                            cat_id = self.cat_to_id[cat]
+                            s[cat_id] += old_score/(old_score*poi_num_cats)
+                #     else:
+                #         print('PM2 selected poi with old score = 0 ?!?!?')
+                # else:
+                #     print('PM2 selected poi with no cats ?!?!?')
         return rec_list,final_scores
