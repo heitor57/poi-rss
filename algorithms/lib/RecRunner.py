@@ -2595,18 +2595,23 @@ class RecRunner():
         num_cities = len(cities)
         num_metrics = len(self.metrics_name)
         result_str = Text()
-        result_str += r"\begin{table}[]"
-        result_str += r"\begin{tabular}{" +'l|'+'l'*(num_metrics*num_cities) + "}"
+        result_str += r"\begin{table}[]\scriptsize"
+        ls_str = ''.join([('l'*num_metrics+'|') if i!=(num_cities-1) else ('l'*num_metrics) for i in range(num_cities)])
+        result_str += r"\begin{tabular}{" +'l|'+ls_str + "}"
         line_start = len(result_str)
         for city in cities:
-            rr.load_metrics(base=True,pretty_name=True)
+            self.city = city
+            self.load_metrics(base=True,pretty_name=True)
             for rec in ['ld','binomial','pm2','geodiv','geocat']:
                 self.final_rec = rec
                 self.load_metrics(base=False,pretty_name=True)
             if not references:
                 references = [list(self.metrics.keys())[0]]
             line_num = line_start
-            result_str[line_num] += "\t&"+'\multicolumn{%d}{c}{%s}' % (num_metrics,CITIES_PRETTY[city])
+            if city != cities[-1]:
+                result_str[line_num] += "\t&"+'\multicolumn{%d}{c|}{%s}' % (num_metrics,CITIES_PRETTY[city])
+            else:
+                result_str[line_num] += "\t&"+'\multicolumn{%d}{c}{%s}' % (num_metrics,CITIES_PRETTY[city])
             if city == cities[-1]:
                 result_str[line_num] += '\\\\'
             line_num += 1
@@ -2614,7 +2619,7 @@ class RecRunner():
                 if len(result_str[line_num]) == 0:
                     result_str[line_num] += "\\hline \\textbf{Algorithm} & "+'& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
                 else:
-                    result_str[line_num] += '& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
+                    result_str[line_num] += '& '+ '& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
                 if city == cities[-1]:
                     result_str[line_num] += "\\\\"
                 line_num += 1
@@ -2658,19 +2663,32 @@ class RecRunner():
                         metrics_gain[rec_using] = dict()
                         for metric_name in self.metrics_name:
                             metrics_gain[rec_using][metric_name] = ''
+                metrics_max = {mn:(None,0) for mn in self.metrics_name}
+                for rec_using,rec_metrics in metrics_mean.items():
+                    for metric_name, value in rec_metrics.items():
+                        if metrics_max[metric_name][1] < value:
+                            metrics_max[metric_name] = (rec_using,value)
+                is_metric_the_max = defaultdict(lambda: defaultdict(bool))
+                for metric_name,(rec_using,value) in metrics_max.items():
+                    is_metric_the_max[rec_using][metric_name] = True
 
                 for rec_using,rec_metrics in metrics_mean.items():
                     gain = metrics_gain[rec_using]
-                    result_str[line_num] += rec_using +' &'+ '& '.join(map(lambda x: "%.4f%s"%(x[0],x[1]) ,zip(rec_metrics.values(),gain.values()) ))
+                    
+                    if city == cities[0]:
+                        result_str[line_num] += rec_using
+                    result_str[line_num] += ' &' + '& '.join(map(lambda x: "\\textbf{%.4f}%s" %(x[0],x[1]) if is_metric_the_max[rec_using][x[2]] else "%.4f%s"%(x[0],x[1])  ,zip(rec_metrics.values(),gain.values(),rec_metrics.keys())))
+                    
                     if city == cities[-1]:
                         result_str[line_num] += "\\\\"
                     line_num += 1
 
         result_str += "\\end{tabular}"
         result_str += "\\end{table}"
-        result_str = LATEX_HEADER + result_str
+        result_str = result_str.__str__()
+        result_str = LATEX_HEADER+result_str
         result_str += LATEX_FOOT
         fout = open(self.data_directory+UTIL+'side_'+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
-        fout.write(result_str.__str__())
+        fout.write(result_str)
         fout.close()
 
