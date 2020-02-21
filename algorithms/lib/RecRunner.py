@@ -113,6 +113,21 @@ def gen_bar_cycle(num=6):
     return bar_cycle
 GEOCAT_BAR_STYLE = {'color': 'k', 'zorder': 10,'edgecolor':BAR_EDGE_COLOR}
 
+def int_what_ordinal(num):
+    num = str(num)
+    if len(num) > 2:
+        end_digits = int(num) % 100
+    else:
+        end_digits = int(num) % 10
+    if end_digits == 1:
+        return "st"
+    if end_digits == 2:
+        return "nd"
+    if end_digits == 3:
+        return "rd"
+    else:
+        return "th"
+
 
 # plt.rcParams['axes.spines.bottom'] = False
 # plt.rcParams['axes.spines.left'] = False
@@ -156,7 +171,7 @@ from geosoca.AdaptiveKernelDensityEstimation import AdaptiveKernelDensityEstimat
 from geosoca.SocialCorrelation import SocialCorrelation
 from geosoca.CategoricalCorrelation import CategoricalCorrelation
 from Text import Text
-
+from Arrow3D import Arrow3D
 CMAP_NAME = 'Set1'
 
 DATA_DIRECTORY = '../data'  # directory with all data
@@ -2572,6 +2587,8 @@ class RecRunner():
             print(pd.Series(mauts).sort_values(ascending=False))
             print(f"at @{k}")
             args_separated = list(zip(*args))
+            lambdas = np.array(args_separated[0])
+            deltas = np.array(args_separated[1])
             lambda_delta = list(zip(*args_separated[:2]))
             lambda_delta = list(map(lambda pair: "%.2f-%.2f"%(pair[0],pair[1]),lambda_delta))
             phi = args_separated[-1]
@@ -2581,22 +2598,54 @@ class RecRunner():
             d_label_tick = {label: tick for label, tick in zip(xlabels,xticks)}
             lambda_delta_like_xticks = list(map(d_label_tick.get,lambda_delta))
             print(lambda_delta_like_xticks)
-            surf = ax.plot_trisurf(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.cm.CMRmap,linewidth=10, vmin=np.min(list(mauts.values())), vmax=np.max(list(mauts.values())))
+            surf = ax.plot_trisurf(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.cm.CMRmap,linewidth=25, vmin=np.min(list(mauts.values())), vmax=np.max(list(mauts.values())))
+            mauts_values = np.array(list(mauts.values()))
+            id_reorder = np.argsort(-mauts_values)
+            lambdas = lambdas[id_reorder]
+            deltas = deltas[id_reorder]
+            phis = np.array(phi)[id_reorder]
+            mauts_values = mauts_values[id_reorder]
+            top_n = 5
+            i=1
+            d_lambda_delta_tick = {label: tick for label, tick in zip(l_geocat_div_2,xticks)}
+
+            box_text_string = "$i^{th}$-$\lambda$-$\delta$-$\phi$\n"
+            for x,y,z,p in list(zip(lambdas,deltas,phis,mauts_values))[:top_n]:
+                z_up = (1+0.04*i)*ax.get_zlim()[1]
+                # print('$%d^{%s}$-%.2f-%.2f-%.2f'%(i,int_what_ordinal(i),x,y,z))
+                x_real = d_lambda_delta_tick[(x,y)]
+                string_to_put = '$%d^{%s}$-%.2f-%.2f-%.2f'%(i,int_what_ordinal(i),x,y,z)
+                ax.text(x_real,z,z_up,'$%d^{%s}$'%(i,int_what_ordinal(i)),fontsize=15,zorder=27)
+                box_text_string += string_to_put + '\n'
+                a = Arrow3D([x_real, x_real], [z, z], [p, z_up], mutation_scale=20,
+                            lw=1, arrowstyle="<|-", color='0.55',zorder=26)
+                ax.add_artist(a)
+                i+=1
+            # print(ax.get_xlim()[1], ax.get_ylim()[0],ax.get_zlim()[1]*1.05)
+            plt.figtext(0.02,0.7,s=box_text_string, color='black',
+                    bbox=dict(facecolor='0.65', edgecolor='black', boxstyle='round,pad=0.4'))
 
             # from mpl_toolkits.axes_grid1 import make_axes_locatable
             # divider = make_axes_locatable(ax)
             # cax = divider.append_axes("right", size="5%",pad=0.05)
 
-            fig.colorbar(surf, shrink=0.8, aspect=20,
-                         pad= -0.02)
+            # from mpl_toolkits.axes_grid1 import make_axes_locatable
+            # divider = make_axes_locatable(ax)
+            # cax = divider.new_vertical(size="5%",pad=0.7,pack_start=True)
+            # fig.add_axes(cax)
+            # fig.colorbar(surf, cax=cax,orientation='horizontal')
+            
+            cbaxes = fig.add_axes([0.3, 0.97, 0.4, 0.02]) 
+            fig.colorbar(surf,cbaxes,orientation='horizontal')
+            # fig.colorbar(surf, shrink=0.6, aspect=20,
+            #              pad= -0.02,orientation="horizontal")
             # fig.colorbar(surf, fraction=0.046, pad=0.04)
             # ax.scatter(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.cm.CMRmap,vmin=np.min(list(mauts.values())), vmax=np.max(list(mauts.values())))
             ax.set(xticks=xticks, xticklabels=xlabels)
             ax.set_xlabel(r"$\lambda$-$\delta$",labelpad=53)
             ax.set_ylabel(r"$\phi$")
             ax.set_zlabel(f"MAUT@{k}")
-            orientation='horizontal'
-            plt.subplots_adjust(left=-0.09,top=1.05,right=1.1)
+            plt.subplots_adjust(left=-0.17,top=1.05,right=1.05)
 
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.png")
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.eps")
