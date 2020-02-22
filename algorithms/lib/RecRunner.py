@@ -1037,7 +1037,7 @@ class RecRunner():
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
                                                          self.final_rec_parameters['div_geo_cat_weight'],self.final_rec_parameters['div_weight'],
                                                          self.final_rec_parameters['heuristic'],
-                                                         gcobjfunc.OBJECTIVE_FUNCTIONS[self.final_rec_parameters['obj_func']],
+                                                         gcobjfunc.OBJECTIVE_FUNCTIONS.get(self.final_rec_parameters['obj_func']),
                                                          self.final_rec_parameters['div_cat_weight'])
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
@@ -2635,7 +2635,7 @@ class RecRunner():
                 i+=1
             # print(ax.get_xlim()[1], ax.get_ylim()[0],ax.get_zlim()[1]*1.05)
             plt.figtext(0.01,0.65,s=box_text_string, color='black', fontsize=17,
-                    bbox=dict(facecolor='0.68', alpha=0.5,edgecolor='black', boxstyle='round,pad=0.35'))
+                    bbox=dict(facecolor='0.75',edgecolor='black', boxstyle='round,pad=0.1'))
 
             # from mpl_toolkits.axes_grid1 import make_axes_locatable
             # divider = make_axes_locatable(ax)
@@ -2649,7 +2649,7 @@ class RecRunner():
             
             cbaxes = fig.add_axes([0.3, 0.97, 0.4, 0.02]) 
             cbar = fig.colorbar(surf,cbaxes,orientation='horizontal')
-            cbar.ax.tick_params(labelsize=font['fontsize'])
+            cbar.ax.tick_params(labelsize=font['fontsize'],zorder=25)
             for t in ax.zaxis.get_major_ticks():
                 t.label.set_fontsize(font['fontsize'])
             # fig.colorbar(surf, shrink=0.6, aspect=20,
