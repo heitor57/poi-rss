@@ -367,11 +367,11 @@ class RecRunner():
                 source_of_parameters_value = parameters
             parameters_result[parameter] = source_of_parameters_value[parameter]
         # filtering special cases
-        if self.final_rec == 'geocat' and parameters_result['obj_func'] != 'cat_weight':
+        if self.final_rec == 'geocat' and parameters_result['heuristic'] == 'local_max' and parameters_result['obj_func'] != 'cat_weight':
             parameters_result['div_cat_weight'] = None
-        if self.final_rec == 'geocat' and parameters_result['obj_func'] == 'cat_weight' and parameters_result['div_cat_weight'] == None:
-            print("Auto setting div_cat_weight to 0.95")
-            parameters_result['div_cat_weight'] = 0.95
+        # if self.final_rec == 'geocat' and parameters_result['obj_func'] == 'cat_weight' and parameters_result['div_cat_weight'] == None:
+        #     print("Auto setting div_cat_weight to 0.95")
+        #     parameters_result['div_cat_weight'] = 0.95
         if self.final_rec == 'geocat' and parameters_result['heuristic'] != 'local_max':
             print("Auto setting obj_func to None")
             parameters_result['obj_func'] = None
@@ -408,8 +408,9 @@ class RecRunner():
     @staticmethod
     def get_final_parameters():
         return  {
-            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
-            "pgeocat": {'div_weight':0.75,'cat_div_method': None, 'geo_div_method': 'walk', 'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': 3,
+            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'tabu_search', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+            # "geocat": {'div_weight':1.00,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.0},
+            "persongeocat": {'div_weight':0.75,'cat_div_method': None, 'geo_div_method': 'walk', 'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': 3,
                         'norm_method': 'median_quad'},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
@@ -2400,7 +2401,9 @@ class RecRunner():
         # print("Categorical diversification propensity methods correlation")
         # print(pd.DataFrame(cat_div_propensties).corr())
         print(pd.concat([pd.DataFrame(geo_div_propensities),pd.DataFrame(cat_div_propensities)],axis=1).corr())
-        
+        print("user with most pois")
+        print(np.nonzero(self.training_matrix[np.argmax(np.count_nonzero(self.training_matrix,axis=1)),:])[0])
+        print([self.poi_coos[lid] for lid in np.nonzero(self.training_matrix[np.argmax(np.count_nonzero(self.training_matrix,axis=1)),:])[0]])
         for geo_div_method in geo_div_methods:
             for cat_div_method in cat_div_methods:
                 geo_div_propensity = geo_div_propensities[geo_div_method]
@@ -2414,18 +2417,18 @@ class RecRunner():
                 
                 groups['geo_preference'] = (cat_div_propensity <= cat_median) & (geo_div_propensity > geo_median)
 
-                groups['no_preference'] = ((cat_div_propensity <= cat_median) & (geo_div_propensity <= geo_median)) | ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
+                groups['no_preference'] = ((cat_div_propensity <= cat_median) & (geo_div_propensity <= geo_median))
+                groups['equal_preference'] = ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
 
                 groups['cat_preference'] = (cat_div_propensity > cat_median) & (geo_div_propensity <= geo_median)
 
-                assert(np.max(groups['no_preference'] & groups['cat_preference'] & groups['geo_preference']) == 0)
-                color = 0.8
-                for group, mask in groups.items():
+                assert(np.max(groups['no_preference'] & groups['cat_preference'] & groups['geo_preference'] & groups['equal_preference']) == 0)
+                colors = np.linspace(0.8,0.4,len(groups))
+                for (group, mask), color in zip(groups.items(),colors):
                     # print(mask)
                     # print(len(cat_div_propensity[mask]))
                     # print(len(geo_div_propensity[mask]))
                     ax.scatter(cat_div_propensity[mask],geo_div_propensity[mask],color=str(color))
-                    color -= 0.2
                 # ax.plot([cat_median]*2,[0,1],color='k')
                 # ax.plot([0,1],[geo_median]*2,color='k')
                 # ax.plot([cat_median]*2,ax.get_ylim(),color='k')
@@ -2440,6 +2443,7 @@ class RecRunner():
                 ax.set_title("Correlation: %f"%(scipy.stats.pearsonr(cat_div_propensity,geo_div_propensity)[0]))
                 ax.legend((f"Geographical preference ({np.count_nonzero(groups['geo_preference'])} people's)",
                            f"No preference ({np.count_nonzero(groups['no_preference'])} people's)",
+                           f"Equal preference ({np.count_nonzero(groups['equal_preference'])} people's)",
                            f"Categorical preference ({np.count_nonzero(groups['cat_preference'])} people's)"))
                 ax.plot([cat_median]*2,[min(geo_div_propensity),max(geo_div_propensity)],color='k')
                 ax.plot([min(cat_div_propensity),max(cat_div_propensity)],[geo_median]*2,color='k')
@@ -2763,7 +2767,7 @@ class RecRunner():
         result_str = result_str.__str__()
         result_str = LATEX_HEADER+result_str
         result_str += LATEX_FOOT
-        fout = open(self.data_directory+UTIL+'side_'+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
+        fout = open(self.data_directory+UTIL+'_'.join(references)+'_'+'side_'+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
 

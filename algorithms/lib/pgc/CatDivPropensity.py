@@ -22,6 +22,7 @@ class CatDivPropensity():
         'poi_ild': 'ILD',
         'num_cat': 'Number of categories visited',
         'binomial': 'Binomial',
+        'std_norm': r'$\sigma$(STD) of categories visits'
     }
     @classmethod
     def getInstance(cls, *args, **kwargs):
