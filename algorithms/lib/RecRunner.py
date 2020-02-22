@@ -2553,8 +2553,11 @@ class RecRunner():
         for i,k in enumerate(KS):
             fig = plt.figure(figsize=(10.5,6.3))
             ax = plt.axes(projection="3d")
-            plt.xticks(rotation=90)
+            font = {'fontsize': 14}
+            plt.xticks(rotation=90,**font)
+            plt.yticks(**font)
             
+
             metrics_mean=dict()
             for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
                 metrics=metrics[k]
@@ -2614,16 +2617,25 @@ class RecRunner():
                 z_up = (1+0.04*i)*ax.get_zlim()[1]
                 # print('$%d^{%s}$-%.2f-%.2f-%.2f'%(i,int_what_ordinal(i),x,y,z))
                 x_real = d_lambda_delta_tick[(x,y)]
-                string_to_put = '$%d^{%s}$-%.2f-%.2f-%.2f'%(i,int_what_ordinal(i),x,y,z)
-                ax.text(x_real,z,z_up,'$%d^{%s}$'%(i,int_what_ordinal(i)),fontsize=15,zorder=27)
+                if i == 1:
+                    ax.text(x_real,z,z_up,'$\\bf{%d^{%s}}$'%(i,int_what_ordinal(i)),fontsize=16,zorder=27)
+                    string_to_put = '$\\bf{%d^{%s}-%.2f-%.2f-%.2f}$'%(i,int_what_ordinal(i),x,y,z)
+                else:
+                    ax.text(x_real,z,z_up,'$%d^{%s}$'%(i,int_what_ordinal(i)),fontsize=16,zorder=27)
+                    string_to_put = '$%d^{%s}$-%.2f-%.2f-%.2f'%(i,int_what_ordinal(i),x,y,z)
+
                 box_text_string += string_to_put + '\n'
-                a = Arrow3D([x_real, x_real], [z, z], [p, z_up], mutation_scale=20,
-                            lw=1, arrowstyle="<|-", color='0.55',zorder=26)
+                if i == 1:
+                    a = Arrow3D([x_real, x_real], [z, z], [p, z_up], mutation_scale=20,
+                                lw=1, arrowstyle="<|-", color='k',zorder=26)
+                else:
+                    a = Arrow3D([x_real, x_real], [z, z], [p, z_up], mutation_scale=20,
+                                lw=1, arrowstyle="<|-", color='0.55',zorder=26)
                 ax.add_artist(a)
                 i+=1
             # print(ax.get_xlim()[1], ax.get_ylim()[0],ax.get_zlim()[1]*1.05)
-            plt.figtext(0.02,0.7,s=box_text_string, color='black',
-                    bbox=dict(facecolor='0.65', edgecolor='black', boxstyle='round,pad=0.4'))
+            plt.figtext(0.01,0.65,s=box_text_string, color='black', fontsize=17,
+                    bbox=dict(facecolor='0.68', alpha=0.5,edgecolor='black', boxstyle='round,pad=0.35'))
 
             # from mpl_toolkits.axes_grid1 import make_axes_locatable
             # divider = make_axes_locatable(ax)
@@ -2636,15 +2648,19 @@ class RecRunner():
             # fig.colorbar(surf, cax=cax,orientation='horizontal')
             
             cbaxes = fig.add_axes([0.3, 0.97, 0.4, 0.02]) 
-            fig.colorbar(surf,cbaxes,orientation='horizontal')
+            cbar = fig.colorbar(surf,cbaxes,orientation='horizontal')
+            cbar.ax.tick_params(labelsize=font['fontsize'])
+            for t in ax.zaxis.get_major_ticks():
+                t.label.set_fontsize(font['fontsize'])
             # fig.colorbar(surf, shrink=0.6, aspect=20,
             #              pad= -0.02,orientation="horizontal")
             # fig.colorbar(surf, fraction=0.046, pad=0.04)
             # ax.scatter(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.cm.CMRmap,vmin=np.min(list(mauts.values())), vmax=np.max(list(mauts.values())))
             ax.set(xticks=xticks, xticklabels=xlabels)
-            ax.set_xlabel(r"$\lambda$-$\delta$",labelpad=53)
-            ax.set_ylabel(r"$\phi$")
-            ax.set_zlabel(f"MAUT@{k}")
+            
+            ax.set_xlabel(r"$\lambda$-$\delta$",labelpad=66,**font)
+            ax.set_ylabel(r"$\phi$",**font)
+            ax.set_zlabel(f"MAUT@{k}",**font)
             plt.subplots_adjust(left=-0.17,top=1.05,right=1.05)
 
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.png")
