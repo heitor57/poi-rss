@@ -2015,9 +2015,19 @@ class RecRunner():
                         for metric_name in self.metrics_name:
                             metrics_gain[rec_using][metric_name] = ''
 
+                metrics_max = {mn:(None,0) for mn in self.metrics_name}
+                for rec_using,rec_metrics in metrics_mean.items():
+                    for metric_name, value in rec_metrics.items():
+                        if metrics_max[metric_name][1] < value:
+                            metrics_max[metric_name] = (rec_using,value)
+                is_metric_the_max = defaultdict(lambda: defaultdict(bool))
+                for metric_name,(rec_using,value) in metrics_max.items():
+                    is_metric_the_max[rec_using][metric_name] = True
+
+
                 for rec_using,rec_metrics in metrics_mean.items():
                     gain = metrics_gain[rec_using]
-                    result_str += rec_using +' &'+ '& '.join(map(lambda x: "%.4f%s"%(x[0],x[1]) ,zip(rec_metrics.values(),gain.values()) ))+"\\\\\n"
+                    result_str += rec_using + ' &' + '& '.join(map(lambda x: "\\textbf{%.4f}%s" %(x[0],x[1]) if is_metric_the_max[rec_using][x[2]] else "%.4f%s"%(x[0],x[1])  ,zip(rec_metrics.values(),gain.values(),rec_metrics.keys())))+"\\\\\n"
 
         result_str += "\\end{tabular}\n"
         result_str += "\\end{table}\n"
