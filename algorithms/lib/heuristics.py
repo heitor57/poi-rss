@@ -5,6 +5,7 @@ from Swarm import Swarm
 from Particle import Particle
 from random import randint
 from sys import exit
+from time import time
 
 def local_max(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirected_category_tree,
                 rec_list, relevant_cats, log_poi_ids, log_neighbors, poi_cover, current_proportionality,
@@ -67,13 +68,13 @@ def local_max(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirect
 def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirected_category_tree,
                 relevant_cats, div_geo_cat_weight, div_weight, user_log, div_cat_weight):
 
-    max_iteration = 100
+    max_iteration = 25
     iteration = 0
-    neighbour_number = 100
+    neighbour_number = 10
     list_size = K
     tabu_size = 1000
     tabu_index = 0
-
+    max_time = 30 # seconds
     # div_geo_cat_weight = 0.75 # beta,this is here because of the work to be done on parameter customization for each user
     # div_weight = 0.5 # lambda, geo vs cat
 
@@ -93,11 +94,11 @@ def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undire
     tabu_list = []
     # Adiciona a solução inicial à lista tabu
     tabu_list.append(current_solution)
-
-    while iteration < max_iteration:
+    start_time = time()
+    while (time()-start_time) <= max_time:
         # Gera o primeiro vizinho
         new_solution = current_solution.create_neighbour(tmp_rec_list, len(tmp_rec_list), tmp_score_list)
-        
+       
         new_solution.fo = metrics.calculate_fo(new_solution, poi_cats, undirected_category_tree,
                                                user_log, poi_neighbors, div_geo_cat_weight, div_weight, K, relevant_cats, div_cat_weight)
         # Gera os outros n-1 vizinhos
@@ -158,11 +159,11 @@ def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, und
                    relevant_cats, div_geo_cat_weight, div_weight, user_log, div_cat_weight):
     
     swarm_size = 30
-    particle_size = 10
+    particle_size = K
     base_rec_size = len(tmp_rec_list)
     iteration = 0
     max_iteration = 100
-
+    max_time = 30 # seconds
     # Global best solution
     global_best = RecList(particle_size)
     
@@ -182,8 +183,8 @@ def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, und
         # Update global best
         if (global_best.fo < swarm[i].best_fo):
             global_best.clone_particle(swarm[i])
-
-    while iteration < max_iteration:
+    start_time = time()
+    while time()-start_time < max_time:
         gbest_position = -1
 
         for i in range(swarm_size):
@@ -194,8 +195,8 @@ def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, und
                 item_id = -1
                 item_score = -1
 
-                while item_id == -1 or item_id not in swarm[i]:
-                    particle_choice = pso_roulette(0.3, 0.3, 0.6)
+                while item_id == -1 or item_id in new_particle:
+                    particle_choice = pso_roulette(0.3, 0.3, 0.4)
                     position = randint(0, particle_size-1)
                     
                     if (particle_choice == 1):
@@ -210,8 +211,7 @@ def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, und
 
                 new_particle.add_item(item_id, item_score)
             
-            new_particle.set_initial_best()
-            swarm[i].clone(new_particle)
+            swarm[i].clone_new_current(new_particle)
 
             # Calcule local best and global best
             metrics.pso_calculate_fo(swarm[i], poi_cats, undirected_category_tree, user_log, poi_neighbors,

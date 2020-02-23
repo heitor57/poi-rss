@@ -52,7 +52,11 @@ class Particle:
 
 		self.item_list = other_particle.item_list.copy()
 		self.score_list = other_particle.score_list.copy()
-	
+
+	def clone_new_current(self, other_particle):
+		self.item_list = other_particle.item_list.copy()
+		self.score_list = other_particle.score_list.copy()
+
 	def add_item(self, item, item_score):
 		if len(self.item_list) < self.size:
 			self.item_list.append(item)
