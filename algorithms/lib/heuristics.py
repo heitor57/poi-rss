@@ -65,7 +65,7 @@ def local_max(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirect
     return rec_list,final_scores
 
 def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirected_category_tree,
-                relevant_cats, div_geo_cat_weight, div_weight, user_log):
+                relevant_cats, div_geo_cat_weight, div_weight, user_log, div_cat_weight):
 
     max_iteration = 100
     iteration = 0
@@ -84,7 +84,7 @@ def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undire
     current_solution.create_from_base_rec(tmp_rec_list, tmp_score_list)
     # Calcula a função objetivo
     current_solution.fo = metrics.calculate_fo(current_solution, poi_cats, undirected_category_tree,
-                        user_log, poi_neighbors, div_geo_cat_weight, div_weight, K, relevant_cats)
+                                               user_log, poi_neighbors, div_geo_cat_weight, div_weight, K, relevant_cats, div_cat_weight)
     
     # Inicializa a melhor solução
     best_solution.clone(current_solution)
@@ -98,10 +98,14 @@ def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undire
         # Gera o primeiro vizinho
         new_solution = current_solution.create_neighbour(tmp_rec_list, len(tmp_rec_list), tmp_score_list)
         
+        new_solution.fo = metrics.calculate_fo(new_solution, poi_cats, undirected_category_tree,
+                                               user_log, poi_neighbors, div_geo_cat_weight, div_weight, K, relevant_cats, div_cat_weight)
         # Gera os outros n-1 vizinhos
         for i in range(neighbour_number-1):
             neighbour_solution = current_solution.create_neighbour(tmp_rec_list, len(tmp_rec_list), tmp_score_list)
 
+            neighbour_solution.fo = metrics.calculate_fo(neighbour_solution, poi_cats, undirected_category_tree,
+                                                         user_log, poi_neighbors, div_geo_cat_weight, div_weight, K, relevant_cats, div_cat_weight)
             if  neighbour_solution not in tabu_list and (neighbour_solution.fo > new_solution.fo or new_solution in tabu_list):
                 # Atualiza o melhor vizinho
                 new_solution.clone(neighbour_solution)
@@ -110,12 +114,10 @@ def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undire
         if new_solution not in tabu_list and new_solution.fo > current_solution.fo:
 
             current_solution.clone(new_solution) # Substitui
-            tabu_list[tabu_index] = current_solution # Adiciona à lista tabu
+            tabu_list.append(current_solution) # Adiciona à lista tabu
 
-            if tabu_index == tabu_size-1:
-                tabu_index = 0
-            else:
-                tabu_index += 1
+            if len(tabu_list) > tabu_size:
+                tabu_list.pop(0)
             
             if current_solution.fo > best_solution.fo:
                 # Atualiza a melhor
@@ -153,7 +155,7 @@ def pso_roulette(w, c1, c2):
     return roulette_list[roulette_position]
 
 def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirected_category_tree,
-                relevant_cats, div_geo_cat_weight, div_weight, user_log):
+                   relevant_cats, div_geo_cat_weight, div_weight, user_log, div_cat_weight):
     
     swarm_size = 30
     particle_size = 10
@@ -175,7 +177,7 @@ def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, und
     # Calculate local best for each particle and global best
     for i in range(swarm_size):
         metrics.pso_calculate_fo(swarm[i], poi_cats, undirected_category_tree, user_log, poi_neighbors,
-                                div_geo_cat_weight, div_weight, K, relevant_cats, dbest)
+                                 div_geo_cat_weight, div_weight, K, relevant_cats, dbest, div_cat_weight)
 
         # Update global best
         if (global_best.fo < swarm[i].best_fo):
@@ -213,7 +215,7 @@ def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, und
 
             # Calcule local best and global best
             metrics.pso_calculate_fo(swarm[i], poi_cats, undirected_category_tree, user_log, poi_neighbors,
-                                    div_geo_cat_weight, div_weight, K, relevant_cats, dbest)
+                                     div_geo_cat_weight, div_weight, K, relevant_cats, dbest, div_cat_weight)
             # Update global best
             if (global_best.fo < swarm[i].best_fo):
                 global_best.clone_particle(swarm[i])

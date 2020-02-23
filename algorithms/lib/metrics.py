@@ -201,10 +201,10 @@ def epck(rec_list,actual,uid,training_matrix):
     EPC=C_2*sum_2
     return EPC
 
-def divgeocatk(ild_value,gc_value,pr_value,div_geo_cat_weight,K):
-    div_cat = (gc_value+ild_value)/2
+def divgeocatk(ild_value,gc_value,pr_value,div_geo_cat_weight,K,div_cat_weight):
+    div_cat = (1-div_cat_weight)*gc_value+div_cat_weight*ild_value
     div_geo = pr_value
-    div=div_geo_cat_weight*div_geo+(1-div_geo_cat_weight)*div_cat
+    div=(1-div_geo_cat_weight)*div_geo+(div_geo_cat_weight)*div_cat
     return div
 
 def relk(score_list, size):
@@ -215,14 +215,15 @@ def relk(score_list, size):
     return relevance
 
 def calculate_fo(current_solution, poi_cats, undirected_category_tree, user_log,
-                poi_neighbors, div_geo_cat_weight, div_weight, K, relevant_cats):
+                 poi_neighbors, div_geo_cat_weight, div_weight, K, relevant_cats, div_cat_weight):
 
     diversity = divgeocatk(
         ildk(current_solution.item_list, poi_cats, undirected_category_tree),
         geocat.objfunc.gc_list(current_solution.item_list,relevant_cats,poi_cats), #Cobertura de gêneros
         prk(user_log, current_solution.item_list, poi_neighbors),
         div_geo_cat_weight,
-        K
+        K,
+        div_cat_weight,
     )
 
     relevance = relk(current_solution.score_list, K)
@@ -233,14 +234,15 @@ def calculate_fo(current_solution, poi_cats, undirected_category_tree, user_log,
     return (relevance**(1-div_weight))*(diversity**div_weight)
 
 def pso_calculate_fo(current_particle, poi_cats, undirected_category_tree, user_log,
-                    poi_neighbors, div_geo_cat_weight, div_weight, K, relevant_cats, dbest):
+                     poi_neighbors, div_geo_cat_weight, div_weight, K, relevant_cats, dbest,div_cat_weight):
 
     diversity = divgeocatk(
         ildk(current_particle.item_list, poi_cats, undirected_category_tree),
         geocat.objfunc.gc_list(current_particle.item_list,relevant_cats,poi_cats), #Cobertura de gêneros
         prk(user_log, current_particle.item_list, poi_neighbors),
         div_geo_cat_weight,
-        K
+        K,
+        div_cat_weight,
     )
 
     relevance = relk(current_particle.score_list, K)

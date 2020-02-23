@@ -232,7 +232,7 @@ def geocat(uid,training_matrix,tmp_rec_list,tmp_score_list,
            div_geo_cat_weight,div_weight,
            method='local_max',
            objective_function=geocat_objective_function,
-           div_cat_weight=0.95):
+           div_cat_weight=0.05):
     range_K=range(K)
     rec_list=[]
 
@@ -283,12 +283,12 @@ def geocat(uid,training_matrix,tmp_rec_list,tmp_score_list,
     elif method == 'tabu_search':
         rec_list,final_scores = heuristics.tabu_search(tmp_rec_list, tmp_score_list, poi_cats,
                 poi_neighbors, K, undirected_category_tree, relevant_cats, div_geo_cat_weight,
-                div_weight, user_log)
+                                                       div_weight, user_log, div_cat_weight)
 
     elif method == 'particle_swarm':
         rec_list,final_scores = heuristics.particle_swarm(tmp_rec_list, tmp_score_list, poi_cats,
                 poi_neighbors, K, undirected_category_tree, relevant_cats, div_geo_cat_weight,
-                div_weight, user_log)
+                                                          div_weight, user_log, div_cat_weight)
 
     else:
         print('Warning! Invalid method choice:', method)
