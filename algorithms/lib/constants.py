@@ -51,3 +51,9 @@ CITIES_PRETTY = {
     'montreal':'Montreal',
     'pittsburgh':'Pittsburgh'
 }
+
+HEURISTICS_PRETTY = {
+    'local_max': 'LM',
+    'particle_swarm': 'PSO',
+    'tabu_search': 'TS',
+}

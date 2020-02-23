@@ -162,7 +162,7 @@ from usg.PowerLaw import PowerLaw
 import geocat.objfunc as gcobjfunc
 from pgc.GeoDivPropensity import GeoDivPropensity
 from pgc.CatDivPropensity import CatDivPropensity
-from constants import experiment_constants, METRICS_PRETTY, RECS_PRETTY, CITIES_PRETTY
+from constants import experiment_constants, METRICS_PRETTY, RECS_PRETTY, CITIES_PRETTY, HEURISTICS_PRETTY
 import metrics
 from geocat.Binomial import Binomial
 from geocat.Pm2 import Pm2
@@ -367,6 +367,10 @@ class RecRunner():
                 source_of_parameters_value = parameters
             parameters_result[parameter] = source_of_parameters_value[parameter]
         # filtering special cases
+
+        if self.final_rec == 'geocat' and parameters_result['heuristic'] == 'local_max' and parameters_result['obj_func'] == None:
+            parameters_result['obj_func'] = 'cat_weight'
+
         if self.final_rec == 'geocat' and parameters_result['heuristic'] == 'local_max' and parameters_result['obj_func'] != 'cat_weight':
             parameters_result['div_cat_weight'] = None
         # if self.final_rec == 'geocat' and parameters_result['obj_func'] == 'cat_weight' and parameters_result['div_cat_weight'] == None:
@@ -408,8 +412,8 @@ class RecRunner():
     @staticmethod
     def get_final_parameters():
         return  {
-            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'tabu_search', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
-            # "geocat": {'div_weight':1.00,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.0},
+            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'particle_swarm', 'obj_func': None, 'div_cat_weight': 0.05},
+            # "geocat": {'div_weight':0.75,'div_geo_cat_weight':1.0, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
             "persongeocat": {'div_weight':0.75,'cat_div_method': None, 'geo_div_method': 'walk', 'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': 3,
                         'norm_method': 'median_quad'},
             "geodiv": {'div_weight':0.5},
@@ -459,6 +463,8 @@ class RecRunner():
         return RECS_PRETTY[self.base_rec]
 
     def get_final_rec_pretty_name(self):
+        if self.final_rec == 'geocat':
+            return f'{RECS_PRETTY[self.final_rec]}({HEURISTICS_PRETTY[self.final_rec_parameters["heuristic"]]})'
         return RECS_PRETTY[self.final_rec]
 
     def get_base_rec_file_name(self):
