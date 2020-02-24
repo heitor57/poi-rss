@@ -3,11 +3,24 @@ import numpy as np
 # 2014 vargas binomial
 import scipy.special
 import scipy.stats
+
 from collections import defaultdict
 from time import time
 from tqdm import tqdm
+import multiprocessing
+
+from parallel_util import run_parallel
 
 class Binomial:
+    _instance = None
+    @classmethod
+    def getInstance(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance=cls(*args,**kwargs)
+        elif len(args) > 0 or len(kwargs) > 0:
+            cls._instance.__init__(*args,**kwargs)
+        return cls._instance
+
     def __init__(self,training_matrix,poi_cats,div_weight=0.75,alpha=0.5):
         self.training_matrix=training_matrix
         self.poi_cats=poi_cats
@@ -42,7 +55,9 @@ class Binomial:
 
 
     # p^{'}_{g}
-    def global_probability_genre(self, genre):
+    @classmethod
+    def global_probability_genre(cls, genre):
+        self = cls.getInstance()
         num_item_users_consumed=0
         count=0
         for uid in range(self.training_matrix.shape[0]):
@@ -56,22 +71,61 @@ class Binomial:
         return (1-self.alpha)*self.p_u_g[uid][genre]+\
             self.alpha*self.p_g[genre]
 
+    @classmethod
+    def compute_user_genre_probability(cls,uid):
+        self = cls.getInstance()
+        lids=self.training_matrix[uid].nonzero()[0]
+        genres=self.get_genres_in_rec_list(lids)
+        user_probability_genre = dict()
+        # genre_probability = dict()
+        for genre in self.genres:
+            user_probability_genre[genre]=0
+            # genre_probability[genre]=0
+        for genre in genres:
+            user_probability_genre[genre]=self.user_probability_genre(uid,genre)
+            # genre_probability[genre]=self.genre_probability(uid,genre)
+        return user_probability_genre# , genre_probability
+
+    @classmethod
+    def compute_genre_probability(cls,uid):
+        self = cls.getInstance()
+        lids=self.training_matrix[uid].nonzero()[0]
+        genres=self.get_genres_in_rec_list(lids)
+        # user_probability_genre = dict()
+        genre_probability = dict()
+        for genre in self.genres:
+            # user_probability_genre[genre]=0
+            genre_probability[genre]=0
+        for genre in genres:
+            # user_probability_genre[genre]=self.user_probability_genre(uid,genre)
+            genre_probability[genre]=self.genre_probability(uid,genre)
+        return genre_probability
 
     def compute_all_probabilities(self):
         print("Computing global probability")
-        for genre in tqdm(self.genres):
-            self.p_g[genre]=self.global_probability_genre(genre)
-        print("Computing user probability")
-        for uid in tqdm(range(self.training_matrix.shape[0])):
-            lids=self.training_matrix[uid].nonzero()[0]
-            genres=self.get_genres_in_rec_list(lids)
-            for genre in self.genres:
-                self.p_u_g[uid][genre]=0
-                self.p[uid][genre]=0
-            for genre in genres:
-                self.p_u_g[uid][genre]=self.user_probability_genre(uid,genre)
-                self.p[uid][genre]=self.genre_probability(uid,genre)
+        num_cores = multiprocessing.cpu_count()
+        num_divs = 4
+        chk_size_genres = int(len(self.genres)/num_cores/num_divs)
+        chk_size_users = int(self.training_matrix.shape[0]/num_cores/num_divs)
+        args = [(genre,) for genre in self.genres]
+        result = run_parallel(self.global_probability_genre,args,chk_size_genres)
+        for genre, p_g in zip(self.genres,result):
+            self.p_g[genre]= p_g
+        # for genre in tqdm(self.genres):
+        #     self.p_g[genre]=self.global_probability_genre(genre)
+        print("\tComputing user probability")
+        args = [(uid,) for uid in range(self.training_matrix.shape[0])]
+        print("Computing user probability genre")
+        result = run_parallel(self.compute_user_genre_probability,args,chk_size_users)
+        for uid, p_u_g in zip(range(self.training_matrix.shape[0]), result):
+            self.p_u_g[uid] = p_u_g
 
+        print("Computing genre probability")
+        result = run_parallel(self.compute_genre_probability,args,chk_size_users)
+        for uid, p in zip(range(self.training_matrix.shape[0]), result):
+            self.p[uid] = p
+
+        
     # def binomial_probability(N,k,p):
     #     """
     #     Keyword arguments:

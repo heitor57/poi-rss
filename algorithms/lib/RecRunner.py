@@ -762,7 +762,7 @@ class RecRunner():
 
         
     def binomial(self):
-        self.binomial=Binomial(self.training_matrix,self.poi_cats,
+        self.binomial=Binomial.getInstance(self.training_matrix,self.poi_cats,
             self.final_rec_parameters['div_weight'],self.final_rec_parameters['alpha'])
         self.binomial.compute_all_probabilities()
         # predicted = self.user_base_predicted_lid[0][
@@ -2417,9 +2417,9 @@ class RecRunner():
         # print("Categorical diversification propensity methods correlation")
         # print(pd.DataFrame(cat_div_propensties).corr())
         print(pd.concat([pd.DataFrame(geo_div_propensities),pd.DataFrame(cat_div_propensities)],axis=1).corr())
-        print("user with most pois")
-        print(np.nonzero(self.training_matrix[np.argmax(np.count_nonzero(self.training_matrix,axis=1)),:])[0])
-        print([self.poi_coos[lid] for lid in np.nonzero(self.training_matrix[np.argmax(np.count_nonzero(self.training_matrix,axis=1)),:])[0]])
+        # print("user with most pois")
+        # print(np.nonzero(self.training_matrix[np.argmax(np.count_nonzero(self.training_matrix,axis=1)),:])[0])
+        # print([self.poi_coos[lid] for lid in np.nonzero(self.training_matrix[np.argmax(np.count_nonzero(self.training_matrix,axis=1)),:])[0]])
         for geo_div_method in geo_div_methods:
             for cat_div_method in cat_div_methods:
                 geo_div_propensity = geo_div_propensities[geo_div_method]
@@ -2786,4 +2786,3 @@ class RecRunner():
         fout = open(self.data_directory+UTIL+'_'.join(references)+'_'+'side_'+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
-

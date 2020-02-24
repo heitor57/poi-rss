@@ -133,7 +133,7 @@ class CatDivPropensity():
         #     "cat_div_ld":self.cat_div_ld,
         # }
         if self.cat_div_method == 'binomial':
-            self.binomial = Binomial(self.training_matrix, self.poi_cats,
+            self.binomial = Binomial.getInstance(self.training_matrix, self.poi_cats,
                                 div_weight, alpha)
             self.binomial.compute_all_probabilities()
 
