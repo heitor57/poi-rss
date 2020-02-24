@@ -57,3 +57,17 @@ HEURISTICS_PRETTY = {
     'particle_swarm': 'PSO',
     'tabu_search': 'TS',
 }
+
+SIZE_AWARENESS_RECS = { # unused
+    "usg": False,
+    "mostpopular": False,
+    "geocat": False,
+    "pgeocat": False,
+    "geodiv": False,
+    "ld": False,
+    "binomial": True,
+    "pm2": False,
+    "perfectpgeocat": False,
+    "pdpgeocat": False,
+    "geosoca": False,
+}

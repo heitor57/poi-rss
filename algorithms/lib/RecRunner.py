@@ -1270,22 +1270,25 @@ class RecRunner():
             predictions = self.user_final_predicted_lid
 
         for i,k in enumerate(METRICS_KS):
-            print(f"running metrics at @{k}")
-            self.epc_val = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids,k)
+            if k <= self.final_rec_list_size and not base:
+                print(f"running metrics at @{k}")
+                self.epc_val = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids,k)
 
-            # if base:
-            result_out = open(self.get_file_name_metrics(base,k), 'w')
-            # else:
-            #     result_out = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
-            
-            self.message_recommender(base=base)
+                # if base:
+                result_out = open(self.get_file_name_metrics(base,k), 'w')
+                # else:
+                #     result_out = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
 
-            args=[(uid,base,k) for uid in self.all_uids]
-            results = run_parallel(self.eval,args,self.CHKSL)
-            print(pd.DataFrame([json.loads(result) for result in results]).mean().T)
-            for json_string_result in results:
-                result_out.write(json_string_result)
-            result_out.close()
+                self.message_recommender(base=base)
+
+                args=[(uid,base,k) for uid in self.all_uids]
+                results = run_parallel(self.eval,args,self.CHKSL)
+                print(pd.DataFrame([json.loads(result) for result in results]).mean().T)
+                for json_string_result in results:
+                    result_out.write(json_string_result)
+                result_out.close()
+            else:
+                print(f"Trying to evaluate list with @{k}, greather than final rec list size")
 
     def load_metrics(self,*,base=False,pretty_with_base_name=False,pretty_name=True,short_name=True,METRICS_KS=experiment_constants.METRICS_K):
         if base:
