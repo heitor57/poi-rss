@@ -172,6 +172,7 @@ from geosoca.SocialCorrelation import SocialCorrelation
 from geosoca.CategoricalCorrelation import CategoricalCorrelation
 from Text import Text
 from Arrow3D import Arrow3D
+from geocat.gc import gc_diversifier
 CMAP_NAME = 'Set1'
 
 DATA_DIRECTORY = '../data'  # directory with all data
@@ -257,13 +258,14 @@ class RecRunner():
         }
         self.FINAL_RECOMMENDERS = {
             "geocat": self.geocat,
-            "pgeocat": self.persongeocat,
+            "persongeocat": self.persongeocat,
             "geodiv": self.geodiv,
             "ld": self.ld,
             "binomial": self.binomial,
             "pm2": self.pm2,
             "perfectpgeocat": self.perfectpersongeocat,
             "pdpgeocat": self.pdpgeocat,
+            "gc": self.gc,
         }
         # self.BASE_RECOMMENDERS_PARAMETERS = {
         #     "mostpopular": [],
@@ -412,9 +414,9 @@ class RecRunner():
     @staticmethod
     def get_final_parameters():
         return  {
-            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'particle_swarm', 'obj_func': None, 'div_cat_weight': 0.05},
-            # "geocat": {'div_weight':0.75,'div_geo_cat_weight':1.0, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
-            "persongeocat": {'div_weight':0.75,'cat_div_method': None, 'geo_div_method': 'walk', 'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': 3,
+            # "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'particle_swarm', 'obj_func': None, 'div_cat_weight': 0.05},
+            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+            "persongeocat": {'div_weight':0.75,'cat_div_method': 'binomial', 'geo_div_method': 'walk', 'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': 3,
                         'norm_method': 'median_quad'},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
@@ -422,6 +424,7 @@ class RecRunner():
             "pm2": {'lambda': 1},
             "perfectpgeocat": {'k': 10,'interval': 2,'div_weight': 0.75},
             "pdpgeocat": {'k': 10,'interval': 2,'div_geo_cat_weight': 0.75},
+            "gc": {'div_weight': 0.8},
         }
 
     def get_base_rec_name(self):
@@ -462,8 +465,8 @@ class RecRunner():
     def get_base_rec_pretty_name(self):
         return RECS_PRETTY[self.base_rec]
 
-    def get_final_rec_pretty_name(self):
-        if self.final_rec == 'geocat':
+    def get_final_rec_pretty_name(self, show_heuristic=False):
+        if show_heuristic and self.final_rec == 'geocat':
             return f'{RECS_PRETTY[self.final_rec]}({HEURISTICS_PRETTY[self.final_rec_parameters["heuristic"]]})'
         return RECS_PRETTY[self.final_rec]
 
@@ -725,15 +728,23 @@ class RecRunner():
         elif self.final_rec_parameters['norm_method'] == 'median_quad':
             cat_div_propensity = self.cat_div_propensity
             geo_div_propensity = self.geo_div_propensity
+            cat_median = np.median(cat_div_propensity)
+            geo_median = np.median(geo_div_propensity)
             groups = dict()
             groups['geo_preference'] = (cat_div_propensity <= cat_median) & (geo_div_propensity > geo_median)
-            groups['no_preference'] = ((cat_div_propensity <= cat_median) & (geo_div_propensity <= geo_median)) | ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
+            groups['no_preference'] = ((cat_div_propensity <= cat_median) & (geo_div_propensity <= geo_median))
+            groups['equal_preference'] = ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
             groups['cat_preference'] = (cat_div_propensity > cat_median) & (geo_div_propensity <= geo_median)
             self.div_geo_cat_weight=np.zeros(self.training_matrix.shape[0])
             self.div_geo_cat_weight[groups['geo_preference']] = 0
-            self.div_geo_cat_weight[groups['no_preference']] = 0.5
+            self.div_geo_cat_weight[groups['equal_preference']] = 0.5
             self.div_geo_cat_weight[groups['cat_preference']] = 1
             self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
+            self.div_weight[groups['no_preference']] = 0
+            fgroups = open(self.data_directory+UTIL+f'groups_{self.get_final_rec_name()}.pickle','wb')
+            pickle.dump(groups,fgroups)
+            fgroups.close()
+
         if self.final_rec_parameters['bins'] != None:
             bins = np.append(np.arange(0,1,1/(self.final_rec_parameters['bins']-1)),1)
             centers = (bins[1:]+bins[:-1])/2
@@ -1177,8 +1188,14 @@ class RecRunner():
             print("recommender not going to be ran, already generated %s" % (self.get_base_rec_name()))
             return
         base_recommender=self.BASE_RECOMMENDERS[self.base_rec]
+
         self.message_recommender(base=True)
+        start_time = time.time()
         base_recommender()
+        final_time = time.time()-start_time
+        fout = open(self.data_directory+UTIL+f'run_time_{self.get_base_rec_name()}.txt',"w")
+        fout.write(str(final_time))
+        fout.close()
 
     def run_final_recommender(self,check_already_exists=False):
         if check_already_exists == True and os.path.exists(self.data_directory+RECLIST+self.get_final_rec_file_name()):
@@ -1187,7 +1204,12 @@ class RecRunner():
         final_recommender=self.FINAL_RECOMMENDERS[self.final_rec]
         if len(self.user_base_predicted_lid)>0:
             self.message_recommender(base=False)
+            start_time = time.time()
             final_recommender()
+            final_time = time.time()-start_time
+            fout = open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"w")
+            fout.write(str(final_time))
+            fout.close()
         else:
             print("User base predicted list is empty")
         pass
@@ -1445,7 +1467,7 @@ class RecRunner():
             fig.show()
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
-            fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.city}_{str(k)}.png",bbox_inches="tight")
+            fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}_{str(k)}.png",bbox_inches="tight")
 
     def plot_bar_metrics(self,prefix_name='all_met'):
         palette = plt.get_cmap(CMAP_NAME)
@@ -2084,7 +2106,7 @@ class RecRunner():
             fig.show()
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
-            fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.city}_{str(k)}.png",bbox_inches="tight")
+            fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}_{str(k)}.png",bbox_inches="tight")
 
     def plot_maut(self,prefix_name='maut',ncol=3,print_times=False):
         # palette = plt.get_cmap(CMAP_NAME)
@@ -2163,7 +2185,7 @@ class RecRunner():
         plt.show()
 
         timestamp = datetime.timestamp(datetime.now())
-        fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.city}.png",bbox_inches="tight")
+        fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}.png",bbox_inches="tight")
 
     def print_ild_gc_correlation(self,metrics=['ild','gc']):
         rec = list(self.metrics.keys())[0]
@@ -2700,7 +2722,7 @@ class RecRunner():
         for city in cities:
             self.city = city
             self.load_metrics(base=True,pretty_name=True)
-            for rec in ['ld','binomial','pm2','geodiv','geocat']:
+            for rec in ['ld','gc','binomial','pm2','geodiv','geocat']:
                 self.final_rec = rec
                 self.load_metrics(base=False,pretty_name=True)
             if not references:
@@ -2789,3 +2811,69 @@ class RecRunner():
         fout = open(self.data_directory+UTIL+'_'.join(references)+'_'+'side_'+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
+
+    def gc(self):
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_gc,args,self.CHKS)
+        self.save_result(results,base=False)
+
+    @classmethod
+    def run_gc(cls, uid):
+        self = cls.getInstance()
+        if uid in self.ground_truth:
+            predicted = self.user_base_predicted_lid[uid][
+                0:self.base_rec_list_size]
+            overall_scores = self.user_base_predicted_score[uid][
+                0:self.base_rec_list_size]
+
+            predicted, overall_scores = gc_diversifier(uid, self.training_matrix,
+                                                       predicted, overall_scores,
+                                                       self.poi_cats,
+                                                       self.undirected_category_tree,
+                                                       self.final_rec_parameters['div_weight'],
+                                                       self.final_rec_list_size)
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
+
+        self.not_in_ground_truth_message()
+        return ""
+
+    def print_gc_hyperparameter(self):
+        KS = [10]
+        lp = np.around(np.linspace(0, 1, 21),decimals=2)
+        l = []
+        for div_weight in lp:
+            l.append(div_weight)
+            self.final_rec_parameters['div_weight'] = div_weight
+            self.load_metrics(base=False,pretty_name=False,short_name=False,METRICS_KS=KS)
+
+        for i,k in enumerate(KS):
+            metrics_mean=dict()
+            for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                metrics=metrics[k]
+
+                metrics_mean[rec_using]=defaultdict(float)
+                for obj in metrics:
+                    for key in self.metrics_name:
+                        metrics_mean[rec_using][key]+=obj[key]
+
+
+                for j,key in enumerate(metrics_mean[rec_using]):
+                    metrics_mean[rec_using][key]/=len(metrics)
+
+            metrics_utility_score=dict()
+            for rec_using in metrics_mean:
+                metrics_utility_score[rec_using]=dict()
+            for metric_name in self.metrics_name:
+                max_metric_value=0
+                min_metric_value=1
+                for rec_using,rec_metrics in metrics_mean.items():
+                    max_metric_value=max(max_metric_value,rec_metrics[metric_name])
+                    min_metric_value=min(min_metric_value,rec_metrics[metric_name])
+                for rec_using,rec_metrics in metrics_mean.items():
+                    metrics_utility_score[rec_using][metric_name]=(rec_metrics[metric_name]-min_metric_value)\
+                        /(max_metric_value-min_metric_value)
+            mauts = dict()
+            for rec_using,utility_scores in metrics_utility_score.items():
+                mauts[rec_using] = np.sum(list(utility_scores.values()))/len(utility_scores)
+
+            print(pd.Series(mauts).sort_values(ascending=False))

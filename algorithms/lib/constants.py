@@ -33,7 +33,7 @@ RECS_PRETTY = {
     "usg": "USG",
     "mostpopular": "MostPopular",
     "geocat": "Geo-Cat",
-    "pgeocat": "PersonGeoCat",
+    "persongeocat": "PersonGeoCat",
     "geodiv": "Geo-Div",
     "ld": "LD",
     "binomial": "Binom",
@@ -41,6 +41,7 @@ RECS_PRETTY = {
     "perfectpgeocat": "PPGC",
     "pdpgeocat": "PDPGC",
     "geosoca": "GeoSoCa",
+    "gc": "GC",
 }
 
 CITIES_PRETTY = {
@@ -53,7 +54,7 @@ CITIES_PRETTY = {
 }
 
 HEURISTICS_PRETTY = {
-    'local_max': 'LM',
+    'local_max': 'GRD',
     'particle_swarm': 'PSO',
     'tabu_search': 'TS',
 }
@@ -62,7 +63,7 @@ SIZE_AWARENESS_RECS = { # unused
     "usg": False,
     "mostpopular": False,
     "geocat": False,
-    "pgeocat": False,
+    "persongeocat": False,
     "geodiv": False,
     "ld": False,
     "binomial": True,

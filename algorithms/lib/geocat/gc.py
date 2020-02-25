@@ -1,4 +1,4 @@
-from objfunc import gc
+from geocat.objfunc import gc
 
 def gc_objective_function(poi_id, score, rec_list, relevant_cats, poi_cats, div_weight):
     div = gc(poi_id,rec_list,relevant_cats,poi_cats)
@@ -6,7 +6,7 @@ def gc_objective_function(poi_id, score, rec_list, relevant_cats, poi_cats, div_
 
 def gc_diversifier(uid,training_matrix,tmp_rec_list,tmp_score_list,
                    poi_cats,undirected_category_tree,
-                   div_weight):
+                   div_weight, K):
     range_K=range(K)
     rec_list=[]
 
@@ -41,3 +41,4 @@ def gc_diversifier(uid,training_matrix,tmp_rec_list,tmp_score_list,
             rec_list.append(poi_to_insert)
             final_scores.append(max_objective_value)
 
+    return rec_list,final_scores

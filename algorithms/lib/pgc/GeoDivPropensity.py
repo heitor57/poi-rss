@@ -70,7 +70,7 @@ class GeoDivPropensity():
         lat,lon = np.mean(lats),np.mean(longs)
         md=0
         for i in range(len(lats)):
-            md+=geo_utils.haversine(lat,lon,lats[i],longs[i])
+            md+=geo_utils.dist((lat,lon),(lats[i],longs[i]))
         return md/len(lats)
 
     def cmean_dist_users(self):
@@ -86,7 +86,7 @@ class GeoDivPropensity():
             md=0
             
             for i in range(len(lats)):
-                md+=geo_utils.haversine(lat,lon,lats[i],longs[i])
+                md+=geo_utils.dist((lat,lon),(lats[i],longs[i]))
             users_cmean.append(md/len(lats))
         return users_cmean
 
@@ -99,7 +99,7 @@ class GeoDivPropensity():
         lat,lon = np.median(lats),np.median(longs)
         md=0
         for i in range(len(lats)):
-            md+=geo_utils.haversine(lat,lon,lats[i],longs[i])
+            md+=geo_utils.dist((lat,lon),(lats[i],longs[i]))
         return md/len(lats)
 
     def cmedian_dist_users(self):
@@ -115,7 +115,7 @@ class GeoDivPropensity():
             md=0
             
             for i in range(len(lats)):
-                md+=geo_utils.haversine(lat,lon,lats[i],longs[i])
+                md+=geo_utils.dist((lat,lon),(lats[i],longs[i]))
             users_cmean.append(md/len(lats))
         return users_cmean
 

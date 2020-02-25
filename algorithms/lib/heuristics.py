@@ -68,7 +68,7 @@ def local_max(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirect
 def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undirected_category_tree,
                 relevant_cats, div_geo_cat_weight, div_weight, user_log, div_cat_weight):
 
-    max_iteration = 25
+    max_iteration = 30
     iteration = 0
     neighbour_number = 10
     list_size = K
@@ -94,8 +94,8 @@ def tabu_search(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, undire
     tabu_list = []
     # Adiciona a solução inicial à lista tabu
     tabu_list.append(current_solution)
-    start_time = time()
-    while (time()-start_time) <= max_time:
+    # start_time = time()
+    while iteration < max_iteration:
         # Gera o primeiro vizinho
         new_solution = current_solution.create_neighbour(tmp_rec_list, len(tmp_rec_list), tmp_score_list)
        
@@ -162,8 +162,8 @@ def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, und
     particle_size = K
     base_rec_size = len(tmp_rec_list)
     iteration = 0
-    max_iteration = 100
-    max_time = 30 # seconds
+    max_iteration = 30
+    # max_time = 30 # seconds
     # Global best solution
     global_best = RecList(particle_size)
     
@@ -183,8 +183,8 @@ def particle_swarm(tmp_rec_list, tmp_score_list, poi_cats, poi_neighbors, K, und
         # Update global best
         if (global_best.fo < swarm[i].best_fo):
             global_best.clone_particle(swarm[i])
-    start_time = time()
-    while time()-start_time < max_time:
+    # start_time = time()
+    while iteration < max_iteration:
         gbest_position = -1
 
         for i in range(swarm_size):
