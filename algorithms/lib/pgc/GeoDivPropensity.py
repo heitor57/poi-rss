@@ -19,7 +19,9 @@ import metrics
 class GeoDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
-    METHODS = ['walk','num_poi','num_cat','visits','walk_raw','ildg','inverse_walk']
+    METHODS = ['walk'# ,'num_poi','num_cat','visits','walk_raw'
+               # ,'ildg'
+               ,'inverse_walk']
     GEO_DIV_PROPENSITY_METHODS_PRETTY_NAME = {
         'walk': 'Mean radius of visited POIs',
         'num_poi': 'Number of visited POIs',

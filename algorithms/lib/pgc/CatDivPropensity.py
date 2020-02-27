@@ -17,7 +17,9 @@ import cat_utils
 class CatDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
-    METHODS = ['std_norm','ild','raw_std','num_cat','binomial','poi_ild']
+    METHODS = [# 'std_norm','ild','raw_std','num_cat',
+               'binomial'# ,'poi_ild'
+    ]
     CAT_DIV_PROPENSITY_METHODS_PRETTY_NAME = {
         'poi_ild': 'ILD',
         'num_cat': 'Number of categories visited',
