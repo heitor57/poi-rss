@@ -128,6 +128,10 @@ def int_what_ordinal(num):
     else:
         return "th"
 
+def sec_to_hm(s):
+    m, s = divmod(s, 60)
+    h, m = divmod(m, 60)
+    return f'{h:d}h{m:02d}m'
 
 # plt.rcParams['axes.spines.bottom'] = False
 # plt.rcParams['axes.spines.left'] = False
@@ -304,6 +308,8 @@ class RecRunner():
         self.cache = defaultdict(dict)
         self.metrics_cities = dict()
 
+        self.show_heuristic = False
+
     def message_start_section(self,string):
         print("------===%s===------" % (string))
     
@@ -417,7 +423,7 @@ class RecRunner():
             # "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'particle_swarm', 'obj_func': None, 'div_cat_weight': 0.05},
             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
             "persongeocat": {'div_weight':0.75,'cat_div_method': 'binomial', 'geo_div_method': 'walk', 'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': 3,
-                        'norm_method': 'median_quad'},
+                        'norm_method': 'default'},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
@@ -465,8 +471,8 @@ class RecRunner():
     def get_base_rec_pretty_name(self):
         return RECS_PRETTY[self.base_rec]
 
-    def get_final_rec_pretty_name(self, show_heuristic=False):
-        if show_heuristic and self.final_rec == 'geocat':
+    def get_final_rec_pretty_name(self):
+        if self.show_heuristic and self.final_rec == 'geocat':
             return f'{RECS_PRETTY[self.final_rec]}({HEURISTICS_PRETTY[self.final_rec_parameters["heuristic"]]})'
         return RECS_PRETTY[self.final_rec]
 
@@ -2711,20 +2717,37 @@ class RecRunner():
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.png")
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.eps")
             
-    def print_latex_cities_metrics_table(self,cities,prefix_name='',references=[]):
+    def print_latex_cities_metrics_table(self,cities,prefix_name='',references=[],heuristic=False):
         num_cities = len(cities)
         num_metrics = len(self.metrics_name)
         result_str = Text()
         result_str += r"\begin{table}[]\scriptsize"
+        if heuristic:
+            num_metrics += 1
         ls_str = ''.join([('l'*num_metrics+'|') if i!=(num_cities-1) else ('l'*num_metrics) for i in range(num_cities)])
         result_str += r"\begin{tabular}{" +'l|'+ls_str + "}"
         line_start = len(result_str)
+
+        final_rec_list_size = self.final_rec_list_size
+
         for city in cities:
             self.city = city
+            self.final_rec_list_size = final_rec_list_size
             self.load_metrics(base=True,pretty_name=True)
-            for rec in ['ld','gc','binomial','pm2','geodiv','geocat']:
-                self.final_rec = rec
+            
+            run_times = dict()
+            # if heuristic:
+            #     run_times[self.get_base_rec_pretty_name()] = open(self.data_directory+UTIL+f'run_time_{self.get_base_rec_name()}.txt',"r").read()
+            
+            if not heuristic:
+                for rec in ['ld','gc','binomial','pm2','geodiv','geocat']:
+                    self.final_rec = rec
+                    self.load_metrics(base=False,pretty_name=True)
+
+            if heuristic:
+                self.final_rec_parameters = {'heuristic': 'local_max'}
                 self.load_metrics(base=False,pretty_name=True)
+
             if not references:
                 references = [list(self.metrics.keys())[0]]
             line_num = line_start
@@ -2736,10 +2759,24 @@ class RecRunner():
                 result_str[line_num] += '\\\\'
             line_num += 1
             for i,k in enumerate(experiment_constants.METRICS_K):
+
+                if heuristic:
+                    self.final_rec_list_size = k
+                    for h in ['tabu_search', 'particle_swarm']:
+                        self.final_rec_parameters = {'heuristic': h}
+                        self.load_metrics(base=False,pretty_name=True,METRICS_KS=[k])
+                        run_times[self.get_final_rec_pretty_name()]=int(float(open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"r").read()))
+                    self.final_rec_parameters = {'heuristic': 'local_max'}
+                    run_times[self.get_final_rec_pretty_name()]=int(float(open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"r").read()))
+                    max_arg_run_time = max(run_times, key=run_times.get)
+
+
                 if len(result_str[line_num]) == 0:
                     result_str[line_num] += "\\hline \\textbf{Algorithm} & "+'& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
                 else:
                     result_str[line_num] += '& '+ '& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
+                if heuristic:
+                    result_str[line_num] += '& \\textbf{Time}'
                 if city == cities[-1]:
                     result_str[line_num] += "\\\\"
                 line_num += 1
@@ -2798,7 +2835,15 @@ class RecRunner():
                     if city == cities[0]:
                         result_str[line_num] += rec_using
                     result_str[line_num] += ' &' + '& '.join(map(lambda x: "\\textbf{%.4f}%s" %(x[0],x[1]) if is_metric_the_max[rec_using][x[2]] else "%.4f%s"%(x[0],x[1])  ,zip(rec_metrics.values(),gain.values(),rec_metrics.keys())))
-                    
+                    if heuristic:
+                        if rec_using not in references:
+                            if rec_using != max_arg_run_time:
+                                result_str[line_num] += f'& {sec_to_hm(run_times[rec_using])}'
+                            else:
+                                result_str[line_num] += f'& \\textbf{{{sec_to_hm(run_times[rec_using])}}}'
+                        else:
+                            result_str[line_num] += f'& '
+                            
                     if city == cities[-1]:
                         result_str[line_num] += "\\\\"
                     line_num += 1
