@@ -32,9 +32,9 @@ METRICS_PRETTY = {'precision':'Prec',
 RECS_PRETTY = {
     "usg": "USG",
     "mostpopular": "MostPopular",
-    "geocat": "Geo-Cat",
+    "geocat": "DisCovER",
     "persongeocat": "PersonGeoCat",
-    "geodiv": "Geo-Div",
+    "geodiv": "Geo-Div(PR)",
     "ld": "LD",
     "binomial": "Binom",
     "pm2": "PM2",
@@ -43,6 +43,7 @@ RECS_PRETTY = {
     "geosoca": "GeoSoCa",
     "gc": "GC",
 }
+
 
 CITIES_PRETTY = {
     'madison':'Madison',

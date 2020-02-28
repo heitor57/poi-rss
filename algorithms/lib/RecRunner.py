@@ -4,6 +4,13 @@
 # if module_path not in sys.path:
 #     sys.path.append(module_path)
 #print(sys.path)
+from enum import Enum
+class NameType(Enum):
+    SHORT = 1
+    PRETTY = 2
+    BASE_PRETTY = 3
+    CITY_BASE_PRETTY = 4
+    FULL = 5
 
 LATEX_HEADER = r"""\documentclass{article}
 
@@ -1318,24 +1325,26 @@ class RecRunner():
             else:
                 print(f"Trying to evaluate list with @{k}, greather than final rec list size")
 
-    def load_metrics(self,*,base=False,pretty_with_base_name=False,pretty_name=True,short_name=True,METRICS_KS=experiment_constants.METRICS_K):
+    def load_metrics(self,*,base=False,name_type=NameType.PRETTY,METRICS_KS=experiment_constants.METRICS_K):
         if base:
             rec_using=self.base_rec
-            if pretty_name:
+            if name_type == NameType.PRETTY:
                 rec_short_name=self.get_base_rec_pretty_name()
-            elif short_name:
+            elif name_type == NameType.SHORT:
                 rec_short_name=self.get_base_rec_short_name()
-            else:
+            elif name_type == NameType.FULL:
                 rec_short_name=self.get_base_rec_name()
         else:
             rec_using=self.final_rec
-            if pretty_with_base_name:
+            if name_type == NameType.BASE_PRETTY:
                 rec_short_name=self.get_final_rec_pretty_name()+'('+self.get_base_rec_pretty_name()+')'
-            elif pretty_name:
+            elif name_type == NameType.PRETTY:
                 rec_short_name=self.get_final_rec_pretty_name()
-            elif short_name:
+            elif name_type == NameType.SHORT:
                 rec_short_name=self.get_final_rec_short_name()
-            else:
+            elif name_type == NameType.CITY_BASE_PRETTY:
+                rec_short_name=f"({CITIES_PRETTY[self.city]})"+self.get_final_rec_pretty_name()+'('+self.get_base_rec_pretty_name()+')'
+            elif name_type == NameType.FULL:
                 rec_short_name=self.get_final_rec_name()
 
         print("Loading %s..." % (rec_short_name))
@@ -1466,7 +1475,7 @@ class RecRunner():
                 mode="expand", borderaxespad=0, ncol=3)
             # ax.legend(tuple(map(lambda name: METRICS_PRETTY[name],self.metrics.keys())))
             ax.set_xticklabels(list(map(lambda name: METRICS_PRETTY[name],self.metrics_name)))
-            ax.set_ylabel("Gain after the reordering (%)")
+            ax.set_ylabel(f"relative diff w.r.t. {RECS_PRETTY[self.base_rec]}")
             # ax.set_ylim(0,1)
             ax.set_xlim(-barWidth,len(self.metrics_name)-1+(num_recs_plot-1)*barWidth+barWidth)
             # ax.set_title(f"at @{k}, {self.city}")
@@ -2194,14 +2203,14 @@ class RecRunner():
         fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}.png",bbox_inches="tight")
 
     def print_ild_gc_correlation(self,metrics=['ild','gc']):
-        rec = list(self.metrics.keys())[0]
-        metrics_ks = list(self.metrics.values())[0]
+        rec = list(self.metrics.keys())[-1]
+        metrics_ks = list(self.metrics.values())[-1]
 
         for k, metrics_k in metrics_ks.items():
             print("%s@%d correlation"%(rec,k))
             df_p_metrics = pd.DataFrame(metrics_k)
             df_p_metrics = df_p_metrics.set_index('user_id')
-            print(df_p_metrics[metrics].corr())
+            print(df_p_metrics[metrics].corr().iloc[0,1])
 
     def plot_geocat_parameters_maut(self):
         x = 1
@@ -2733,20 +2742,20 @@ class RecRunner():
         for city in cities:
             self.city = city
             self.final_rec_list_size = final_rec_list_size
-            self.load_metrics(base=True,pretty_name=True)
+            self.load_metrics(base=True,name_type=NameType.PRETTY)
             
             run_times = dict()
             # if heuristic:
             #     run_times[self.get_base_rec_pretty_name()] = open(self.data_directory+UTIL+f'run_time_{self.get_base_rec_name()}.txt',"r").read()
             
             if not heuristic:
-                for rec in ['ld','gc','binomial','pm2','geodiv','geocat']:
+                for rec in ['gc','ld','geodiv','geocat']:
                     self.final_rec = rec
-                    self.load_metrics(base=False,pretty_name=True)
+                    self.load_metrics(base=False,name_type=NameType.PRETTY)
 
             if heuristic:
                 self.final_rec_parameters = {'heuristic': 'local_max'}
-                self.load_metrics(base=False,pretty_name=True)
+                self.load_metrics(base=False,name_type=NameType.PRETTY)
 
             if not references:
                 references = [list(self.metrics.keys())[0]]
@@ -2922,3 +2931,60 @@ class RecRunner():
                 mauts[rec_using] = np.sum(list(utility_scores.values()))/len(utility_scores)
 
             print(pd.Series(mauts).sort_values(ascending=False))
+
+
+    def plot_adapt_gain_metrics(self,cities,base_recs,final_recs,prefix_name='all_met_gain_cities',ncol=3):
+        idx = 0
+        refs_idxs = [] 
+        for city in cities:
+            self.city = city
+            for base_rec in base_recs:
+                self.base_rec = base_rec
+                self.load_metrics(base=True,name_type=NameType.FULL)
+                refs_idxs.append(idx)
+                idx += 1
+                for final_rec in final_recs:
+                    self.final_rec = final_rec
+                    self.load_metrics(base=False,name_type=NameType.CITY_BASE_PRETTY)
+                    idx += 1
+            
+        for i,k in enumerate(experiment_constants.METRICS_K):
+            metrics_mean=dict()
+            for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                metrics=metrics[k]
+                
+                metrics_mean[rec_using]=defaultdict(float)
+                for obj in metrics:
+                    for key in self.metrics_name:
+                        metrics_mean[rec_using][key]+=obj[key]
+                
+                for j,key in enumerate(metrics_mean[rec_using]):
+                    metrics_mean[rec_using][key]/=len(metrics)
+
+            reference_recommenders = [list(metrics_mean.keys())[idx] for idx in refs_idxs]
+            reference_vals = [np.array(list(metrics_mean.pop(ref_rec).values())) for ref_rec in reference_recommenders]
+            fig = plt.figure()
+            ax=fig.add_subplot(111)
+            ax.grid(alpha=MPL_ALPHA)
+            num_recs_plot = len(metrics_mean)
+            barWidth= 1-num_recs_plot/(1+num_recs_plot)
+            N=len(self.metrics_name)
+            indexes=np.arange(N)
+            i=0
+            styles = gen_bar_cycle(len(self.metrics))()
+            for rec_using,rec_metrics in metrics_mean.items():
+                print(f"{rec_using} at @{k}")
+                print(rec_metrics)
+                
+                ax.bar(indexes+i*barWidth,-100+100*np.array(list(rec_metrics.values()))/reference_vals[i//len(final_recs)],barWidth,label=rec_using,**next(styles))
+                i+=1
+            ax.set_xticks(np.arange(N+1)+barWidth*(((num_recs_plot)/2)-1)+barWidth/2)
+            ax.legend(tuple(metrics_mean.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                      mode="expand", borderaxespad=0, ncol=ncol)
+            ax.set_xticklabels(list(map(lambda name: METRICS_PRETTY[name],self.metrics_name)))
+            ax.set_ylabel("Gain after the reordering (%)")
+            ax.set_xlim(-barWidth,len(self.metrics_name)-1+(num_recs_plot-1)*barWidth+barWidth)
+            fig.show()
+            plt.show()
+            timestamp = datetime.timestamp(datetime.now())
+            fig.savefig(self.data_directory+f"result/img/{prefix_name}_{'_'.join(base_recs)}_{self.city}_{str(k)}.png",bbox_inches="tight")

@@ -68,8 +68,8 @@ class Binomial:
         return count/num_item_users_consumed
 
     def genre_probability(self,uid,genre):
-        return (1-self.alpha)*self.p_u_g[uid][genre]+\
-            self.alpha*self.p_g[genre]
+        return (1-self.alpha)*self.p_g[genre]+\
+            self.alpha*self.p_u_g[uid][genre]
 
     @classmethod
     def compute_user_genre_probability(cls,uid):

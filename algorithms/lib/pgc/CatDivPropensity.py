@@ -127,7 +127,7 @@ class CatDivPropensity():
         return ild
 
 
-    def compute_div_propensity(self,div_weight=0.75,alpha=0.5):
+    def compute_div_propensity(self,div_weight=0.75,alpha=0.0):
         # switcher = {
         #     "cat_div_std_norm": self.cat_div_std_norm,
         #     "cat_div_skew": self.cat_div_skew,
