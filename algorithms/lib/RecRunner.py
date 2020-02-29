@@ -155,11 +155,12 @@ from sklearn.linear_model import LinearRegression
 from sklearn.neural_network import MLPRegressor
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, silhouette_score
 from sklearn import preprocessing
 from sklearn import svm
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn import neighbors
+from sklearn.cluster import DBSCAN
 import imblearn
 import imblearn.datasets
 import imblearn.over_sampling
@@ -184,6 +185,7 @@ from geosoca.CategoricalCorrelation import CategoricalCorrelation
 from Text import Text
 from Arrow3D import Arrow3D
 from geocat.gc import gc_diversifier
+import geo_utils
 CMAP_NAME = 'Set1'
 
 DATA_DIRECTORY = '../data'  # directory with all data
@@ -1180,7 +1182,8 @@ class RecRunner():
 
     def load_final_predicted(self):
         result_file = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'r')
-
+        self.user_final_predicted_lid = dict()
+        self.user_final_predicted_score = dict()
         for i,line in enumerate(result_file):
             obj=json.loads(line)
             self.user_final_predicted_lid[obj['user_id']]=obj['predicted']
@@ -2608,7 +2611,7 @@ class RecRunner():
                     self.final_rec_parameters['div_cat_weight'] = div_cat_weight
                     if not(div_weight==0.0 and (div_geo_cat_weight!=div_weight or div_cat_weight!=div_weight)):
                         args.append((div_weight,div_geo_cat_weight,div_cat_weight))
-                        self.load_metrics(base=False,pretty_name=False,short_name=False,METRICS_KS=KS)
+                        self.load_metrics(base=False,name_type=NameType.FULL,METRICS_KS=KS)
 
         for i,k in enumerate(KS):
             fig = plt.figure(figsize=(10.5,6.3))
@@ -2988,3 +2991,120 @@ class RecRunner():
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
             fig.savefig(self.data_directory+f"result/img/{prefix_name}_{'_'.join(base_recs)}_{self.city}_{str(k)}.png",bbox_inches="tight")
+
+    def plot_jaccard_ild_gc_correlation(self,base_rec,final_rec_1,final_rec_2,ks,metrics=['ild','gc']):
+        self.final_rec = final_rec_1
+        self.load_final_predicted()
+        res_1 = self.user_final_predicted_lid
+
+        self.final_rec = final_rec_2
+        self.load_final_predicted()
+        res_2 = self.user_final_predicted_lid
+
+
+        values = dict()
+        # spearmans = dict()
+        for k in ks:
+            num_div = 0
+            num_equal = 0
+            # spearman_acc = 0
+            equal_pois_data = np.array([])
+            # spearman_data = np.array([])
+            for (uid1, lids1), (uid2,lids2) in zip(res_1.items(),res_2.items()):
+                equal_pois = set(lids1[:k]).intersection(set(lids2[:k]))
+                # ranks_1= [lids1.index(lid) for lid in equal_pois]
+                # ranks_2= [lids2.index(lid) for lid in equal_pois]
+                equal_pois_data = np.append(equal_pois_data,len(equal_pois))
+                # if len(equal_pois) > 1:
+                #     spearman = scipy.stats.spearmanr(ranks_1,ranks_2)[0]
+                #     spearman_data = np.append(spearman_data,spearman)
+                    
+                num_equal += len(equal_pois)
+                num_div += k
+            print(f'At @{k}')
+            print("Equal POIs")
+            print(scipy.stats.describe(equal_pois_data))
+            values[k] = num_equal/num_div
+            # if len(spearman_data) > 0:
+            #     print("Spearman in Equal POIs")
+            #     print(scipy.stats.describe(spearman_data))
+            #     spearmans[k] = np.mean(spearman_data)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+
+        ax.plot(list(values.keys()),list(values.values()),marker='o',color='k')
+        ax.set_ylim(0,1)
+        ax.set_xlabel('List size')
+        ax.set_ylabel('Rate of equal POIs')
+        xticks = np.round(np.linspace(ks[0],ks[-1],6))
+        ax.set_xticks(xticks)
+
+        # ax = fig.add_subplot(122)
+        # ax.plot(list(spearmans.keys()),list(spearmans.values()),marker='o',color='k')
+        # ax.set_ylim(0,1)
+        # ax.set_xlabel('List size')
+        # ax.set_ylabel('Correlation coeff.')
+
+        fig.savefig(self.data_directory+IMG+f"{final_rec_1}_{final_rec_2}_{self.city}_{str(ks)}.png")
+
+    def plot_ild_gc_correlation(self,metrics=['ild','gc']):
+        rec = list(self.metrics.keys())[-1]
+        metrics_ks = list(self.metrics.values())[-1]
+        correlations = dict()
+        for k, metrics_k in metrics_ks.items():
+            print("%s@%d correlation"%(rec,k))
+            df_p_metrics = pd.DataFrame(metrics_k)
+            df_p_metrics = df_p_metrics.set_index('user_id')
+            correlations[k] = abs(df_p_metrics[metrics].corr().loc['ild','gc'])
+        ks = list(metrics_ks.keys())
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+
+        ax.plot(list(correlations.keys()),list(correlations.values()),marker='o',color='k')
+        ax.set_ylim(min(0,min(correlations.values())),1)
+        ax.set_xlabel('List size')
+        ax.set_ylabel('Pearson correlation(Absolute)')
+        xticks = np.round(np.linspace(ks[0],ks[-1],6))
+        ax.set_xticks(xticks)
+        fig.savefig(self.data_directory+IMG+f"correlation_{rec}_{self.city}.png")
+
+    def dbscan_hyperparameter(self):
+        num_users = self.training_matrix.shape[0]
+        vals = np.linspace(0.1,5,50)
+        mins_samples = np.arange(2,11,1)
+        users_visits = np.sum(self.training_matrix,axis=1)
+        users_sorted_by_visits = list(reversed(np.argsort(users_visits)))
+        users_X = dict()
+        for uid in users_sorted_by_visits[:num_users]:
+            users_X[uid] = [self.poi_coos[lid] for lid in np.nonzero(self.training_matrix[uid])[0]]
+            print('uid:',uid,'pois:',len(users_X[uid]))
+
+        max_silhouette = 0
+        max_val = 0
+        max_min_samples = 0
+        all_max_silhouette = []
+        for val in vals:
+            for min_samples in mins_samples:
+
+                users_sil = np.array([])
+                for uid in users_sorted_by_visits[:num_users]:
+                    X = users_X[uid]
+                    db = DBSCAN(eps=geo_utils.km_to_lat(val), min_samples=min_samples).fit(X)
+                    core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+                    core_samples_mask[db.core_sample_indices_] = True
+                    labels = db.labels_
+                    # plt.scatter(x=X[:,0],y=X[:,1],c=labels)
+                    try:
+                        sil = silhouette_score(X, labels)
+                        users_sil = np.append(users_sil,sil)
+                    except:
+                        pass
+                    # print(f'{val} {min_samples}',"Silhouette Coefficient: %0.3f"
+                    #     % sil)
+                if np.mean(users_sil) > max_silhouette:
+                    max_silhouette = sil
+                    max_val = val
+                    max_min_samples = min_samples
+                    all_max_silhouette.append((max_silhouette, max_val, max_min_samples))
+        print(all_max_silhouette)
+            

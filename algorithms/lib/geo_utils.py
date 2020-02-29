@@ -44,3 +44,6 @@ def dist(loc1, loc2):
     arc = math.acos( cos )
     earth_radius = 6371
     return arc * earth_radius
+
+def km_to_lat(km):
+    return km/dist((0,0),(0,1))
