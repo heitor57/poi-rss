@@ -78,6 +78,17 @@ plt.rcParams['legend.framealpha'] = 0.5
 # plt.rcParams['axes.spines.right'] = False
 
 BAR_EDGE_COLOR = 'black'
+
+def adjust_lightness(color, amount=0.5):
+    import matplotlib.colors as mc
+    import colorsys
+    try:
+        c = mc.cnames[color]
+    except:
+        c = color
+    c = colorsys.rgb_to_hls(*mc.to_rgb(c))
+    return colorsys.hls_to_rgb(c[0], max(0, min(1, amount * c[1])), c[2])
+
 linestyle_tuple = {
      'loosely dotted':        (0, (1, 10)),
      'dotted':                (0, (1, 1)),
@@ -111,12 +122,22 @@ def gen_line_cycle(num=6):
     marker = cycler('marker', ['^','v','s','x','d','o','1','h','P','*'][:num])
     return (color_cycler + linestyle + marker) * linewidth * markerwidth
 
+# ['#4477AA','#66CCEE','#228833','#CCBB44','#EE6677','#AA3377','#BBBBBB']
+# my color scheme
+# ['#9595ff','#2a913e','#ffb2b2','#b5b355','#11166c','#ecd9c6','#939393']
+MY_COLOR_SCHEME = ['#939393','#9595ff','#2a913e','#b5b355','#11166c','#ffb2b2','#ecd9c6']
 def gen_bar_cycle(num=6):
     arrange = np.linspace(0,1,num)
-    hatch_cycler = cycler('hatch', ['///', '--', '...','\///', 'xxx', '\\\\','None','*'][:num])
-    base_cycler = cycler('zorder', [10])*cycler('edgecolor',[BAR_EDGE_COLOR])
-    color_cycler = cycler('color', reversed(list(map(str,arrange))))
-    bar_cycle = (hatch_cycler + color_cycler)*base_cycler
+    # hatch_cycler = cycler('hatch', ['///', '--', '...','\///', 'xxx', '\\\\','None','*'][:num])
+    base_cycler = cycler('zorder', [10])# *cycler('edgecolor',[BAR_EDGE_COLOR])
+    # base_cycler = cycler('zorder', [10])*cycler('edgecolor',[adjust_lightness(color,amount=0.3) for color in ['#9595ff','#2a913e','#ffb2b2','#b5b355','#11166c','#ecd9c6','#939393'][:num]])
+
+    # color_cycler = cycler('color', reversed(list(map(str,arrange))))
+    color_cycler = cycler('color', MY_COLOR_SCHEME[len(MY_COLOR_SCHEME)-num:])+cycler('edgecolor',[adjust_lightness(color,amount=0.3) for color in MY_COLOR_SCHEME[len(MY_COLOR_SCHEME)-num:]])
+    # color_cycler = cycler('color', reversed([plt.get_cmap('Dark2')(i) for i in arrange]))
+    linewidth_cycler = cycler('linewidth', [1])
+    bar_cycle = (# hatch_cycler +
+                 color_cycler)*base_cycler*linewidth_cycler
     return bar_cycle
 GEOCAT_BAR_STYLE = {'color': 'k', 'zorder': 10,'edgecolor':BAR_EDGE_COLOR}
 
@@ -186,7 +207,8 @@ from Text import Text
 from Arrow3D import Arrow3D
 from geocat.gc import gc_diversifier
 import geo_utils
-CMAP_NAME = 'Set1'
+from geocat.random import random_diversifier
+CMAP_NAME = 'viridis'
 
 DATA_DIRECTORY = '../data'  # directory with all data
 
@@ -279,6 +301,7 @@ class RecRunner():
             "perfectpgeocat": self.perfectpersongeocat,
             "pdpgeocat": self.pdpgeocat,
             "gc": self.gc,
+            "random": self.random,
         }
         # self.BASE_RECOMMENDERS_PARAMETERS = {
         #     "mostpopular": [],
@@ -309,7 +332,7 @@ class RecRunner():
         self.user_final_predicted_score = {}
         
         self.metrics = {}
-        self.metrics_name = ['precision', 'recall', 'gc', 'ild', 'epc','pr']
+        self.metrics_name = ['precision', 'recall', 'gc', 'ild','pr','epc']
         self.except_final_rec = except_final_rec
         self.welcome_message()
         self.CHKS = 50 # chunk size for process pool executor
@@ -437,9 +460,10 @@ class RecRunner():
             "ld": {'div_weight':0.25},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
             "pm2": {'lambda': 1},
-            "perfectpgeocat": {'k': 10,'interval': 2,'div_weight': 0.75},
+            "perfectpgeocat": {'k': 10,'interval': 2,'div_weight': 0.75,'div_cat_weight': 0.05},
             "pdpgeocat": {'k': 10,'interval': 2,'div_geo_cat_weight': 0.75},
             "gc": {'div_weight': 0.8},
+            "random": {'div_weight': 0.8},
         }
 
     def get_base_rec_name(self):
@@ -731,13 +755,13 @@ class RecRunner():
 
         if self.final_rec_parameters['norm_method'] == 'default':
             if self.final_rec_parameters['cat_div_method'] == None:
-                self.div_geo_cat_weight=self.geo_div_propensity
+                self.div_geo_cat_weight=1-self.geo_div_propensity
                 self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
             elif self.final_rec_parameters['geo_div_method'] == None:
-                self.div_geo_cat_weight=1-self.cat_div_propensity
+                self.div_geo_cat_weight=self.cat_div_propensity
                 self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
             else:
-                self.div_geo_cat_weight=(self.geo_div_propensity)/(self.geo_div_propensity+self.cat_div_propensity)
+                self.div_geo_cat_weight=(self.cat_div_propensity)/(self.geo_div_propensity+self.cat_div_propensity)
                 self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
                 self.div_weight[(self.geo_div_propensity==0) & (self.cat_div_propensity==0)] = 0
         elif self.final_rec_parameters['norm_method'] == 'median_quad':
@@ -971,9 +995,11 @@ class RecRunner():
                 predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores,
                                                             self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
                                                             div_geo_cat_weight,self.final_rec_parameters['div_weight'],
-                                                                'local_max')
+                                                             'local_max',
+                                                             gcobjfunc.OBJECTIVE_FUNCTIONS.get('cat_weight'),
+                                                             self.final_rec_parameters['div_cat_weight'])
 
-                precision_val=metrics.precisionk(actual, predicted[:self.final_rec_parameters['k']])
+                precision_val=metrics.recallk(actual, predicted[:self.final_rec_parameters['k']])
                 if precision_val > max_predicted_val:
                     max_predicted_val = precision_val
                     max_predicted = predicted
@@ -1308,7 +1334,7 @@ class RecRunner():
             predictions = self.user_final_predicted_lid
 
         for i,k in enumerate(METRICS_KS):
-            if k <= self.final_rec_list_size and not base:
+            if (k <= self.final_rec_list_size and not base) or (k <= self.base_rec_list_size and base):
                 print(f"running metrics at @{k}")
                 self.epc_val = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids,k)
 
@@ -1445,22 +1471,29 @@ class RecRunner():
 
             reference_recommender = list(metrics_mean.keys())[0]
             reference_vals = np.array(list(metrics_mean.pop(reference_recommender).values()))
-            fig = plt.figure()
+            fig = plt.figure(figsize=(8, 6))
             ax=fig.add_subplot(111)
-            ax.grid(alpha=MPL_ALPHA)
+            # ax.grid(alpha=MPL_ALPHA,axis='y')
             num_recs_plot = len(self.metrics)-1
             barWidth= 1-num_recs_plot/(1+num_recs_plot)
             N=len(self.metrics_name)
             indexes=np.arange(N)
             i=0
-            styles = gen_bar_cycle(len(self.metrics))()
+            styles = gen_bar_cycle(num_recs_plot)()
+            y_to_annotate = 90
+            put_annotation = []
             for rec_using,rec_metrics in metrics_mean.items():
                 print(f"{rec_using} at @{k}")
                 print(rec_metrics)
-
-                ax.bar(indexes+i*barWidth,-100+100*np.array(list(rec_metrics.values()))/reference_vals,barWidth,label=rec_using,**next(styles))
-                #ax.bar(indexes[j]+i*barWidth,np.mean(list(rec_metrics.values())),barWidth,label=rec_using,color=palette(i))
+                rel_diffs = -100+100*np.array(list(rec_metrics.values()))/reference_vals
+                ax.bar(indexes+i*barWidth,rel_diffs,barWidth,label=rec_using,**next(styles))
+                special_cases = rel_diffs > 100
+                for idx, value in zip(indexes[special_cases],rel_diffs[special_cases]):
+                    ax.annotate(f'{int(value)}%',xy=(idx+i*barWidth-barWidth,y_to_annotate),zorder=25,color='k',fontsize=18)
+                    y_to_annotate -= 10
                 i+=1
+
+                #ax.bar(indexes[j]+i*barWidth,np.mean(list(rec_metrics.values())),barWidth,label=rec_using,color=palette(i))
             # reference_us_vals = metrics_utility_score.pop(reference_recommender)
             # reference_us_fvals = np.sum(list(reference_us_vals.values()))/len(reference_us_vals)
             # i=0
@@ -1475,17 +1508,23 @@ class RecRunner():
             ax.set_xticks(np.arange(N+1)+barWidth*(((num_recs_plot)/2)-1)+barWidth/2)
             # ax.legend((p1[0], p2[0]), self.metrics_name)
             ax.legend(tuple(metrics_mean.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
-                mode="expand", borderaxespad=0, ncol=3)
+                      mode="expand", borderaxespad=0, ncol=3,fontsize=18)
             # ax.legend(tuple(map(lambda name: METRICS_PRETTY[name],self.metrics.keys())))
-            ax.set_xticklabels(list(map(lambda name: METRICS_PRETTY[name],self.metrics_name)))
-            ax.set_ylabel(f"relative diff w.r.t. {RECS_PRETTY[self.base_rec]}")
-            # ax.set_ylim(0,1)
+            ax.set_xticklabels(map(lambda x: f'{x}@{k}',list(map(lambda name: METRICS_PRETTY[name],self.metrics_name))),fontsize=16)
+            for tick in ax.yaxis.get_major_ticks():
+                tick.label.set_fontsize(16) 
+            ax.set_ylabel(f"Relative diff w.r.t. {RECS_PRETTY[self.base_rec]}",fontsize=23)
+            ax.set_ylim(-25,100)
             ax.set_xlim(-barWidth,len(self.metrics_name)-1+(num_recs_plot-1)*barWidth+barWidth)
+
+            for i, m in enumerate(self.metrics_name):
+                ax.axvline(i+num_recs_plot*barWidth,color='k',linewidth=1,alpha=0.5)
             # ax.set_title(f"at @{k}, {self.city}")
             fig.show()
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
             fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}_{str(k)}.png",bbox_inches="tight")
+            fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}_{str(k)}.eps",bbox_inches="tight")
 
     def plot_bar_metrics(self,prefix_name='all_met'):
         palette = plt.get_cmap(CMAP_NAME)
@@ -2003,20 +2042,53 @@ class RecRunner():
         df[['precision','p_precision','p_beta','beta']].plot()
         plt.savefig(self.data_directory+IMG+f'analysis_{self.get_final_rec_name()}.png')
 
-    def print_latex_metrics_table(self,prefix_name='',references=[]):
+    def print_latex_metrics_table(self,prefix_name='',references=[],heuristic=False,cities=None):
         num_metrics = len(self.metrics_name)
+        if heuristic:
+            num_metrics += 1
         result_str = r"\begin{table}[]" + "\n"
         result_str += r"\begin{tabular}{" +'l|'+'l'*(num_metrics) + "}\n"
         # result_str += "\begin{tabular}{" + 'l'*(num_metrics+1) + "}\n"
-        if not references:
-            references = [list(self.metrics.keys())[0]]
-        cities=[self.city]
+
+        if cities == None:
+            cities = [self.city]
+        final_rec_list_size = self.final_rec_list_size
+
         for city in cities:
+            self.city = city
+            self.final_rec_list_size = final_rec_list_size
+            if heuristic:
+                self.load_metrics(base=True,name_type=NameType.PRETTY)
+
+            run_times = dict()
+
+            if not references:
+                references = [list(self.metrics.keys())[0]]
+
             result_str += "\t&"+'\multicolumn{%d}{c}{%s}\\\\\n' % (num_metrics,CITIES_PRETTY[city])
 
-            for i,k in enumerate(experiment_constants.METRICS_K):
-                result_str += "\\hline \\textbf{Algorithm} & "+'& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))+"\\\\\n"
+            if heuristic:
+                self.final_rec_parameters = {'heuristic': 'local_max'}
+                self.load_metrics(base=False,name_type=NameType.PRETTY)
 
+            for i,k in enumerate(experiment_constants.METRICS_K):
+
+
+                if heuristic:
+                    self.final_rec_list_size = k
+                    for h in ['tabu_search', 'particle_swarm']:
+                        self.final_rec_parameters = {'heuristic': h}
+                        self.load_metrics(base=False,name_type=NameType.PRETTY,METRICS_KS=[k])
+                        run_times[self.get_final_rec_pretty_name()]=int(float(open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"r").read()))
+                    self.final_rec_parameters = {'heuristic': 'local_max'}
+                    run_times[self.get_final_rec_pretty_name()]=int(float(open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"r").read()))
+                    max_arg_run_time = max(run_times, key=run_times.get)
+
+                result_str += "\\hline \\rowcolor{Gray} \\textbf{Algorithm} & "+'& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
+
+                if heuristic:
+                    result_str += '& \\textbf{Time}'
+                result_str += "\\\\\n"
                 metrics_mean=dict()
                 metrics_gain=dict()
                 
@@ -2067,10 +2139,21 @@ class RecRunner():
                 for metric_name,(rec_using,value) in metrics_max.items():
                     is_metric_the_max[rec_using][metric_name] = True
 
-
                 for rec_using,rec_metrics in metrics_mean.items():
                     gain = metrics_gain[rec_using]
-                    result_str += rec_using + ' &' + '& '.join(map(lambda x: "\\textbf{%.4f}%s" %(x[0],x[1]) if is_metric_the_max[rec_using][x[2]] else "%.4f%s"%(x[0],x[1])  ,zip(rec_metrics.values(),gain.values(),rec_metrics.keys())))+"\\\\\n"
+                    result_str += rec_using + ' &' + '& '.join(map(lambda x: "\\textbf{%.4f}%s" %(x[0],x[1]) if is_metric_the_max[rec_using][x[2]] else "%.4f%s"%(x[0],x[1])  ,zip(rec_metrics.values(),gain.values(),rec_metrics.keys())))
+                    if heuristic:
+                        if rec_using not in references:
+                            if rec_using != max_arg_run_time:
+                                result_str += f'& {sec_to_hm(run_times[rec_using])}'
+                            else:
+                                result_str += f'& \\textbf{{{sec_to_hm(run_times[rec_using])}}}'
+                        else:
+                            result_str += f'& '
+                    result_str += "\\\\\n"
+            if city != cities[-1]:
+                result_str += '\\hline'
+
 
         result_str += "\\end{tabular}\n"
         result_str += "\\end{table}\n"
@@ -2116,7 +2199,7 @@ class RecRunner():
             ax.legend(tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                       mode="expand", borderaxespad=0, ncol=ncol)
             # ax.legend(tuple(map(lambda name: METRICS_PRETTY[name],self.metrics.keys())))
-            ax.set_xticklabels(list(map(lambda name: METRICS_PRETTY[name],self.metrics_name)))
+            ax.set_xticklabels(map(lambda x: f'{x}@{k}',list(map(lambda name: METRICS_PRETTY[name],self.metrics_name))))
             # ax.set_title(f"at @{k}, {self.city}")
             ax.set_ylabel("Mean Value")
             ax.set_ylim(0,1)
@@ -2126,11 +2209,11 @@ class RecRunner():
             timestamp = datetime.timestamp(datetime.now())
             fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}_{str(k)}.png",bbox_inches="tight")
 
-    def plot_maut(self,prefix_name='maut',ncol=3,print_times=False):
+    def plot_maut(self,prefix_name='maut',ncol=4,print_times=False):
         # palette = plt.get_cmap(CMAP_NAME)
         fig = plt.figure()
         ax=fig.add_subplot(111)
-
+        num_recs = len(self.metrics)
         N=len(experiment_constants.METRICS_K)
         barWidth=1-len(self.metrics)/(1+len(self.metrics))
         indexes=np.arange(N)
@@ -2177,14 +2260,16 @@ class RecRunner():
             #ax.set_xticks(np.arange(N+1)+barWidth*(np.floor((len(self.metrics))/2)-1)+barWidth/2)
         # ax.set_xticks(np.arange(N+1)+barWidth*len(metrics_utility_score)/2+barWidth/2)
 
+
+
         ax.set_xticks(np.arange(N+1)+barWidth*(((len(self.metrics))/2)-1)+barWidth/2)
         # ax.legend((p1[0], p2[0]), self.metrics_name)
         ax.legend(tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                   mode="expand", borderaxespad=0, ncol=ncol)
         # ax.legend(tuple(map(lambda name: METRICS_PRETTY[name],self.metrics.keys())))
-        ax.set_xticklabels(['MAUT@5','MAUT@10','MAUT@20'])
+        ax.set_xticklabels(['MAUT@5','MAUT@10','MAUT@20'],fontsize=16)
         # ax.set_title(f"at @{k}, {self.city}")
-        ax.set_ylabel("Mean Value")
+        ax.set_ylabel("Mean Value",fontsize=18)
         ax.set_ylim(0,1)
         ax.set_xlim(-barWidth,len(experiment_constants.METRICS_K)-1+(len(self.metrics)-1)*barWidth+barWidth)
 
@@ -2199,11 +2284,15 @@ class RecRunner():
             # place a text box in upper left in axes coords
             ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14,
                     verticalalignment='top', bbox=props)
+
+        for i in range(N):
+            ax.axvline(i+num_recs*barWidth,color='k',linewidth=1,alpha=0.5)
         fig.show()
         plt.show()
 
         timestamp = datetime.timestamp(datetime.now())
         fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}.png",bbox_inches="tight")
+        fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}.eps",bbox_inches="tight")
 
     def print_ild_gc_correlation(self,metrics=['ild','gc']):
         rec = list(self.metrics.keys())[-1]
@@ -2517,7 +2606,7 @@ class RecRunner():
                 for k in inl:
                     l.append((i,j,k))
                     self.base_rec_parameters['alpha'], self.base_rec_parameters['beta'], self.base_rec_parameters['eta'] = i, j, k 
-                    self.load_metrics(base=True,pretty_name=False,short_name=False,METRICS_KS=KS)
+                    self.load_metrics(base=True,name_type=NameType.FULL,METRICS_KS=KS)
         METRIC = 'recall'
         for i,k in enumerate(KS):
             # palette = plt.get_cmap(CMAP_NAME)
@@ -2591,7 +2680,7 @@ class RecRunner():
             print(df.sort_values(ascending=False))
 
 
-    def plot_geocat_hyperparameter(self):
+    def plot_geocat_hyperparameter(self,metric='maut'):
         KS = [10]
         num_l_cat = 6
         num_l_geocat_div = 5
@@ -2633,24 +2722,31 @@ class RecRunner():
 
                 for j,key in enumerate(metrics_mean[rec_using]):
                     metrics_mean[rec_using][key]/=len(metrics)
+            if metric == 'maut':
+                metrics_utility_score=dict()
+                for rec_using in metrics_mean:
+                    metrics_utility_score[rec_using]=dict()
+                for metric_name in self.metrics_name:
+                    max_metric_value=0
+                    min_metric_value=1
+                    for rec_using,rec_metrics in metrics_mean.items():
+                        max_metric_value=max(max_metric_value,rec_metrics[metric_name])
+                        min_metric_value=min(min_metric_value,rec_metrics[metric_name])
+                    for rec_using,rec_metrics in metrics_mean.items():
+                        metrics_utility_score[rec_using][metric_name]=(rec_metrics[metric_name]-min_metric_value)\
+                            /(max_metric_value-min_metric_value)
+                mauts = dict()
+                for rec_using,utility_scores in metrics_utility_score.items():
+                    mauts[rec_using] = np.sum(list(utility_scores.values()))/len(utility_scores)
 
-            metrics_utility_score=dict()
-            for rec_using in metrics_mean:
-                metrics_utility_score[rec_using]=dict()
-            for metric_name in self.metrics_name:
-                max_metric_value=0
-                min_metric_value=1
-                for rec_using,rec_metrics in metrics_mean.items():
-                    max_metric_value=max(max_metric_value,rec_metrics[metric_name])
-                    min_metric_value=min(min_metric_value,rec_metrics[metric_name])
-                for rec_using,rec_metrics in metrics_mean.items():
-                    metrics_utility_score[rec_using][metric_name]=(rec_metrics[metric_name]-min_metric_value)\
-                        /(max_metric_value-min_metric_value)
-            mauts = dict()
-            for rec_using,utility_scores in metrics_utility_score.items():
-                mauts[rec_using] = np.sum(list(utility_scores.values()))/len(utility_scores)
+                val_to_use = mauts
+            else:
+                val_to_use = dict()
+                for rec_using, metrics in metrics_mean.items():
+                    val_to_use[rec_using] = metrics[metric]
 
-            print(pd.Series(mauts).sort_values(ascending=False))
+
+            print(pd.Series(val_to_use).sort_values(ascending=False))
             print(f"at @{k}")
             args_separated = list(zip(*args))
             lambdas = np.array(args_separated[0])
@@ -2664,19 +2760,19 @@ class RecRunner():
             d_label_tick = {label: tick for label, tick in zip(xlabels,xticks)}
             lambda_delta_like_xticks = list(map(d_label_tick.get,lambda_delta))
             print(lambda_delta_like_xticks)
-            surf = ax.plot_trisurf(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.cm.CMRmap,linewidth=25, vmin=np.min(list(mauts.values())), vmax=np.max(list(mauts.values())))
-            mauts_values = np.array(list(mauts.values()))
-            id_reorder = np.argsort(-mauts_values)
+            surf = ax.plot_trisurf(lambda_delta_like_xticks, phi, list(val_to_use.values()),cmap=plt.get_cmap(CMAP_NAME),linewidth=25, vmin=np.min(list(val_to_use.values())), vmax=np.max(list(val_to_use.values())))
+            val_to_use_values = np.array(list(val_to_use.values()))
+            id_reorder = np.argsort(-val_to_use_values)
             lambdas = lambdas[id_reorder]
             deltas = deltas[id_reorder]
             phis = np.array(phi)[id_reorder]
-            mauts_values = mauts_values[id_reorder]
+            val_to_use_values = val_to_use_values[id_reorder]
             top_n = 5
             i=1
             d_lambda_delta_tick = {label: tick for label, tick in zip(l_geocat_div_2,xticks)}
 
             box_text_string = "$i^{th}$-$\lambda$-$\delta$-$\phi$\n"
-            for x,y,z,p in list(zip(lambdas,deltas,phis,mauts_values))[:top_n]:
+            for x,y,z,p in list(zip(lambdas,deltas,phis,val_to_use_values))[:top_n]:
                 z_up = (1+0.04*i)*ax.get_zlim()[1]
                 # print('$%d^{%s}$-%.2f-%.2f-%.2f'%(i,int_what_ordinal(i),x,y,z))
                 x_real = d_lambda_delta_tick[(x,y)]
@@ -2718,12 +2814,12 @@ class RecRunner():
             # fig.colorbar(surf, shrink=0.6, aspect=20,
             #              pad= -0.02,orientation="horizontal")
             # fig.colorbar(surf, fraction=0.046, pad=0.04)
-            # ax.scatter(lambda_delta_like_xticks, phi, list(mauts.values()),cmap=plt.cm.CMRmap,vmin=np.min(list(mauts.values())), vmax=np.max(list(mauts.values())))
+            # ax.scatter(lambda_delta_like_xticks, phi, list(val_to_use.values()),cmap=plt.cm.CMRmap,vmin=np.min(list(val_to_use.values())), vmax=np.max(list(val_to_use.values())))
             ax.set(xticks=xticks, xticklabels=xlabels)
             
             ax.set_xlabel(r"$\lambda$-$\delta$",labelpad=66,**font)
             ax.set_ylabel(r"$\phi$",**font)
-            ax.set_zlabel(f"MAUT@{k}",**font)
+            ax.set_zlabel(f"{METRICS_PRETTY[metric]}@{k}",**font)
             plt.subplots_adjust(left=-0.17,top=1.05,right=1.05)
 
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.png")
@@ -2776,7 +2872,7 @@ class RecRunner():
                     self.final_rec_list_size = k
                     for h in ['tabu_search', 'particle_swarm']:
                         self.final_rec_parameters = {'heuristic': h}
-                        self.load_metrics(base=False,pretty_name=True,METRICS_KS=[k])
+                        self.load_metrics(base=False,name_type=NameType.PRETTY,METRICS_KS=[k])
                         run_times[self.get_final_rec_pretty_name()]=int(float(open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"r").read()))
                     self.final_rec_parameters = {'heuristic': 'local_max'}
                     run_times[self.get_final_rec_pretty_name()]=int(float(open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"r").read()))
@@ -2784,7 +2880,7 @@ class RecRunner():
 
 
                 if len(result_str[line_num]) == 0:
-                    result_str[line_num] += "\\hline \\textbf{Algorithm} & "+'& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
+                    result_str[line_num] += "\\hline \\rowcolor{Gray} \\textbf{Algorithm} & "+'& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
                 else:
                     result_str[line_num] += '& '+ '& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
                 if heuristic:
@@ -2994,15 +3090,25 @@ class RecRunner():
 
     def plot_jaccard_ild_gc_correlation(self,base_rec,final_rec_1,final_rec_2,ks,metrics=['ild','gc']):
         self.final_rec = final_rec_1
+        div_weight_1 = self.final_rec_parameters['div_weight']
         self.load_final_predicted()
         res_1 = self.user_final_predicted_lid
-
+        
         self.final_rec = final_rec_2
+        div_weight_2 = self.final_rec_parameters['div_weight']
         self.load_final_predicted()
         res_2 = self.user_final_predicted_lid
 
-
+        self.final_rec = 'random'
+        self.final_rec_parameters = {'div_weight': div_weight_1}
+        self.load_final_predicted()
+        res_3 = self.user_final_predicted_lid
+        self.final_rec_parameters = {'div_weight': div_weight_2}
+        self.load_final_predicted()
+        res_4 = self.user_final_predicted_lid
+        
         values = dict()
+        values_rand = dict()
         # spearmans = dict()
         for k in ks:
             num_div = 0
@@ -3010,6 +3116,7 @@ class RecRunner():
             # spearman_acc = 0
             equal_pois_data = np.array([])
             # spearman_data = np.array([])
+
             for (uid1, lids1), (uid2,lids2) in zip(res_1.items(),res_2.items()):
                 equal_pois = set(lids1[:k]).intersection(set(lids2[:k]))
                 # ranks_1= [lids1.index(lid) for lid in equal_pois]
@@ -3025,6 +3132,12 @@ class RecRunner():
             print("Equal POIs")
             print(scipy.stats.describe(equal_pois_data))
             values[k] = num_equal/num_div
+            equal_pois_rand = np.array([])
+            for (uid1, lids1), (uid2,lids2) in zip(res_3.items(),res_4.items()):
+                equal_pois = set(lids1[:k]).intersection(set(lids2[:k]))
+                equal_pois_rand = np.append(equal_pois_rand,len(equal_pois))
+
+            values_rand[k] = equal_pois_rand.sum()/(k*len(res_1))
             # if len(spearman_data) > 0:
             #     print("Spearman in Equal POIs")
             #     print(scipy.stats.describe(spearman_data))
@@ -3033,6 +3146,8 @@ class RecRunner():
         ax = fig.add_subplot(111)
 
         ax.plot(list(values.keys()),list(values.values()),marker='o',color='k')
+        ax.plot(list(values_rand.keys()),list(values_rand.values()),marker='o',color='r')
+        ax.legend((f'{RECS_PRETTY[final_rec_1]}($\lambda$=0.25),{RECS_PRETTY[final_rec_2]}($\lambda$=0.8)','Random($\lambda$=0.25),Random($\lambda$=0.8)'))
         ax.set_ylim(0,1)
         ax.set_xlabel('List size')
         ax.set_ylabel('Rate of equal POIs')
@@ -3045,7 +3160,8 @@ class RecRunner():
         # ax.set_xlabel('List size')
         # ax.set_ylabel('Correlation coeff.')
 
-        fig.savefig(self.data_directory+IMG+f"{final_rec_1}_{final_rec_2}_{self.city}_{str(ks)}.png")
+        fig.savefig(self.data_directory+IMG+f"{final_rec_1}_{final_rec_2}_{self.city}_{ks[0]}_{ks[-1]}.png",bbox_inches="tight")
+        fig.savefig(self.data_directory+IMG+f"{final_rec_1}_{final_rec_2}_{self.city}_{ks[0]}_{ks[-1]}.eps",bbox_inches="tight")
 
     def plot_ild_gc_correlation(self,metrics=['ild','gc']):
         rec = list(self.metrics.keys())[-1]
@@ -3062,11 +3178,12 @@ class RecRunner():
 
         ax.plot(list(correlations.keys()),list(correlations.values()),marker='o',color='k')
         ax.set_ylim(min(0,min(correlations.values())),1)
-        ax.set_xlabel('List size')
+        ax.set_xlabel(f'List size ({rec})')
         ax.set_ylabel('Pearson correlation(Absolute)')
         xticks = np.round(np.linspace(ks[0],ks[-1],6))
         ax.set_xticks(xticks)
-        fig.savefig(self.data_directory+IMG+f"correlation_{rec}_{self.city}.png")
+        fig.savefig(self.data_directory+IMG+f"correlation_{rec}_{self.city}.png",bbox_inches="tight")
+        fig.savefig(self.data_directory+IMG+f"correlation_{rec}_{self.city}.eps",bbox_inches="tight")
 
     def dbscan_hyperparameter(self):
         num_users = self.training_matrix.shape[0]
@@ -3108,3 +3225,25 @@ class RecRunner():
                     all_max_silhouette.append((max_silhouette, max_val, max_min_samples))
         print(all_max_silhouette)
             
+
+
+    def random(self):
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_random,args,self.CHKS)
+        self.save_result(results,base=False)
+
+    @classmethod
+    def run_random(cls, uid):
+        self = cls.getInstance()
+        if uid in self.ground_truth:
+            predicted = self.user_base_predicted_lid[uid][
+                0:self.base_rec_list_size]
+            overall_scores = self.user_base_predicted_score[uid][
+                0:self.base_rec_list_size]
+
+            predicted, overall_scores = random_diversifier(predicted, overall_scores,
+                                               self.final_rec_list_size, self.final_rec_parameters['div_weight'])
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
+
+        self.not_in_ground_truth_message()
+        return ""

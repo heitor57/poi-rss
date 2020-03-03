@@ -27,6 +27,7 @@ METRICS_PRETTY = {'precision':'Prec',
                   'ndcg':'NDCG',
                   'map':'MAP',
                   'ildg':'ILDg',
+                  'maut':'MAUT',
 }
 
 RECS_PRETTY = {
