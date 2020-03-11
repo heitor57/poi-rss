@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.cluster import DBSCAN
 # import os
 # import sys
 # module_path = os.path.abspath(os.path.join('..'))
@@ -13,20 +14,25 @@ from concurrent.futures import ProcessPoolExecutor
 from parallel_util import run_parallel
 
 import lib.cat_utils as cat_utils
+import lib.geo_utils as geo_utils
 import metrics
-
+# (0.6118019290456039, 3.8000000000000003, 5), DBSCAN SILHOUETTE
 
 class GeoDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
     METHODS = ['walk'# ,'num_poi','num_cat','visits','walk_raw'
                # ,'ildg'
-               ,'inverse_walk']
+               ,'inverse_walk','dbscan','inv_dbscan','inv_wcluster','wcluster']
     GEO_DIV_PROPENSITY_METHODS_PRETTY_NAME = {
         'walk': 'Mean radius of visited POIs',
         'num_poi': 'Number of visited POIs',
         'ildg': 'Geographical ILD',
-        'inverse_walk': 'Inverse of mean radius of visited POIs'
+        'inverse_walk': 'Inverse of mean radius of visited POIs',
+        'dbscan': 'Using clusters of visited pois',
+        'inv_dbscan': 'Inverse of dbscan',
+        'inv_wcluster': 'Inverse weighted clustering',
+        'wcluster': 'Weighted clustering',
     }
 
     @classmethod
@@ -55,6 +61,10 @@ class GeoDivPropensity():
             "walk_raw": self.geo_div_walk_raw,
             "ildg": self.geo_div_ildg,
             "inverse_walk": self.geo_div_inverse_walk,
+            "dbscan": self.geo_div_dbscan,
+            "inv_dbscan": self.geo_div_inv_dbscan,
+            "inv_wcluster": self.geo_div_inv_wcluster,
+            "wcluster": self.geo_div_wcluster,
         }
 
 
@@ -168,6 +178,102 @@ class GeoDivPropensity():
         # self.geo_div_propensity=norm_prop
         return 1-norm_prop
 
+    @classmethod
+    def geo_div_dbscan(cls, uid):
+        self = cls.getInstance()
+        km = 3.8
+        min_samples = 5
+        
+        points = [self.poi_coos[lid]
+                  for lid in np.nonzero(self.training_matrix[uid])[0]
+                  # for _ in range(self.training_matrix[uid,lid])
+        ]
+        db = DBSCAN(eps=geo_utils.km_to_lat(km), min_samples=min_samples).fit(points)
+        labels = db.labels_
+        # Number of clusters in labels, ignoring noise if present.
+        a = n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+        b = n_noise_ = list(labels).count(-1)
+
+        return ((b - a)/(max(a,b)) + 1)/2
+
+
+    @classmethod
+    def geo_div_inv_dbscan(cls, uid):
+        self = cls.getInstance()
+        km = 3.8
+        min_samples = 5
+        
+        points = [self.poi_coos[lid]
+                  for lid in np.nonzero(self.training_matrix[uid])[0]
+                  # for _ in range(self.training_matrix[uid,lid])
+        ]
+        db = DBSCAN(eps=geo_utils.km_to_lat(km), min_samples=min_samples).fit(points)
+        labels = db.labels_
+        # Number of clusters in labels, ignoring noise if present.
+        a = n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+        b = n_noise_ = list(labels).count(-1)
+
+        return 1-((b - a)/(max(a,b)) + 1)/2
+
+    @classmethod
+    def geo_div_inv_wcluster(cls, uid):
+        self = cls.getInstance()
+        km = 3.8
+        min_samples = 5
+        
+        points = [self.poi_coos[lid]
+                  for lid in np.nonzero(self.training_matrix[uid])[0]
+                  # for _ in range(self.training_matrix[uid,lid])
+        ]
+        db = DBSCAN(eps=geo_utils.km_to_lat(km), min_samples=min_samples).fit(points)
+        labels = db.labels_
+        # Number of clusters in labels, ignoring noise if present.
+        unique, counts = np.unique(labels, return_counts=True)
+        u_c = dict(zip(unique, counts))
+        wa = 0
+        wb = 0
+        for lab, amount in u_c.items():
+            if lab != -1:
+                wa += amount
+            else:
+                wb += amount
+        a = n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+        b = n_noise_ = list(labels).count(-1)
+        a*= wa
+        b*= wb
+
+        return 1-((b - a)/(max(a,b)) + 1)/2
+
+
+    @classmethod
+    def geo_div_wcluster(cls, uid):
+        self = cls.getInstance()
+        km = 3.8
+        min_samples = 5
+        
+        points = [self.poi_coos[lid]
+                  for lid in np.nonzero(self.training_matrix[uid])[0]
+                  # for _ in range(self.training_matrix[uid,lid])
+        ]
+        db = DBSCAN(eps=geo_utils.km_to_lat(km), min_samples=min_samples).fit(points)
+        labels = db.labels_
+        # Number of clusters in labels, ignoring noise if present.
+        unique, counts = np.unique(labels, return_counts=True)
+        u_c = dict(zip(unique, counts))
+        wa = 0
+        wb = 0
+        for lab, amount in u_c.items():
+            if lab != -1:
+                wa += amount
+            else:
+                wb += amount
+        a = n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+        b = n_noise_ = list(labels).count(-1)
+        a*= wa
+        b*= wb
+
+        return ((b - a)/(max(a,b)) + 1)/2
+
     def compute_div_propensity(self):
         func = self.GEO_METHODS.get(self.geo_div_method,
                                     lambda: "Invalid method")
@@ -176,4 +282,14 @@ class GeoDivPropensity():
         self.geo_div_propensity = run_parallel(func, args, self.CHKS)
         if self.geo_div_method == 'ildg':
             self.geo_div_propensity = self.geo_div_propensity/np.max(self.geo_div_propensity)
-        return np.array(self.geo_div_propensity)
+        self.geo_div_propensity = np.array(self.geo_div_propensity)
+
+        # bins = np.append(np.arange(0,1,1/(3-1)),1)
+        # centers = (bins[1:]+bins[:-1])/2
+        # self.geo_div_propensity = bins[np.digitize(self.geo_div_propensity, centers)]
+
+        # if self.geo_div_method == 'dbscan':
+        #     self.geo_div_propensity[self.geo_div_propensity>=0.5] = 1
+        #     self.geo_div_propensity[(self.geo_div_propensity<0.5) & (self.geo_div_propensity>=0.3)] = 0.5
+        #     self.geo_div_propensity[self.geo_div_propensity<0.3] = 0
+        return self.geo_div_propensity

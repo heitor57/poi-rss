@@ -17,14 +17,16 @@ import cat_utils
 class CatDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
-    METHODS = [# 'std_norm','ild','raw_std','num_cat',
-               'binomial'# ,'poi_ild'
+    METHODS = ['std_norm','ild','raw_std','num_cat',
+               'binomial','poi_ild'
     ]
     CAT_DIV_PROPENSITY_METHODS_PRETTY_NAME = {
         'poi_ild': 'ILD',
         'num_cat': 'Number of categories visited',
         'binomial': 'Binomial',
-        'std_norm': r'$\sigma$(STD) of categories visits'
+        'std_norm': r'$\sigma$(STD) of categories visits',
+        'raw_std': '1-std_norm',
+        'ild': 'Visited categories ILD',
     }
     @classmethod
     def getInstance(cls, *args, **kwargs):
@@ -112,7 +114,8 @@ class CatDivPropensity():
     def cat_div_num_cat(cls, uid):
         self = cls.getInstance()
         cats_visits = self.users_categories_visits[uid]
-        return len(cats_visits)/(len(self.undirected_category_tree)-1)
+        # return len(cats_visits)/(len(self.undirected_category_tree)-1)
+        return len(cats_visits)
 
     # @classmethod
     # def cat_div_binomial(cls):
@@ -138,7 +141,11 @@ class CatDivPropensity():
             self.binomial = Binomial.getInstance(self.training_matrix, self.poi_cats,
                                 div_weight, alpha)
             self.binomial.compute_all_probabilities()
-
+        if self.cat_div_method == 'num_cat':
+            self.poi_cats_median = np.median(list(map(len,self.poi_cats.values())))
+            self.visits_median = np.median(np.sum(self.training_matrix,axis=1))
+            self.num_cat_norm_value = self.poi_cats_median*self.visits_median
+            
         func = self.CAT_METHODS.get(self.cat_div_method,
                                     lambda: "Invalid method")
         # args=[(i,) for i in self.users_categories_visits]
@@ -146,14 +153,20 @@ class CatDivPropensity():
         # if self.cat_div_method == 'binomial' or self.cat_div_method == 'poi_ild':
         args=[(uid,) for uid in range(len(self.users_categories_visits))]
         self.cat_div_propensity = run_parallel(func, args, self.CHKS)
-
+        self.cat_div_propensity = np.array(self.cat_div_propensity)
+         
+        if self.cat_div_method == 'num_cat':
+            self.cat_div_propensity = 1 - np.clip(self.cat_div_propensity,None,self.num_cat_norm_value)/self.num_cat_norm_value
+        # bins = np.append(np.arange(0,1,1/(3-1)),1)
+        # centers = (bins[1:]+bins[:-1])/2
+        # self.cat_div_propensity = bins[np.digitize(self.cat_div_propensity, centers)]
         # executor = ProcessPoolExecutor()
         # futures = []
         # for cat_visits in self.users_categories_visits:
         #     futures.append(executor.submit(func, cat_visits))
         # self.cat_div_propensity = [futures[i].result()
         #                            for i in tqdm(range(len(futures)), desc='CatDivProp')]
-        return np.array(self.cat_div_propensity)
+        return self.cat_div_propensity
 
     @classmethod
     def cat_div_binomial(cls,uid):
@@ -163,4 +176,4 @@ class CatDivPropensity():
         for lid in lids:
             cats.update(self.poi_cats[lid])
         num_lids = len(lids)
-        return self.binomial.binom_div(uid, lids, num_lids, cats)
+        return 1-self.binomial.binom_div(uid, lids, num_lids, cats)
