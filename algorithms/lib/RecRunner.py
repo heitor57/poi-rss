@@ -59,6 +59,7 @@ import itertools
 import multiprocessing
 from collections import Counter
 import os
+import math
 
 import inquirer
 import numpy as np
@@ -462,12 +463,11 @@ class RecRunner():
             # "ld": {'div_weight':1},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
             "pm2": {'lambda': 1},
-            "perfectpgeocat": {'k': 10,'interval': 2,'div_weight': 0.75,'div_cat_weight': 0.05},
+            "perfectpgeocat": {'k': 10,'interval': 2,'div_weight': 0.75,'div_cat_weight': 0.05, 'train_size': 0.7},
             "pdpgeocat": {'k': 10,'interval': 2,'div_geo_cat_weight': 0.75},
             "gc": {'div_weight': 0.8},
             # "gc": {'div_weight': 1},
             "random": {'div_weight': 1},
-            "pdiscover": {''},
         }
 
     def get_base_rec_name(self):
@@ -604,6 +604,7 @@ class RecRunner():
         self.training_matrix = self.training_matrix[self.all_uids]
 
         uid_to_int = dict()
+        self.uid_to_int = uid_to_int
         for i, uid in enumerate(self.all_uids):
             uid_to_int[uid] = i
 
@@ -844,6 +845,63 @@ class RecRunner():
         del self.pm2
 
     def perfectpersongeocat(self):
+        if self.final_rec_parameters['train_size'] != None:
+            user_checkin_data = dict()
+            for uid, nuid in self.uid_to_int.items():
+                user_checkin_data[nuid] = []
+            for checkin in self.data_checkin_train:
+                try:
+                    user_checkin_data[self.uid_to_int[checkin['user_id']]].append({'poi_id':checkin['poi_id'],'date':checkin['date']})
+                except:
+                    pass
+
+            tr_checkin_data=[]
+            te_checkin_data=[]
+            TRAIN_SIZE = self.final_rec_parameters['train_size']
+            for i in tqdm(range(len(self.all_uids)),desc='train/test'):
+                user_id=i
+                checkin_list=user_checkin_data[user_id]
+                checkin_list=sorted(checkin_list, key = lambda i: i['date']) 
+                train_size=math.ceil(len(checkin_list)*TRAIN_SIZE)
+                #test_size=math.floor(len(checkin_list)*TEST_SIZE)
+                count=1
+                te_pois=set()
+                tr_pois=set()
+                initial_te_size=len(te_checkin_data)
+                final_te_size=len(te_checkin_data)
+                for checkin in checkin_list:
+                    if count<=train_size:
+                        tr_pois.add(checkin['poi_id'])
+                        tr_checkin_data.append({'user_id':user_id,'poi_id':checkin['poi_id'],'date':checkin['date']})
+                    else:
+                        te_pois.add(checkin['poi_id'])
+                        te_checkin_data.append({'user_id':user_id,'poi_id':checkin['poi_id'],'date':checkin['date']})
+                        final_te_size+=1
+                    count+=1
+                int_pois=te_pois&tr_pois
+                rel_index=0
+                for i in range(initial_te_size,final_te_size):
+                    i+=rel_index
+                    if te_checkin_data[i]['poi_id'] in int_pois:
+                        te_checkin_data.pop(i)
+                        rel_index-=1
+
+            train_ground_truth = defaultdict(set)
+            for checkin in te_checkin_data:
+                train_ground_truth[checkin['user_id']].add(checkin['poi_id'])
+            train_ground_truth = dict(train_ground_truth)
+
+            train_training_matrix = np.zeros((self.user_num, self.poi_num),dtype=int)
+            for checkin in tr_checkin_data:
+                train_training_matrix[checkin['user_id'], checkin['poi_id']] += 1
+
+            tmp_gt = self.ground_truth
+            tmp_tm = self.training_matrix
+            tmp_au = self.all_uids
+            self.ground_truth = train_ground_truth
+            self.training_matrix = train_training_matrix
+            self.all_uids = list(train_ground_truth.keys())
+
         args=[(uid,) for uid in self.all_uids]
         results = run_parallel(self.run_perfectpersongeocat,args,self.CHKS)
 
@@ -852,12 +910,18 @@ class RecRunner():
         self.perfect_parameter = dict()
         for uid,div_geo_cat_weight in zip(uids,div_geo_cat_weights):
             self.perfect_parameter[uid] = div_geo_cat_weight
+        print(list(self.perfect_parameter.keys()))
         # print(self.perfect_parameter)
         results = [r[0] for r in results]
 
         fout = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"wb")
         pickle.dump(self.perfect_parameter,fout)
         self.save_result(results,base=False)
+
+        if self.final_rec_parameters['train_size'] != None:
+            self.ground_truth = tmp_gt
+            self.training_matrix = tmp_tm
+            self.all_uids = tmp_au
 
     def pdpgeocat(self):
         args=[(uid,) for uid in self.all_uids]
@@ -3308,7 +3372,7 @@ class RecRunner():
         div_geo_cat_weight = self.div_geo_cat_weight
         # print(self.perfect_parameter)
         vals = np.array([])
-        for uid, val in self.perfect_parameter.items():
+        for uid, val in self.erfect_parameter.items():
             vals = np.append(vals,val)
         diff = div_geo_cat_weight-vals   
         unique, counts = np.unique(diff, return_counts=True)
@@ -3602,3 +3666,7 @@ class RecRunner():
             # plt.show()
             # timestamp = datetime.timestamp(datetime.now())
             fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}_{str(k)}.png",bbox_inches="tight")
+
+    def print_train_perfect(self):
+        pass
+
