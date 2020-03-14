@@ -23,7 +23,9 @@ class GeoDivPropensity():
     _instance = None
     METHODS = ['walk'# ,'num_poi','num_cat','visits','walk_raw'
                # ,'ildg'
-               ,'inverse_walk','dbscan','inv_dbscan','inv_wcluster','wcluster']
+               ,'inverse_walk',# 'dbscan','inv_dbscan','inv_wcluster','wcluster',
+               # 'perfect'
+    ]
     GEO_DIV_PROPENSITY_METHODS_PRETTY_NAME = {
         'walk': 'Mean radius of visited POIs',
         'num_poi': 'Number of visited POIs',

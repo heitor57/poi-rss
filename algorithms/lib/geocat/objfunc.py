@@ -1,6 +1,7 @@
 # Objective functions of the DivGeoCat
 import networkx as nx
 import lib.heuristics as heuristics
+import math
 
 HEURISTICS = ['local_max', 'tabu_search', 'particle_swarm']
 
@@ -568,6 +569,7 @@ def cat_weight_geocat_objective_function(poi_id,score,
                                       log_poi_ids,poi_cover,poi_neighbors,log_neighbors,
                                       div_geo_cat_weight,div_weight,current_proportionality,
                                       div_cat_weight):
+    # if not math.isnan(div_geo_cat_weight):
     NO_MEANING_VALUE = 32131
     if div_geo_cat_weight!=0:
         if div_cat_weight != 0:
@@ -590,6 +592,8 @@ def cat_weight_geocat_objective_function(poi_id,score,
 
     objective_value=cat_weight_ILD_GC_PR(score,ild_div,gc_div,pr,current_proportionality,rec_list_size,div_geo_cat_weight,div_weight,div_cat_weight)
     return objective_value
+    # else:
+    #     return score
 
 
 OBJECTIVE_FUNCTIONS = {

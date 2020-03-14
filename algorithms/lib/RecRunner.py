@@ -49,7 +49,7 @@ triangle_down_str = r'\textcolor[rgb]{0.7,00,00}{$\blacktriangledown$}'
 
 
 from abc import ABC, abstractmethod
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, Counter
 import pickle
 from concurrent.futures import ProcessPoolExecutor
 import json
@@ -66,6 +66,7 @@ import numpy as np
 from tqdm import tqdm
 from scipy.stats import describe
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 from mpl_toolkits.mplot3d import Axes3D
 from cycler import cycler
 # PALETTE = plt.get_cmap('Greys')
@@ -127,7 +128,19 @@ def gen_line_cycle(num=6):
 # my color scheme
 # ['#9595ff','#2a913e','#ffb2b2','#b5b355','#11166c','#ecd9c6','#939393']
 MY_COLOR_SCHEME = ['#939393','#9595ff','#2a913e','#b5b355','#11166c','#ffb2b2','#ecd9c6']
-def gen_bar_cycle(num=6):
+def brightness(color):
+    r = int(color[1:3],16)
+    b = int(color[3:5],16)
+    g = int(color[5:7],16)
+    return 0.2126*r + 0.0722*b + 0.7152*g
+    
+def gen_bar_cycle(num=6,ord_by_brightness=False):
+    global MY_COLOR_SCHEME
+    MY_COLOR_SCHEME = MY_COLOR_SCHEME.copy()
+    if ord_by_brightness:
+        colors_brightness = list(map(brightness,MY_COLOR_SCHEME))
+        MY_COLOR_SCHEME = [x for y, x in sorted(zip(colors_brightness, MY_COLOR_SCHEME))]
+
     arrange = np.linspace(0,1,num)
     # hatch_cycler = cycler('hatch', ['///', '--', '...','\///', 'xxx', '\\\\','None','*'][:num])
     base_cycler = cycler('zorder', [10])# *cycler('edgecolor',[BAR_EDGE_COLOR])
@@ -456,14 +469,15 @@ class RecRunner():
         return  {
             # "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'particle_swarm', 'obj_func': None, 'div_cat_weight': 0.05},
             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
-            "persongeocat": {'div_weight':0.75,'cat_div_method': 'binomial', 'geo_div_method': 'walk', 'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': 3,
-                        'norm_method': 'default'},
+            "persongeocat": {'div_weight':0.75,'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk',
+                             'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': None,
+                             'norm_method': 'default','funnel':True},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
             # "ld": {'div_weight':1},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
             "pm2": {'lambda': 1},
-            "perfectpgeocat": {'k': 10,'interval': 2,'div_weight': 0.75,'div_cat_weight': 0.05, 'train_size': 0.7},
+            "perfectpgeocat": {'k': 10,'interval': 2,'div_weight': 0.75,'div_cat_weight': 0.05, 'train_size': None},
             "pdpgeocat": {'k': 10,'interval': 2,'div_geo_cat_weight': 0.75},
             "gc": {'div_weight': 0.8},
             # "gc": {'div_weight': 1},
@@ -717,7 +731,7 @@ class RecRunner():
             self.city = 'madison'
             self.load_base()
             self.load_perfect()
-            perfect_parameter_train = self.perfect_parameter
+            perfect_parameter_train = list(self.perfect_parameter.values())
             df = self.generate_general_user_data()
 
             for key, val in bckp.items():
@@ -745,13 +759,34 @@ class RecRunner():
             self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
             return
 
+        if self.final_rec_parameters['geo_div_method'] == 'perfect':
+            tmp_final_rec = self.final_rec
+            tmp_final_rec_parameters = self.final_rec_parameters
+            self.final_rec = 'perfectpgeocat'
+            self.load_perfect()
 
-        if self.final_rec_parameters['geo_div_method'] != None:
+            b = [uid for uid in self.all_uids if uid not in self.perfect_parameter]
+            for uid in self.all_uids:
+                if uid not in self.perfect_parameter:
+                    self.perfect_parameter[uid] = 0.0
+            self.geo_div_propensity = []
+            for uid in self.all_uids:
+                self.geo_div_propensity.append(self.perfect_parameter[uid])
+            self.geo_div_propensity = np.array(self.geo_div_propensity)
+
+            self.final_rec = tmp_final_rec
+            self.final_rec_parameters = tmp_final_rec_parameters
+            
+        elif self.final_rec_parameters['geo_div_method'] != None:
             print("Computing geographic diversification propensity")
             self.pgeo_div_runner = GeoDivPropensity.getInstance(self.training_matrix, self.poi_coos,
                                                                 self.poi_cats,self.undirected_category_tree,
                                                                 self.final_rec_parameters['geo_div_method'])
-            self.geo_div_propensity = 1-self.pgeo_div_runner.compute_div_propensity()
+            self.geo_div_propensity = self.pgeo_div_runner.compute_div_propensity()
+
+            if self.final_rec_parameters['funnel'] == True:
+                self.geo_div_propensity[self.geo_div_propensity>=0.5] = self.geo_div_propensity[self.geo_div_propensity>=0.5]**self.geo_div_propensity[self.geo_div_propensity>=0.5]
+                self.geo_div_propensity[self.geo_div_propensity<0.5] = self.geo_div_propensity[self.geo_div_propensity<0.5]**(1+self.geo_div_propensity[self.geo_div_propensity<0.5])
 
         if self.final_rec_parameters['cat_div_method'] != None:
             self.pcat_div_runner = CatDivPropensity.getInstance(
@@ -762,10 +797,13 @@ class RecRunner():
             print("Computing categoric diversification propensity with",
                 self.final_rec_parameters['cat_div_method'])
             self.cat_div_propensity=self.pcat_div_runner.compute_div_propensity()
+            if self.final_rec_parameters['funnel'] == True:
+                self.cat_div_propensity[self.cat_div_propensity>=0.5] = self.cat_div_propensity[self.cat_div_propensity>=0.5]**self.cat_div_propensity[self.cat_div_propensity>=0.5]
+                self.cat_div_propensity[self.cat_div_propensity<0.5] = self.cat_div_propensity[self.cat_div_propensity<0.5]**(1+self.cat_div_propensity[self.cat_div_propensity<0.5])
 
         if self.final_rec_parameters['norm_method'] == 'default':
             if self.final_rec_parameters['cat_div_method'] == None:
-                self.div_geo_cat_weight=self.geo_div_propensity
+                self.div_geo_cat_weight=1-self.geo_div_propensity
                 self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
             elif self.final_rec_parameters['geo_div_method'] == None:
                 self.div_geo_cat_weight=self.cat_div_propensity
@@ -773,25 +811,32 @@ class RecRunner():
             else:
                 self.div_geo_cat_weight=(self.cat_div_propensity)/(self.geo_div_propensity+self.cat_div_propensity)
                 self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
+                # self.div_weight = (self.geo_div_propensity+self.cat_div_propensity)/2
                 self.div_weight[(self.geo_div_propensity==0) & (self.cat_div_propensity==0)] = 0
         elif self.final_rec_parameters['norm_method'] == 'median_quad':
             cat_div_propensity = self.cat_div_propensity
             geo_div_propensity = self.geo_div_propensity
-            cat_median = np.median(cat_div_propensity)
-            geo_median = np.median(geo_div_propensity)
+            # cat_median = np.median(cat_div_propensity)
+            # geo_median = np.median(geo_div_propensity)
+            cat_median = 0.5
+            geo_median = 0.5
             groups = dict()
             groups['geo_preference'] = (cat_div_propensity <= cat_median) & (geo_div_propensity > geo_median)
             groups['no_preference'] = ((cat_div_propensity <= cat_median) & (geo_div_propensity <= geo_median))
             groups['equal_preference'] = ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
             groups['cat_preference'] = (cat_div_propensity > cat_median) & (geo_div_propensity <= geo_median)
             self.div_geo_cat_weight=np.zeros(self.training_matrix.shape[0])
-            self.div_geo_cat_weight[groups['geo_preference']] = 1
+            self.div_geo_cat_weight[groups['geo_preference']] = 0
             self.div_geo_cat_weight[groups['equal_preference']] = 0.5
-            self.div_geo_cat_weight[groups['cat_preference']] = 0
+            self.div_geo_cat_weight[groups['cat_preference']] = 1
             self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
             self.div_weight[groups['no_preference']] = 0
+            # self.div_geo_cat_weight[groups['no_preference']] = 0.25
+            uid_group = dict()
+            for group, array in groups.items():
+                uid_group.update(dict.fromkeys(np.nonzero(array)[0],group))
             fgroups = open(self.data_directory+UTIL+f'groups_{self.get_final_rec_name()}.pickle','wb')
-            pickle.dump(groups,fgroups)
+            pickle.dump(uid_group,fgroups)
             fgroups.close()
 
         if self.final_rec_parameters['bins'] != None:
@@ -1187,6 +1232,8 @@ class RecRunner():
             
             # start_time = time.time()
             div_geo_cat_weight=self.div_geo_cat_weight[uid]
+            # if math.isnan(div_geo_cat_weight):
+            #     print(f"User {uid} with nan value")
             div_weight=self.div_weight[uid]
             predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores,
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
@@ -1421,6 +1468,7 @@ class RecRunner():
                 args=[(uid,base,k) for uid in self.all_uids]
                 results = run_parallel(self.eval,args,self.CHKSL)
                 print(pd.DataFrame([json.loads(result) for result in results]).mean().T)
+                # print(pd.DataFrame([json.loads(result) for result in results]).std().T)
                 for json_string_result in results:
                     result_out.write(json_string_result)
                 result_out.close()
@@ -1964,13 +2012,13 @@ class RecRunner():
 
     def load_perfect(self):
         final_rec = self.final_rec
-        self.final_rec = 'perfectpgeocat'
+        # self.final_rec = 'perfectpgeocat'
         fin = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"rb")
         self.perfect_parameter = pickle.load(fin)
-        vals = np.array([])
-        for uid, val in self.perfect_parameter.items():
-            vals = np.append(vals,val)
-        self.perfect_parameter = vals
+        # vals = np.array([])
+        # for uid, val in self.perfect_parameter.items():
+        #     vals = np.append(vals,val)
+        # self.perfect_parameter = vals
         # self.perfect_parameter = pd.Series(self.perfect_parameter)
         self.final_rec = final_rec
     
@@ -1978,11 +2026,11 @@ class RecRunner():
         # self.base_rec = 'usg'
 
         self.load_perfect()
-        self.perfect_parameter = pd.Series(self.perfect_parameter)
+        self.perfect_parameter = pd.Series(self.perfect_parameter.values())
 
         df_poly=self.generate_general_user_data()
 
-        correlations = df_poly.corrwith(self.perfect_parameter)
+        correlations = df_poly.corrwith(list(self.perfect_parameter.values()))
         print(correlations)
         print(correlations.idxmax(), correlations.max())
 
@@ -2022,7 +2070,7 @@ class RecRunner():
 
         df_test = self.generate_general_user_data()
         self.load_perfect()
-        perfect_parameter_test = self.perfect_parameter
+        perfect_parameter_test = list(self.perfect_parameter.values())
         perfect_parameter_train = np.array([])
         df = pd.DataFrame()
         for city in experiment_constants.CITIES:
@@ -2030,7 +2078,7 @@ class RecRunner():
                 self.city = city
                 self.load_base(user_data=True)
                 self.load_perfect()
-                perfect_parameter_train = np.append(perfect_parameter_train,self.perfect_parameter)
+                perfect_parameter_train = np.append(perfect_parameter_train,list(self.perfect_parameter.values()))
                 df = df.append(self.generate_general_user_data(), ignore_index=True)
 
         # print(perfect_parameter_train)
@@ -2599,7 +2647,15 @@ class RecRunner():
     #                 ax.annotate("Correlation: %f"%(scipy.stats.pearsonr(geo_div_method1,geo_div_method2)[0]), xy=(0, 0), xytext=(0,0),zorder = 21)
     #                 fig.savefig(self.data_directory+IMG+f"{self.city}_{geo_div_method1}_{geo_div_method2}_corr.png")
     
-    def plot_geo_cat_methods(self):
+    def plot_geo_cat_methods(self,diff_to_optimal=False,default_label_axis=True,default_legend=True,plot_ord=False,plot_cdf=False):
+
+        if diff_to_optimal:
+            final_rec = self.final_rec
+            self.final_rec = 'perfectpgeocat'
+            self.load_perfect()
+            perfect_parameter = self.perfect_parameter
+            self.final_rec = final_rec
+        
         questions = [
         inquirer.Checkbox('geo_div_method',
                             message="Geographical diversification method",
@@ -2644,46 +2700,107 @@ class RecRunner():
                 geo_div_propensity = geo_div_propensities[geo_div_method]
                 cat_div_propensity = cat_div_propensities[cat_div_method]
                 fig = plt.figure(figsize=(8,8))
+
+                plt.rcParams.update({'font.size': 15})
                 ax = fig.add_subplot(111)
                 # ax.set_ylim(0,1)
-                cat_median = np.median(cat_div_propensity)
-                geo_median = np.median(geo_div_propensity)
+                # cat_median = np.median(cat_div_propensity)
+                # geo_median = np.median(geo_div_propensity)
+
+                cat_median = 0.5
+                geo_median = 0.5
                 groups = dict()
                 
+                groups['cat_preference'] = (cat_div_propensity > cat_median) & (geo_div_propensity <= geo_median)
                 groups['geo_preference'] = (cat_div_propensity <= cat_median) & (geo_div_propensity > geo_median)
 
-                groups['no_preference'] = ((cat_div_propensity <= cat_median) & (geo_div_propensity <= geo_median))
                 groups['equal_preference'] = ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
+                groups['no_preference'] = ((cat_div_propensity <= cat_median) & (geo_div_propensity <= geo_median))
 
-                groups['cat_preference'] = (cat_div_propensity > cat_median) & (geo_div_propensity <= geo_median)
 
                 assert(np.max(groups['no_preference'] & groups['cat_preference'] & groups['geo_preference'] & groups['equal_preference']) == 0)
-                colors = np.linspace(0.8,0.4,len(groups))
+                colors = MY_COLOR_SCHEME[:len(groups)]
                 for (group, mask), color in zip(groups.items(),colors):
                     # print(mask)
                     # print(len(cat_div_propensity[mask]))
                     # print(len(geo_div_propensity[mask]))
-                    ax.scatter(cat_div_propensity[mask],geo_div_propensity[mask],color=str(color))
+                    ax.scatter(cat_div_propensity[mask],geo_div_propensity[mask],color=color)
                 # ax.plot([cat_median]*2,[0,1],color='k')
                 # ax.plot([0,1],[geo_median]*2,color='k')
                 # ax.plot([cat_median]*2,ax.get_ylim(),color='k')
                 # ax.plot(ax.get_ylim(),[geo_median]*2,color='k')
                 # ax.set_xlim([min(cat_div_propensity),max(cat_div_propensity)])
                 # ax.set_ylim([min(geo_div_propensity),max(geo_div_propensity)])
-                ax.set_xlabel('Categorical method ('+CatDivPropensity.CAT_DIV_PROPENSITY_METHODS_PRETTY_NAME[cat_div_method]+')')
-                ax.set_ylabel('Geographic method ('+GeoDivPropensity.GEO_DIV_PROPENSITY_METHODS_PRETTY_NAME[geo_div_method]+')')
+                if not default_label_axis:
+                    ax.set_xlabel('Categorical method ('+CatDivPropensity.CAT_DIV_PROPENSITY_METHODS_PRETTY_NAME[cat_div_method]+')')
+                    ax.set_ylabel('Geographic method ('+GeoDivPropensity.GEO_DIV_PROPENSITY_METHODS_PRETTY_NAME[geo_div_method]+')')
+                else:
+                    ax.set_xlabel(r'Parameter of Cat-Diversification ( $\theta_{cat}$ )')
+                    ax.set_ylabel(r'Parameter of Geo-Diversification ( $\theta_{geo}$ )')
+                    
                 # ax.set_xlim(min(np.min(cat_div_propensity),0),max(np.max(cat_div_propensity),1))
                 # ax.set_ylim(min(np.min(geo_div_propensity),0),max(np.max(geo_div_propensity),1))
 
-                ax.set_title("Correlation: %f"%(scipy.stats.pearsonr(cat_div_propensity,geo_div_propensity)[0]))
-                ax.legend((f"Geographical preference ({np.count_nonzero(groups['geo_preference'])} people's)",
-                           f"No preference ({np.count_nonzero(groups['no_preference'])} people's)",
-                           f"Equal preference ({np.count_nonzero(groups['equal_preference'])} people's)",
-                           f"Categorical preference ({np.count_nonzero(groups['cat_preference'])} people's)"))
+                # ax.set_title("Correlation: %f"%(scipy.stats.pearsonr(cat_div_propensity,geo_div_propensity)[0]))
+                ax.annotate("Correlation: %f"%(scipy.stats.pearsonr(cat_div_propensity,geo_div_propensity)[0]),
+                                (0,0))
+                if not default_legend:
+                    ax.legend((
+                        f"Categorical preference ({np.count_nonzero(groups['cat_preference'])} users)",
+                        f"Geographical preference ({np.count_nonzero(groups['geo_preference'])} users)",
+                        f"Equal preference ({np.count_nonzero(groups['equal_preference'])} users)",
+                        f"No preference ({np.count_nonzero(groups['no_preference'])} users)",
+                    ))
+                else:
+                    ax.legend((
+                        f"Group 1 ({np.count_nonzero(groups['cat_preference'])} users)",
+                        f"Group 2 ({np.count_nonzero(groups['geo_preference'])} users)",
+                        f"Group 3 ({np.count_nonzero(groups['equal_preference'])} users)",
+                        f"Group 4 ({np.count_nonzero(groups['no_preference'])} users)",
+                    ),
+                              bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                              mode="expand", borderaxespad=0, ncol=2
+                    )
                 ax.plot([cat_median]*2,[min(geo_div_propensity),max(geo_div_propensity)],color='k')
                 ax.plot([min(cat_div_propensity),max(cat_div_propensity)],[geo_median]*2,color='k')
 
-                fig.savefig(self.data_directory+IMG+f"{self.city}_{geo_div_method}_{cat_div_method}.png")
+                fig.savefig(self.data_directory+IMG+f"{self.city}_{geo_div_method}_{cat_div_method}.png",bbox_inches="tight")
+                fig.savefig(self.data_directory+IMG+f"{self.city}_{geo_div_method}_{cat_div_method}.eps",bbox_inches="tight")
+
+                if plot_ord:
+                    fig = plt.figure(figsize=(8,8))
+                    ax = fig.add_subplot(111)
+                    val_exp = cat_div_propensity/(cat_div_propensity+geo_div_propensity)
+                    ax.plot(100*np.array(self.all_uids)/len(self.all_uids),np.sort(val_exp),color='k')
+                    ax.set_xlabel("Users (%)")
+                    ax.set_ylabel("$\delta$")
+                    ax.xaxis.set_major_formatter(mtick.PercentFormatter())
+                    fig.savefig(self.data_directory+IMG+f"{self.city}_ord_{geo_div_method}_{cat_div_method}.png",bbox_inches="tight")
+                    fig.savefig(self.data_directory+IMG+f"{self.city}_ord_{geo_div_method}_{cat_div_method}.eps",bbox_inches="tight")
+
+                if plot_cdf:
+                    fig = plt.figure(figsize=(8,8))
+                    ax = fig.add_subplot(111)
+                    num_users = len(self.all_uids)
+                    xs = np.linspace(0,1,21)
+                    ys = []
+                    for x in xs:
+                        ys.append(len(np.nonzero(val_exp<=x)[0])/num_users)
+                    ax.plot(xs,ys,color='k',marker='o')
+                    ax.set_xlabel("x")
+                    ax.set_ylabel("P($\delta \leq x)$")
+                    fig.savefig(self.data_directory+IMG+f"{self.city}_cdf_{geo_div_method}_{cat_div_method}.png",bbox_inches="tight")
+                    fig.savefig(self.data_directory+IMG+f"{self.city}_cdf_{geo_div_method}_{cat_div_method}.eps",bbox_inches="tight")
+
+                if diff_to_optimal:
+                    fig = plt.figure(figsize=(8,8))
+                    ax = fig.add_subplot(111)
+                    ax.plot(self.all_uids,np.sort(cat_div_propensity/(cat_div_propensity+geo_div_propensity) - list(perfect_parameter.values())),color='k')
+                    ax.set_xlabel("Users")
+                    ax.set_ylabel("$\delta$ diff to optimal")
+                    fig.savefig(self.data_directory+IMG+f"{self.city}_ord_diff_{geo_div_method}_{cat_div_method}.png")
+
+
     def plot_usg_hyperparameter(self):
         KS = [10]
         inl = np.around(np.linspace(0,1,6),2)
@@ -3426,7 +3543,7 @@ class RecRunner():
 
                 for j,key in enumerate(metrics_mean[rec_using]):
                     metrics_mean[rec_using][key]/=len(metrics)
-            styles = gen_bar_cycle(len(self.metrics))()
+            styles = gen_bar_cycle(len(self.metrics),ord_by_brightness=True)()
 
             metrics_utility_score=dict()
             for rec_using in metrics_mean:
@@ -3615,58 +3732,120 @@ class RecRunner():
 
         pass
     
-    def plot_person_metrics_groups(self,prefix_name='person_groups',ncol=3):
-        groups_unique = np.unique(self.div_geo_cat_weight)
+    def plot_person_metrics_groups(self,prefix_name='person_groups',ncol=1):
+        # self.metrics_name = ['precision','recall']
+        self.final_rec_parameters = {'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk', 'norm_method': 'median_quad','bins': None,'funnel':None}
+        # self.load_metrics(base=False,name_type=NameType.FULL)
+        uid_group = self.get_groups()
+        groups_count = Counter(uid_group.values())
+        unique_groups = list(groups_count.keys())
         palette = plt.get_cmap(CMAP_NAME)
         for i,k in enumerate(experiment_constants.METRICS_K):
             metrics_mean=dict()
             for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
                 metrics=metrics[k]
                 
-                metrics_mean[rec_using]=defaultdict(dict)
+                metrics_mean[rec_using]=defaultdict(lambda: defaultdict(float))
                 for obj in metrics:
-                    group = self.div_geo_cat_weight[obj['user_id']]
+                    group = uid_group[obj['user_id']]
                     for key in self.metrics_name:
-                        metrics_mean[rec_using][key][group]+=obj[key]
+                        metrics_mean[rec_using][group][key]+=obj[key]
                 
-                for j,key in enumerate(metrics_mean[rec_using]):
-                    for group in groups_unique:
-                        metrics_mean[rec_using][key][group]/=len(metrics)
-                
-                    #print(f"{key}:{metrics_mean[rec_using][key]}")
-            fig = plt.figure()
-            ax=fig.add_subplot(111)
-            # ax.grid(alpha=MPL_ALPHA)
-            num_recs = len(groups_unique)
-            barWidth= 1-num_recs/(1+num_recs)
-            N=len(self.metrics_name)
-            indexes=np.arange(N)
-            i=0
-            styles = gen_bar_cycle(num_recs)()
-            for rec_using,rec_metrics in metrics_mean.items():
-                for group_metrics in rec_metrics:
-                    print(f"{rec_using} at @{k}")
-                    print(rec_metrics)
-                    ax.bar(indexes+i*barWidth,rec_metrics.values(),barWidth,label=rec_using,**next(styles))
-                    #ax.bar(indexes[j]+i*barWidth,np.mean(list(rec_metrics.values())),barWidth,label=rec_using,color=palette(i))
+                for j,key in enumerate(self.metrics_name):
+                    for group in unique_groups:
+                        metrics_mean[rec_using][group][key]/=groups_count[group]
+
+            # reference_recommender = list(metrics_mean.keys())[0]
+            # reference_vals = metrics_mean.pop(reference_recommender)
+            for group in unique_groups:
+                fig = plt.figure()
+                ax=fig.add_subplot(111)
+                # ax.grid(alpha=MPL_ALPHA)
+                num_recs = len(metrics_mean)
+                barWidth= 1-num_recs/(1+num_recs)
+                N=len(self.metrics_name)
+                indexes=np.arange(N)
+                i=0
+                styles = gen_bar_cycle(num_recs)()
+
+                for rec_using,rec_metrics in metrics_mean.items():
+                    print(group)
+                    group_metrics = np.array(list(rec_metrics[group].values()))
+                    # print(f"{rec_using} at @{k}")
+                    # print(rec_metrics)
+                    # tmp_ref_val = np.array(list(reference_vals[group].values()))
+                    # print(tmp_ref_val)
+                    # vals = (group_metrics - tmp_ref_val)/tmp_ref_val
+                    vals= group_metrics
+                    ax.bar(indexes+i*barWidth,vals,barWidth,label=rec_using,**next(styles))
                     i+=1
 
-            # #ax.set_xticks(np.arange(N+1)+barWidth*(np.floor((len(self.metrics))/2)-1)+barWidth/2)
-            # ax.set_xticks(np.arange(N+1)+barWidth*(((len(self.metrics))/2)-1)+barWidth/2)
-            # # ax.legend((p1[0], p2[0]), self.metrics_name)
-            # ax.legend(tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
-            #           mode="expand", borderaxespad=0, ncol=ncol)
-            # # ax.legend(tuple(map(lambda name: METRICS_PRETTY[name],self.metrics.keys())))
-            # ax.set_xticklabels(map(lambda x: f'{x}@{k}',list(map(lambda name: METRICS_PRETTY[name],self.metrics_name))))
-            # # ax.set_title(f"at @{k}, {self.city}")
-            # ax.set_ylabel("Mean Value")
-            # ax.set_ylim(0,1)
-            # ax.set_xlim(-barWidth,len(self.metrics_name)-1+(len(self.metrics)-1)*barWidth+barWidth)
-            # fig.show()
-            # plt.show()
-            # timestamp = datetime.timestamp(datetime.now())
-            fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}_{str(k)}.png",bbox_inches="tight")
+                ax.set_xticks(np.arange(N+1)+barWidth*(((num_recs)/2)-1)+barWidth/2)
+                ax.legend(tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                        mode="expand", borderaxespad=0, ncol=ncol)
+                ax.set_xticklabels(map(lambda x: f'{x}@{k}',list(map(lambda name: METRICS_PRETTY[name],self.metrics_name))))
+                ax.set_ylabel("Mean Value")
+                ax.set_ylim(0,1)
+                ax.set_xlim(-barWidth,len(self.metrics_name)-1+(num_recs-1)*barWidth+barWidth)
+                ax.set_title(f'{group}')
+                fig.savefig(self.data_directory+f"result/img/{prefix_name}_{group}_{self.base_rec}_{self.city}_{str(k)}.png",bbox_inches="tight")
 
     def print_train_perfect(self):
-        pass
+        self.load_perfect()
+        a = list(self.perfect_parameter.values())
+        perf1 = self.perfect_parameter
+        unique, counts = np.unique(a, return_counts=True)
+        print(dict(zip(unique, counts)))
+        b= [uid for uid in self.all_uids if uid not in self.perfect_parameter]
+        print(b)
 
+        self.final_rec_parameters['train_size'] = None
+        self.load_perfect()
+        perf2 = self.perfect_parameter
+        a = list(self.perfect_parameter.values())
+        a = set(np.nonzero(a)[0])
+        inters = a & set(b)
+        print(f'number of equals(a&b): {len(inters)}, a length: {len(a)}, b length: {len(b)}')
+        print('intersection:',inters)
+
+
+        for uid in self.all_uids:
+            if uid not in perf1:
+                perf1[uid] = 0.5
+            
+        # perf2 = {key: val for key, val in zip(perf1.keys(),perf2.values())}
+
+        lab_enc = preprocessing.LabelEncoder()
+
+        print(confusion_matrix(lab_enc.fit_transform(list(perf2.values())),
+                               lab_enc.transform(list(perf1.values()))))
+
+    def get_groups(self):
+        fgroups = open(self.data_directory+UTIL+f'groups_{self.get_final_rec_name()}.pickle','rb')
+        groups=pickle.load(fgroups)
+        fgroups.close()
+        return groups
+
+
+    def plot_cities_cdf(self):
+        plt.rcParams.update({'font.size': 17})
+        cities = ['lasvegas','phoenix']
+        fig = plt.figure(figsize=(8,8))
+        ax = fig.add_subplot(111)
+        colors = MY_COLOR_SCHEME[:len(cities)]
+        xs = np.linspace(0,1,21)
+        for city, color in zip(cities,colors):
+            self.city = city
+            self.load_base()
+            self.persongeocat_preprocess()
+            val_exp = self.div_geo_cat_weight
+            num_users = len(self.all_uids)
+            ys = []
+            for x in xs:
+                ys.append(len(np.nonzero(val_exp<=x)[0])/num_users)
+            ax.plot(xs,ys,color=color,marker='o')
+        ax.legend(list(map(CITIES_PRETTY.get,cities)))
+        ax.set_xlabel("x")
+        ax.set_ylabel("P($\delta \leq x)$")
+        fig.savefig(self.data_directory+IMG+f"{'_'.join(cities)}_cdf_{self.final_rec_parameters['geo_div_method']}_{self.final_rec_parameters['cat_div_method']}.png",bbox_inches="tight")
+        fig.savefig(self.data_directory+IMG+f"{'_'.join(cities)}_cdf_{self.final_rec_parameters['geo_div_method']}_{self.final_rec_parameters['cat_div_method']}.eps",bbox_inches="tight")

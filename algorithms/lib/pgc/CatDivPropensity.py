@@ -17,8 +17,9 @@ import cat_utils
 class CatDivPropensity():
     CHKS = 50 # chunk size for parallel pool executor
     _instance = None
-    METHODS = ['std_norm','ild','raw_std','num_cat',
-               'binomial','poi_ild'
+    METHODS = [# 'std_norm','ild','raw_std',
+               'num_cat','inv_num_cat',
+               # 'binomial','poi_ild'
     ]
     CAT_DIV_PROPENSITY_METHODS_PRETTY_NAME = {
         'poi_ild': 'ILD',
@@ -27,6 +28,7 @@ class CatDivPropensity():
         'std_norm': r'$\sigma$(STD) of categories visits',
         'raw_std': '1-std_norm',
         'ild': 'Visited categories ILD',
+        'inv_num_cat': 'Inverse number of categories visited',
     }
     @classmethod
     def getInstance(cls, *args, **kwargs):
@@ -49,6 +51,7 @@ class CatDivPropensity():
             "num_cat": self.cat_div_num_cat,
             "binomial": self.cat_div_binomial,
             "poi_ild": self.cat_div_poi_ild,
+            "inv_num_cat": self.cat_div_num_cat
         }
 
         self.poi_cats = poi_cats
@@ -117,6 +120,14 @@ class CatDivPropensity():
         # return len(cats_visits)/(len(self.undirected_category_tree)-1)
         return len(cats_visits)
 
+    @classmethod
+    def cat_div_inv_num_cat(cls, uid):
+        self = cls.getInstance()
+        cats_visits = self.users_categories_visits[uid]
+        # return len(cats_visits)/(len(self.undirected_category_tree)-1)
+        return len(cats_visits)
+
+
     # @classmethod
     # def cat_div_binomial(cls):
     #     self = cls.getInstance()
@@ -141,7 +152,7 @@ class CatDivPropensity():
             self.binomial = Binomial.getInstance(self.training_matrix, self.poi_cats,
                                 div_weight, alpha)
             self.binomial.compute_all_probabilities()
-        if self.cat_div_method == 'num_cat':
+        if self.cat_div_method in ['num_cat','inv_num_cat']:
             self.poi_cats_median = np.median(list(map(len,self.poi_cats.values())))
             self.visits_median = np.median(np.sum(self.training_matrix,axis=1))
             self.num_cat_norm_value = self.poi_cats_median*self.visits_median
@@ -156,7 +167,9 @@ class CatDivPropensity():
         self.cat_div_propensity = np.array(self.cat_div_propensity)
          
         if self.cat_div_method == 'num_cat':
-            self.cat_div_propensity = 1 - np.clip(self.cat_div_propensity,None,self.num_cat_norm_value)/self.num_cat_norm_value
+            self.cat_div_propensity = np.clip(self.cat_div_propensity,None,self.num_cat_norm_value)/self.num_cat_norm_value
+        elif self.cat_div_method == 'inv_num_cat':
+            self.cat_div_propensity = 1-np.clip(self.cat_div_propensity,None,self.num_cat_norm_value)/self.num_cat_norm_value
         # bins = np.append(np.arange(0,1,1/(3-1)),1)
         # centers = (bins[1:]+bins[:-1])/2
         # self.cat_div_propensity = bins[np.digitize(self.cat_div_propensity, centers)]
