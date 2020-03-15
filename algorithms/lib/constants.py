@@ -34,7 +34,7 @@ RECS_PRETTY = {
     "usg": "USG",
     "mostpopular": "MostPopular",
     "geocat": "DisCovER",
-    "persongeocat": "PersonGeoCat",
+    "persongeocat": "PersonDisCovER",
     "geodiv": "Geo-Div(PR)",
     "ld": "LD",
     "binomial": "Binom",
@@ -73,4 +73,11 @@ SIZE_AWARENESS_RECS = { # unused
     "perfectpgeocat": False,
     "pdpgeocat": False,
     "geosoca": False,
+}
+
+GROUP_ID = {
+    'cat_preference': '1',
+    'geo_preference': '2',
+    'geocat_preference': '3',
+    'no_preference': '4',
 }
