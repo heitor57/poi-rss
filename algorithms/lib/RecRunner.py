@@ -71,9 +71,11 @@ from mpl_toolkits.mplot3d import Axes3D
 from cycler import cycler
 # PALETTE = plt.get_cmap('Greys')
 # monochrome = (cycler('color', ['k']) * cycler('linestyle', ['-.', '--','-', ':', ]) * cycler('marker', [',','.','^']))
-plt.rcParams['font.size'] = 11
-plt.rcParams['legend.frameon'] = True
-plt.rcParams['legend.framealpha'] = 0.5
+# plt.rcParams['font.size'] = 11
+# plt.rcParams['legend.frameon'] = True
+plt.rcParams['legend.framealpha'] = 1.0
+# plt.rcParams['legend.shadow'] = True
+plt.rcParams['legend.fancybox'] = False
 # plt.rcParams['axes.grid'] = True
 # plt.rcParams['axes.prop_cycle'] = monochrome
 # plt.rcParams['axes.spines.top'] = False
@@ -133,13 +135,19 @@ def brightness(color):
     b = int(color[3:5],16)
     g = int(color[5:7],16)
     return 0.2126*r + 0.0722*b + 0.7152*g
-    
+
+def ord_scheme_brightness(color_scheme):
+    colors_brightness = list(map(brightness,MY_COLOR_SCHEME))
+    color_scheme = [x for y, x in sorted(zip(colors_brightness, color_scheme))]
+    return color_scheme
+
 def gen_bar_cycle(num=6,ord_by_brightness=False):
     global MY_COLOR_SCHEME
     MY_COLOR_SCHEME = MY_COLOR_SCHEME.copy()
     if ord_by_brightness:
-        colors_brightness = list(map(brightness,MY_COLOR_SCHEME))
-        MY_COLOR_SCHEME = [x for y, x in sorted(zip(colors_brightness, MY_COLOR_SCHEME))]
+        MY_COLOR_SCHEME=ord_scheme_brightness(MY_COLOR_SCHEME)
+        # colors_brightness = list(map(brightness,MY_COLOR_SCHEME))
+        # MY_COLOR_SCHEME = [x for y, x in sorted(zip(colors_brightness, MY_COLOR_SCHEME))]
 
     arrange = np.linspace(0,1,num)
     # hatch_cycler = cycler('hatch', ['///', '--', '...','\///', 'xxx', '\\\\','None','*'][:num])
@@ -201,6 +209,7 @@ import imblearn.datasets
 import imblearn.over_sampling
 import imblearn.under_sampling
 import scipy.stats
+from matplotlib.legend import Legend
 
 import cat_utils
 from usg.UserBasedCF import UserBasedCF
@@ -209,7 +218,7 @@ from usg.PowerLaw import PowerLaw
 import geocat.objfunc as gcobjfunc
 from pgc.GeoDivPropensity import GeoDivPropensity
 from pgc.CatDivPropensity import CatDivPropensity
-from constants import experiment_constants, METRICS_PRETTY, RECS_PRETTY, CITIES_PRETTY, HEURISTICS_PRETTY
+from constants import experiment_constants, METRICS_PRETTY, RECS_PRETTY, CITIES_PRETTY, HEURISTICS_PRETTY, GROUP_ID
 import metrics
 from geocat.Binomial import Binomial
 from geocat.Pm2 import Pm2
@@ -222,6 +231,7 @@ from Arrow3D import Arrow3D
 from geocat.gc import gc_diversifier
 import geo_utils
 from geocat.random import random_diversifier
+from HandlerSquare import HandlerSquare
 CMAP_NAME = 'viridis'
 
 DATA_DIRECTORY = '../data'  # directory with all data
@@ -471,7 +481,7 @@ class RecRunner():
             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
             "persongeocat": {'div_weight':0.75,'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk',
                              'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': None,
-                             'norm_method': 'default','funnel':True},
+                             'norm_method': 'default','funnel':None},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
             # "ld": {'div_weight':1},
@@ -809,11 +819,24 @@ class RecRunner():
                 self.div_geo_cat_weight=self.cat_div_propensity
                 self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
             else:
-                self.div_geo_cat_weight=(self.cat_div_propensity)/(self.geo_div_propensity+self.cat_div_propensity)
+                # self.div_geo_cat_weight=(self.cat_div_propensity)/(self.geo_div_propensity+self.cat_div_propensity)
+                self.div_geo_cat_weight=self.cat_div_propensity*self.geo_div_propensity
                 self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
                 # self.div_weight = (self.geo_div_propensity+self.cat_div_propensity)/2
                 self.div_weight[(self.geo_div_propensity==0) & (self.cat_div_propensity==0)] = 0
-        elif self.final_rec_parameters['norm_method'] == 'median_quad':
+                # groups = dict()
+                # groups['geocat_preference'] = (self.div_geo_cat_weight >= 0.4) & (self.div_geo_cat_weight < 0.6)
+                # groups['geo_preference'] = self.div_geo_cat_weight < 0.4
+                # groups['cat_preference'] = self.div_geo_cat_weight >= 0.6
+
+                # uid_group = dict()
+                # for group, array in groups.items():
+                #     uid_group.update(dict.fromkeys(np.nonzero(array)[0],group))
+                # fgroups = open(self.data_directory+UTIL+f'groups_{self.get_final_rec_name()}.pickle','wb')
+                # pickle.dump(uid_group,fgroups)
+                # fgroups.close()
+            
+        elif self.final_rec_parameters['norm_method'] == 'quadrant':
             cat_div_propensity = self.cat_div_propensity
             geo_div_propensity = self.geo_div_propensity
             # cat_median = np.median(cat_div_propensity)
@@ -823,11 +846,11 @@ class RecRunner():
             groups = dict()
             groups['geo_preference'] = (cat_div_propensity <= cat_median) & (geo_div_propensity > geo_median)
             groups['no_preference'] = ((cat_div_propensity <= cat_median) & (geo_div_propensity <= geo_median))
-            groups['equal_preference'] = ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
+            groups['geocat_preference'] = ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
             groups['cat_preference'] = (cat_div_propensity > cat_median) & (geo_div_propensity <= geo_median)
             self.div_geo_cat_weight=np.zeros(self.training_matrix.shape[0])
             self.div_geo_cat_weight[groups['geo_preference']] = 0
-            self.div_geo_cat_weight[groups['equal_preference']] = 0.5
+            self.div_geo_cat_weight[groups['geocat_preference']] = 0.5
             self.div_geo_cat_weight[groups['cat_preference']] = 1
             self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
             self.div_weight[groups['no_preference']] = 0
@@ -2343,7 +2366,7 @@ class RecRunner():
             timestamp = datetime.timestamp(datetime.now())
             fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}_{str(k)}.png",bbox_inches="tight")
 
-    def plot_maut(self,prefix_name='maut',ncol=4,print_times=True,print_text=True):
+    def plot_maut(self,prefix_name='maut',ncol=4,print_times=False,print_text=True):
         # palette = plt.get_cmap(CMAP_NAME)
         fig = plt.figure()
         ax=fig.add_subplot(111)
@@ -2402,9 +2425,9 @@ class RecRunner():
         ax.legend(tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                   mode="expand", borderaxespad=0, ncol=ncol)
         # ax.legend(tuple(map(lambda name: METRICS_PRETTY[name],self.metrics.keys())))
-        ax.set_xticklabels(['MAUT@5','MAUT@10','MAUT@20'],fontsize=16)
+        ax.set_xticklabels(['@5','@10','@20'],fontsize=16)
         # ax.set_title(f"at @{k}, {self.city}")
-        ax.set_ylabel("Mean Value",fontsize=18)
+        ax.set_ylabel("MAUT",fontsize=18)
         ax.set_ylim(0,1)
         ax.set_xlim(-barWidth,len(experiment_constants.METRICS_K)-1+(len(self.metrics)-1)*barWidth+barWidth)
 
@@ -2714,11 +2737,11 @@ class RecRunner():
                 groups['cat_preference'] = (cat_div_propensity > cat_median) & (geo_div_propensity <= geo_median)
                 groups['geo_preference'] = (cat_div_propensity <= cat_median) & (geo_div_propensity > geo_median)
 
-                groups['equal_preference'] = ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
+                groups['geocat_preference'] = ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
                 groups['no_preference'] = ((cat_div_propensity <= cat_median) & (geo_div_propensity <= geo_median))
 
 
-                assert(np.max(groups['no_preference'] & groups['cat_preference'] & groups['geo_preference'] & groups['equal_preference']) == 0)
+                assert(np.max(groups['no_preference'] & groups['cat_preference'] & groups['geo_preference'] & groups['geocat_preference']) == 0)
                 colors = MY_COLOR_SCHEME[:len(groups)]
                 for (group, mask), color in zip(groups.items(),colors):
                     # print(mask)
@@ -2748,14 +2771,14 @@ class RecRunner():
                     ax.legend((
                         f"Categorical preference ({np.count_nonzero(groups['cat_preference'])} users)",
                         f"Geographical preference ({np.count_nonzero(groups['geo_preference'])} users)",
-                        f"Equal preference ({np.count_nonzero(groups['equal_preference'])} users)",
+                        f"Equal preference ({np.count_nonzero(groups['geocat_preference'])} users)",
                         f"No preference ({np.count_nonzero(groups['no_preference'])} users)",
                     ))
                 else:
                     ax.legend((
                         f"Group 1 ({np.count_nonzero(groups['cat_preference'])} users)",
                         f"Group 2 ({np.count_nonzero(groups['geo_preference'])} users)",
-                        f"Group 3 ({np.count_nonzero(groups['equal_preference'])} users)",
+                        f"Group 3 ({np.count_nonzero(groups['geocat_preference'])} users)",
                         f"Group 4 ({np.count_nonzero(groups['no_preference'])} users)",
                     ),
                               bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
@@ -3731,21 +3754,28 @@ class RecRunner():
         fig.savefig(self.data_directory+f"result/img/visits_{self.city}.png",bbox_inches="tight")
 
         pass
-    
-    def plot_person_metrics_groups(self,prefix_name='person_groups',ncol=1):
+
+    # Plot mean of groups, and groups by file
+    def plot_person_metrics_groups(self,prefix_name='person_groups',ncol=3):
         # self.metrics_name = ['precision','recall']
-        self.final_rec_parameters = {'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk', 'norm_method': 'median_quad','bins': None,'funnel':None}
+        self.final_rec_parameters = {'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk', 'norm_method': 'quadrant','bins': None,'funnel':None}
+        # self.final_rec_parameters = {'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk', 'norm_method': 'default','bins': None,'funnel':None}
         # self.load_metrics(base=False,name_type=NameType.FULL)
         uid_group = self.get_groups()
         groups_count = Counter(uid_group.values())
         unique_groups = list(groups_count.keys())
         palette = plt.get_cmap(CMAP_NAME)
+
+        plt.rcParams.update({'font.size': 14})
         for i,k in enumerate(experiment_constants.METRICS_K):
             metrics_mean=dict()
+
+            groups_mean = dict()
             for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
                 metrics=metrics[k]
                 
                 metrics_mean[rec_using]=defaultdict(lambda: defaultdict(float))
+                groups_mean[rec_using] = defaultdict(float)
                 for obj in metrics:
                     group = uid_group[obj['user_id']]
                     for key in self.metrics_name:
@@ -3755,8 +3785,46 @@ class RecRunner():
                     for group in unique_groups:
                         metrics_mean[rec_using][group][key]/=groups_count[group]
 
-            # reference_recommender = list(metrics_mean.keys())[0]
-            # reference_vals = metrics_mean.pop(reference_recommender)
+                for j,key in enumerate(self.metrics_name):
+                    groups_mean[rec_using][key] = 0
+                    for group in unique_groups:
+                        groups_mean[rec_using][key] += metrics_mean[rec_using][group][key]
+                    groups_mean[rec_using][key] /= len(unique_groups)
+
+            reference_recommender = list(metrics_mean.keys())[0]
+            reference_vals = metrics_mean.pop(reference_recommender)
+
+            group_reference_recommender = list(groups_mean.keys())[0]
+            group_reference_vals = groups_mean.pop(reference_recommender)
+
+            fig = plt.figure()
+            ax=fig.add_subplot(111)
+            # ax.grid(alpha=MPL_ALPHA)
+            num_recs = len(groups_mean)
+            barWidth= 1-num_recs/(1+num_recs)
+            N=len(self.metrics_name)
+            indexes=np.arange(N)
+            i=0
+            styles = gen_bar_cycle(num_recs)()
+
+            for rec_using,rec_metrics in groups_mean.items():
+                group_metrics = np.array(list(rec_metrics.values()))
+                tmp_ref_val = np.array(list(group_reference_vals.values()))
+                vals = 100*(group_metrics - tmp_ref_val)/tmp_ref_val
+                ax.bar(indexes+i*barWidth,vals,barWidth,label=rec_using,**next(styles))
+                i+=1
+
+            ax.set_xticks(np.arange(N+1)+barWidth*(((num_recs)/2)-1)+barWidth/2)
+            ax.legend(tuple(groups_mean.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                    mode="expand", borderaxespad=0, ncol=ncol)
+            ax.set_xticklabels(map(lambda x: f'{x}@{k}',list(map(lambda name: METRICS_PRETTY[name],self.metrics_name))))
+            ax.set_ylabel(f"Relative diff w.r.t. {group_reference_recommender}")
+            ax.yaxis.set_major_formatter(mtick.PercentFormatter())
+            ax.set_xlim(-barWidth,len(self.metrics_name)-1+(num_recs-1)*barWidth+barWidth)
+            for i in range(N):
+                ax.axvline(i+num_recs*barWidth,color='k',linewidth=1,alpha=0.5)
+            fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}_{str(k)}.png",bbox_inches="tight")
+
             for group in unique_groups:
                 fig = plt.figure()
                 ax=fig.add_subplot(111)
@@ -3773,21 +3841,24 @@ class RecRunner():
                     group_metrics = np.array(list(rec_metrics[group].values()))
                     # print(f"{rec_using} at @{k}")
                     # print(rec_metrics)
-                    # tmp_ref_val = np.array(list(reference_vals[group].values()))
+                    tmp_ref_val = np.array(list(reference_vals[group].values()))
                     # print(tmp_ref_val)
-                    # vals = (group_metrics - tmp_ref_val)/tmp_ref_val
-                    vals= group_metrics
+                    vals = 100*(group_metrics - tmp_ref_val)/tmp_ref_val
+                    # vals= group_metrics
                     ax.bar(indexes+i*barWidth,vals,barWidth,label=rec_using,**next(styles))
                     i+=1
 
                 ax.set_xticks(np.arange(N+1)+barWidth*(((num_recs)/2)-1)+barWidth/2)
-                ax.legend(tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                ax.legend(tuple(metrics_mean.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                         mode="expand", borderaxespad=0, ncol=ncol)
                 ax.set_xticklabels(map(lambda x: f'{x}@{k}',list(map(lambda name: METRICS_PRETTY[name],self.metrics_name))))
-                ax.set_ylabel("Mean Value")
-                ax.set_ylim(0,1)
+                ax.set_ylabel(f"Relative diff w.r.t. {reference_recommender}")
+                ax.yaxis.set_major_formatter(mtick.PercentFormatter())
+                ax.annotate(f'{group}',xy=(0,0.02),
+                                xycoords='axes fraction')
                 ax.set_xlim(-barWidth,len(self.metrics_name)-1+(num_recs-1)*barWidth+barWidth)
-                ax.set_title(f'{group}')
+                for i in range(N):
+                    ax.axvline(i+num_recs*barWidth,color='k',linewidth=1,alpha=0.5)
                 fig.savefig(self.data_directory+f"result/img/{prefix_name}_{group}_{self.base_rec}_{self.city}_{str(k)}.png",bbox_inches="tight")
 
     def print_train_perfect(self):
@@ -3828,11 +3899,11 @@ class RecRunner():
 
 
     def plot_cities_cdf(self):
-        plt.rcParams.update({'font.size': 17})
+        plt.rcParams.update({'font.size': 23})
         cities = ['lasvegas','phoenix']
         fig = plt.figure(figsize=(8,8))
         ax = fig.add_subplot(111)
-        colors = MY_COLOR_SCHEME[:len(cities)]
+        colors = ord_scheme_brightness(MY_COLOR_SCHEME)[:len(cities)]
         xs = np.linspace(0,1,21)
         for city, color in zip(cities,colors):
             self.city = city
@@ -3849,3 +3920,73 @@ class RecRunner():
         ax.set_ylabel("P($\delta \leq x)$")
         fig.savefig(self.data_directory+IMG+f"{'_'.join(cities)}_cdf_{self.final_rec_parameters['geo_div_method']}_{self.final_rec_parameters['cat_div_method']}.png",bbox_inches="tight")
         fig.savefig(self.data_directory+IMG+f"{'_'.join(cities)}_cdf_{self.final_rec_parameters['geo_div_method']}_{self.final_rec_parameters['cat_div_method']}.eps",bbox_inches="tight")
+
+    # Plot all groups in one file, ks by file
+    def plot_metrics_groups(self,prefix_name='groups_metrics',ncol=2):
+        self.final_rec_parameters = {'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk', 'norm_method': 'quadrant','bins': None,'funnel':None}
+        uid_group = self.get_groups()
+        groups_count = Counter(uid_group.values())
+        unique_groups = list(groups_count.keys())
+        unique_groups = [x for y, x in sorted(zip(iter(map(GROUP_ID.get,unique_groups)), unique_groups))]
+        palette = plt.get_cmap(CMAP_NAME)
+
+        plt.rcParams.update({'font.size': 14})
+        for i,k in enumerate(experiment_constants.METRICS_K):
+            metrics_mean=dict()
+
+            groups_mean = dict()
+            for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                metrics=metrics[k]
+                
+                metrics_mean[rec_using]=defaultdict(lambda: defaultdict(float))
+                for obj in metrics:
+                    group = uid_group[obj['user_id']]
+                    for key in self.metrics_name:
+                        metrics_mean[rec_using][group][key]+=obj[key]
+                
+                for j,key in enumerate(self.metrics_name):
+                    for group in unique_groups:
+                        metrics_mean[rec_using][group][key]/=groups_count[group]
+            reference_recommender = list(metrics_mean.keys())[0]
+            reference_vals = metrics_mean.pop(reference_recommender)
+
+            fig = plt.figure()
+            ax=fig.add_subplot(111)
+            num_recs = len(unique_groups)
+            barWidth= 1-num_recs/(1+num_recs)
+            N=len(self.metrics_name)
+            indexes=np.arange(N)
+            i=0
+            styles = gen_bar_cycle(num_recs)()
+            rects = dict()
+            for group in unique_groups:
+                for rec_using,rec_metrics in metrics_mean.items():
+                    print(group)
+                    group_metrics = np.array(list(rec_metrics[group].values()))
+                    # print(f"{rec_using} at @{k}")
+                    # print(rec_metrics)
+                    tmp_ref_val = np.array(list(reference_vals[group].values()))
+                    # print(tmp_ref_val)
+                    vals = 100*(group_metrics - tmp_ref_val)/tmp_ref_val
+                    # vals= group_metrics
+                    rects[group] = ax.bar(indexes+i*barWidth,vals,barWidth,label=rec_using,**next(styles))[0]
+                    # for count, val in zip(indexes,vals):
+                    #     ax.text(count+i*barWidth,val,"%s"%(group),rotation=90,zorder=33,fontweight='bold')
+                    i+=1
+            rects = list(rects.values())
+            ax.set_xticks(np.arange(N+1)+barWidth*(((num_recs)/2)-1)+barWidth/2)
+            tmp_legend_labels = list(map(lambda x:'Group '+GROUP_ID.get(x),unique_groups))
+            ax.legend(
+                rects,
+                tmp_legend_labels,handletextpad=-0.6,
+                handler_map={rect: HandlerSquare() for rect in rects}
+            )
+            ax.set_xticklabels(map(lambda x: f'{x}@{k}',list(map(lambda name: METRICS_PRETTY[name],self.metrics_name))))
+            ax.set_ylabel(f"Relative diff w.r.t. {reference_recommender}")
+            ax.yaxis.set_major_formatter(mtick.PercentFormatter())
+            # ax.annotate(f'{group}',xy=(0,0.02),
+            #                 xycoords='axes fraction')
+            ax.set_xlim(-barWidth,len(self.metrics_name)-1+(num_recs-1)*barWidth+barWidth)
+            for i in range(N):
+                ax.axvline(i+num_recs*barWidth,color='k',linewidth=1,alpha=0.5)
+            fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}_{str(k)}.png",bbox_inches="tight")
