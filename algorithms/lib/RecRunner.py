@@ -1625,18 +1625,26 @@ class RecRunner():
             i=0
             styles = gen_bar_cycle(num_recs_plot)()
             y_to_annotate = 90
+            neg_y_to_annotate = 2
             put_annotation = []
+            rects = dict()
             for rec_using,rec_metrics in metrics_mean.items():
                 print(f"{rec_using} at @{k}")
                 print(rec_metrics)
                 rel_diffs = -100+100*np.array(list(rec_metrics.values()))/reference_vals
-                ax.bar(indexes+i*barWidth,rel_diffs,barWidth,label=rec_using,**next(styles))
+                rects[rec_using] = ax.bar(indexes+i*barWidth,rel_diffs,barWidth,label=rec_using,**next(styles))[0]
                 special_cases = rel_diffs > 100
                 for idx, value in zip(indexes[special_cases],rel_diffs[special_cases]):
                     ax.annotate(f'{int(value)}%',xy=(idx+i*barWidth-barWidth,y_to_annotate),zorder=25,color='k',fontsize=18)
                     y_to_annotate -= 10
-                i+=1
 
+                special_cases = rel_diffs < -25
+
+                for idx, value in zip(indexes[special_cases],rel_diffs[special_cases]):
+                    ax.annotate(f'{int(value)}%',xy=(idx+i*barWidth-barWidth,neg_y_to_annotate),zorder=25,color='k',fontsize=18)
+                    neg_y_to_annotate += 10
+                i+=1
+            rects = list(rects.values())
                 #ax.bar(indexes[j]+i*barWidth,np.mean(list(rec_metrics.values())),barWidth,label=rec_using,color=palette(i))
             # reference_us_vals = metrics_utility_score.pop(reference_recommender)
             # reference_us_fvals = np.sum(list(reference_us_vals.values()))/len(reference_us_vals)
@@ -1651,12 +1659,13 @@ class RecRunner():
             #ax.set_xticks(np.arange(N+1)+barWidth*(np.floor((len(self.metrics))/2)-1)+barWidth/2)
             ax.set_xticks(np.arange(N+1)+barWidth*(((num_recs_plot)/2)-1)+barWidth/2)
             # ax.legend((p1[0], p2[0]), self.metrics_name)
-            ax.legend(tuple(metrics_mean.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
-                      mode="expand", borderaxespad=0, ncol=3,fontsize=18)
+            ax.legend(rects,tuple(metrics_mean.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                      mode="expand", borderaxespad=0, ncol=3,fontsize=19,handletextpad=-0.6,
+                      handler_map={rect: HandlerSquare() for rect in rects})
             # ax.legend(tuple(map(lambda name: METRICS_PRETTY[name],self.metrics.keys())))
-            ax.set_xticklabels(map(lambda x: f'{x}@{k}',list(map(lambda name: METRICS_PRETTY[name],self.metrics_name))),fontsize=16)
+            ax.set_xticklabels(map(lambda x: f'{x}@{k}',list(map(lambda name: METRICS_PRETTY[name],self.metrics_name))),fontsize=17)
             for tick in ax.yaxis.get_major_ticks():
-                tick.label.set_fontsize(16) 
+                tick.label.set_fontsize(19) 
             ax.set_ylabel(f"Relative diff w.r.t. {RECS_PRETTY[self.base_rec]}",fontsize=23)
             ax.set_ylim(-25,100)
             ax.set_xlim(-barWidth,len(self.metrics_name)-1+(num_recs_plot-1)*barWidth+barWidth)
@@ -1664,6 +1673,7 @@ class RecRunner():
             for i, m in enumerate(self.metrics_name):
                 ax.axvline(i+num_recs_plot*barWidth,color='k',linewidth=1,alpha=0.5)
             # ax.set_title(f"at @{k}, {self.city}")
+            ax.yaxis.set_major_formatter(mtick.PercentFormatter())
             fig.show()
             plt.show()
             timestamp = datetime.timestamp(datetime.now())
@@ -2374,7 +2384,7 @@ class RecRunner():
         N=len(experiment_constants.METRICS_K)
         barWidth=1-len(self.metrics)/(1+len(self.metrics))
         indexes=np.arange(N)
-
+        rects = dict()
         for count,k in enumerate(experiment_constants.METRICS_K):
             metrics_mean=dict()
             for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
@@ -2410,7 +2420,7 @@ class RecRunner():
             i=0
             for rec_using,utility_scores in metrics_utility_score.items():
                 val = np.sum(list(utility_scores.values()))/len(utility_scores)
-                ax.bar(count+i*barWidth,val,barWidth,**next(styles),label=rec_using)
+                rects[rec_using] = ax.bar(count+i*barWidth,val,barWidth,**next(styles),label=rec_using)[0]
                     # ax.bar(count+i*barWidth,val,barWidth,**GEOCAT_BAR_STYLE,label=rec_using)
                 if print_text:
                     ax.text(count+i*barWidth-barWidth/2+barWidth*0.1,val+0.025,"%.2f"%(val),rotation=90)
@@ -2419,13 +2429,16 @@ class RecRunner():
         # ax.set_xticks(np.arange(N+1)+barWidth*len(metrics_utility_score)/2+barWidth/2)
 
 
-
+        rects = list(rects.values())
         ax.set_xticks(np.arange(N+1)+barWidth*(((len(self.metrics))/2)-1)+barWidth/2)
         # ax.legend((p1[0], p2[0]), self.metrics_name)
-        ax.legend(tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
-                  mode="expand", borderaxespad=0, ncol=ncol)
+        ax.legend(rects,tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                  mode="expand", borderaxespad=0, ncol=ncol,fontsize=15,handletextpad=-0.6,
+                  handler_map={rect: HandlerSquare() for rect in rects})
         # ax.legend(tuple(map(lambda name: METRICS_PRETTY[name],self.metrics.keys())))
         ax.set_xticklabels(['@5','@10','@20'],fontsize=16)
+        for tick in ax.yaxis.get_major_ticks():
+            tick.label.set_fontsize(16)
         # ax.set_title(f"at @{k}, {self.city}")
         ax.set_ylabel("MAUT",fontsize=18)
         ax.set_ylim(0,1)
@@ -2724,7 +2737,7 @@ class RecRunner():
                 cat_div_propensity = cat_div_propensities[cat_div_method]
                 fig = plt.figure(figsize=(8,8))
 
-                plt.rcParams.update({'font.size': 15})
+                plt.rcParams.update({'font.size': 18})
                 ax = fig.add_subplot(111)
                 # ax.set_ylim(0,1)
                 # cat_median = np.median(cat_div_propensity)
@@ -2765,7 +2778,7 @@ class RecRunner():
                 # ax.set_ylim(min(np.min(geo_div_propensity),0),max(np.max(geo_div_propensity),1))
 
                 # ax.set_title("Correlation: %f"%(scipy.stats.pearsonr(cat_div_propensity,geo_div_propensity)[0]))
-                ax.annotate("Correlation: %f"%(scipy.stats.pearsonr(cat_div_propensity,geo_div_propensity)[0]),
+                ax.annotate("Pearson = %.2f"%(scipy.stats.pearsonr(cat_div_propensity,geo_div_propensity)[0]),
                                 (0,0))
                 if not default_legend:
                     ax.legend((
@@ -2780,13 +2793,16 @@ class RecRunner():
                         f"Group 2 ({np.count_nonzero(groups['geo_preference'])} users)",
                         f"Group 3 ({np.count_nonzero(groups['geocat_preference'])} users)",
                         f"Group 4 ({np.count_nonzero(groups['no_preference'])} users)",
-                    ),
+                    ),handletextpad=-0.6,scatteryoffsets=[0.5],
                               bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                               mode="expand", borderaxespad=0, ncol=2
                     )
-                ax.plot([cat_median]*2,[min(geo_div_propensity),max(geo_div_propensity)],color='k')
-                ax.plot([min(cat_div_propensity),max(cat_div_propensity)],[geo_median]*2,color='k')
-
+                # ax.plot([cat_median]*2,[min(geo_div_propensity),max(geo_div_propensity)],color='k')
+                # ax.plot([min(cat_div_propensity),max(cat_div_propensity)],[geo_median]*2,color='k')
+                ax.axvline(0.5,color='k',linewidth=1)
+                ax.axhline(0.5,color='k',linewidth=1)
+                ax.set_xticks(np.linspace(0,1,6))
+                ax.set_yticks(np.linspace(0,1,6))
                 fig.savefig(self.data_directory+IMG+f"{self.city}_{geo_div_method}_{cat_div_method}.png",bbox_inches="tight")
                 fig.savefig(self.data_directory+IMG+f"{self.city}_{geo_div_method}_{cat_div_method}.eps",bbox_inches="tight")
 
@@ -3373,12 +3389,14 @@ class RecRunner():
             #     print("Spearman in Equal POIs")
             #     print(scipy.stats.describe(spearman_data))
             #     spearmans[k] = np.mean(spearman_data)
+
+        plt.rcParams.update({'font.size': 19})
         fig = plt.figure()
         ax = fig.add_subplot(111)
 
         ax.plot(list(values.keys()),list(values.values()),marker='o',color='k')
         ax.plot(list(values_rand.keys()),list(values_rand.values()),marker='o',color='r')
-        ax.legend((f'{RECS_PRETTY[final_rec_1]}($\lambda$={div_weight_1}),{RECS_PRETTY[final_rec_2]}($\lambda$={div_weight_2})',f'Random($\lambda$={div_weight_1}),Random($\lambda$={div_weight_2})'))
+        ax.legend((f'{RECS_PRETTY[final_rec_1]}($\lambda$={div_weight_1}),{RECS_PRETTY[final_rec_2]}($\lambda$={div_weight_2})',f'Random($\lambda$={div_weight_1}),Random($\lambda$={div_weight_2})'),frameon = False)
         ax.set_ylim(0,1)
         ax.set_xlabel('List size')
         ax.set_ylabel('Rate of equal POIs')
@@ -3542,6 +3560,7 @@ class RecRunner():
         self.final_rec_parameters = {'heuristic': 'local_max'}
         self.load_metrics(base=False,name_type=NameType.PRETTY)
 
+        rects = dict()
         for count,k in enumerate(experiment_constants.METRICS_K):
             self.final_rec_list_size = k
             for h in ['tabu_search', 'particle_swarm']:
@@ -3552,8 +3571,6 @@ class RecRunner():
             run_times[self.get_final_rec_pretty_name()]=int(float(open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"r").read()))
             # max_arg_run_time = max(run_times, key=run_times.get)
 
-
-            
             metrics_mean=dict()
             for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
                 metrics=metrics[k]
@@ -3586,7 +3603,7 @@ class RecRunner():
             i=0
             for rec_using,utility_scores in metrics_utility_score.items():
                 val = mauts[rec_using]
-                ax.bar(count+i*barWidth,val,barWidth,**next(styles),label=rec_using)
+                rects[rec_using] = ax.bar(count+i*barWidth,val,barWidth,**next(styles),label=rec_using)[0]
                     # ax.bar(count+i*barWidth,val,barWidth,**GEOCAT_BAR_STYLE,label=rec_using)
                 # if print_text:
                 if rec_using != 'USG':
@@ -3595,18 +3612,23 @@ class RecRunner():
             #ax.set_xticks(np.arange(N+1)+barWidth*(np.floor((len(self.metrics))/2)-1)+barWidth/2)
         # ax.set_xticks(np.arange(N+1)+barWidth*len(metrics_utility_score)/2+barWidth/2)
 
-
+        rects = list(rects.values())
 
         ax.set_xticks(np.arange(N+1)+barWidth*(((len(self.metrics))/2)-1)+barWidth/2)
         # ax.legend((p1[0], p2[0]), self.metrics_name)
-        ax.legend(tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
-                  mode="expand", borderaxespad=0, ncol=ncol)
+        ax.legend(rects,tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                  mode="expand", borderaxespad=0, ncol=ncol,
+                  handler_map={rect: HandlerSquare() for rect in rects},
+                  fontsize=15,handletextpad=-0.6)
         # ax.legend(tuple(map(lambda name: METRICS_PRETTY[name],self.metrics.keys())))
-        ax.set_xticklabels(['MAUT@5','MAUT@10','MAUT@20'],fontsize=16)
+        ax.set_xticklabels(['@5','@10','@20'],fontsize=16)
         # ax.set_title(f"at @{k}, {self.city}")
-        ax.set_ylabel("Mean Value",fontsize=18)
+        ax.set_ylabel("MAUT",fontsize=18)
         ax.set_ylim(0,1)
         ax.set_xlim(-barWidth,len(experiment_constants.METRICS_K)-1+(len(self.metrics)-1)*barWidth+barWidth)
+        for tick in ax.yaxis.get_major_ticks():
+            tick.label.set_fontsize(16)
+                  
 
         for i in range(N):
             ax.axvline(i+num_recs*barWidth,color='k',linewidth=1,alpha=0.5)
@@ -3990,3 +4012,32 @@ class RecRunner():
             for i in range(N):
                 ax.axvline(i+num_recs*barWidth,color='k',linewidth=1,alpha=0.5)
             fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}_{str(k)}.png",bbox_inches="tight")
+            fig.savefig(self.data_directory+f"result/img/{prefix_name}_{self.base_rec}_{self.city}_{str(k)}.eps",bbox_inches="tight")
+
+    def plot_recs_ild_gc_correlation(self,metrics=['ild','gc']):
+
+        plt.rcParams.update({'font.size': 19})
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+
+        colors = ord_scheme_brightness(MY_COLOR_SCHEME)[:len(self.metrics)]
+        i=0
+        for rec, metrics_ks in zip(self.metrics.keys(), self.metrics.values()):
+            correlations = dict()
+            for k, metrics_k in metrics_ks.items():
+                print("%s@%d correlation"%(rec,k))
+                df_p_metrics = pd.DataFrame(metrics_k)
+                df_p_metrics = df_p_metrics.set_index('user_id')
+                correlations[k] = abs(df_p_metrics[metrics].corr().loc['ild','gc'])
+            ks = list(metrics_ks.keys())
+
+            ax.plot(list(correlations.keys()),list(correlations.values()),marker='o',color=colors[i])
+            i+=1
+        ax.set_ylim(0,1)
+        ax.set_xlabel(f'List size')
+        ax.set_ylabel('Pearson correlation(Absolute)')
+        xticks = np.round(np.linspace(ks[0],ks[-1],6))
+        ax.set_xticks(xticks)
+        ax.legend(list(self.metrics.keys()),frameon=False)
+        fig.savefig(self.data_directory+IMG+f"correlation_{self.city}.png",bbox_inches="tight")
+        fig.savefig(self.data_directory+IMG+f"correlation_{self.city}.eps",bbox_inches="tight")
