@@ -140,14 +140,22 @@ def ord_scheme_brightness(color_scheme):
     colors_brightness = list(map(brightness,MY_COLOR_SCHEME))
     color_scheme = [x for y, x in sorted(zip(colors_brightness, color_scheme))]
     return color_scheme
-
-def gen_bar_cycle(num=6,ord_by_brightness=False):
+def get_my_color_scheme(num=None,ord_by_brightness=False,inverse_order=True):
     global MY_COLOR_SCHEME
     MY_COLOR_SCHEME = MY_COLOR_SCHEME.copy()
     if ord_by_brightness:
         MY_COLOR_SCHEME=ord_scheme_brightness(MY_COLOR_SCHEME)
-        # colors_brightness = list(map(brightness,MY_COLOR_SCHEME))
-        # MY_COLOR_SCHEME = [x for y, x in sorted(zip(colors_brightness, MY_COLOR_SCHEME))]
+
+    if inverse_order:
+        MY_COLOR_SCHEME = list(reversed(MY_COLOR_SCHEME))
+
+    if num:
+        return MY_COLOR_SCHEME[:num]
+    return MY_COLOR_SCHEME
+            
+
+def gen_bar_cycle(num=6,ord_by_brightness=False,inverse_order=True):
+    MY_COLOR_SCHEME = get_my_color_scheme(num,ord_by_brightness,inverse_order)
 
     arrange = np.linspace(0,1,num)
     # hatch_cycler = cycler('hatch', ['///', '--', '...','\///', 'xxx', '\\\\','None','*'][:num])
@@ -155,7 +163,7 @@ def gen_bar_cycle(num=6,ord_by_brightness=False):
     # base_cycler = cycler('zorder', [10])*cycler('edgecolor',[adjust_lightness(color,amount=0.3) for color in ['#9595ff','#2a913e','#ffb2b2','#b5b355','#11166c','#ecd9c6','#939393'][:num]])
 
     # color_cycler = cycler('color', reversed(list(map(str,arrange))))
-    color_cycler = cycler('color', MY_COLOR_SCHEME[len(MY_COLOR_SCHEME)-num:])+cycler('edgecolor',[adjust_lightness(color,amount=0.3) for color in MY_COLOR_SCHEME[len(MY_COLOR_SCHEME)-num:]])
+    color_cycler = cycler('color', MY_COLOR_SCHEME)+cycler('edgecolor',[adjust_lightness(color,amount=0.3) for color in MY_COLOR_SCHEME])
     # color_cycler = cycler('color', reversed([plt.get_cmap('Dark2')(i) for i in arrange]))
     linewidth_cycler = cycler('linewidth', [1])
     bar_cycle = (# hatch_cycler +
@@ -823,7 +831,7 @@ class RecRunner():
                 self.div_geo_cat_weight=self.cat_div_propensity*self.geo_div_propensity
                 self.div_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_weight']
                 # self.div_weight = (self.geo_div_propensity+self.cat_div_propensity)/2
-                self.div_weight[(self.geo_div_propensity==0) & (self.cat_div_propensity==0)] = 0
+                # self.div_weight[(self.geo_div_propensity==0) & (self.cat_div_propensity==0)] = 0
                 # groups = dict()
                 # groups['geocat_preference'] = (self.div_geo_cat_weight >= 0.4) & (self.div_geo_cat_weight < 0.6)
                 # groups['geo_preference'] = self.div_geo_cat_weight < 0.4
@@ -2755,7 +2763,7 @@ class RecRunner():
 
 
                 assert(np.max(groups['no_preference'] & groups['cat_preference'] & groups['geo_preference'] & groups['geocat_preference']) == 0)
-                colors = MY_COLOR_SCHEME[:len(groups)]
+                colors = get_my_color_scheme(len(groups),ord_by_brightness=True,inverse_order=False)
                 for (group, mask), color in zip(groups.items(),colors):
                     # print(mask)
                     # print(len(cat_div_propensity[mask]))
@@ -3956,7 +3964,6 @@ class RecRunner():
         for i,k in enumerate(experiment_constants.METRICS_K):
             metrics_mean=dict()
 
-            groups_mean = dict()
             for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
                 metrics=metrics[k]
                 
@@ -3979,7 +3986,7 @@ class RecRunner():
             N=len(self.metrics_name)
             indexes=np.arange(N)
             i=0
-            styles = gen_bar_cycle(num_recs)()
+            styles = gen_bar_cycle(num_recs,ord_by_brightness=True,inverse_order=False)()
             rects = dict()
             for group in unique_groups:
                 for rec_using,rec_metrics in metrics_mean.items():
@@ -4041,3 +4048,152 @@ class RecRunner():
         ax.legend(list(self.metrics.keys()),frameon=False)
         fig.savefig(self.data_directory+IMG+f"correlation_{self.city}.png",bbox_inches="tight")
         fig.savefig(self.data_directory+IMG+f"correlation_{self.city}.eps",bbox_inches="tight")
+
+    def print_latex_groups_cities_metrics_table(self,cities,prefix_name='',references=[],heuristic=False,print_htime=False):
+        num_cities = len(cities)
+        num_metrics = len(self.metrics_name)
+        result_str = Text()
+        result_str += r"\begin{table}[]\scriptsize"
+        ls_str = ''.join([('l'*num_metrics+'|') if i!=(num_cities-1) else ('l'*num_metrics) for i in range(num_cities)])
+        result_str += r"\begin{tabular}{" +'l|'+ls_str + "}"
+        line_start = len(result_str)
+
+        final_rec_list_size = self.final_rec_list_size
+
+        for city in cities:
+            self.city = city
+            self.final_rec_list_size = final_rec_list_size
+            # self.load_metrics(base=True,name_type=NameType.PRETTY)
+            self.final_rec = 'persongeocat'
+            self.final_rec_parameters = {'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk', 'norm_method': 'quadrant','bins': None,'funnel':None}
+            uid_group = self.get_groups()
+
+            groups_count = Counter(uid_group.values())
+            unique_groups = list(groups_count.keys())
+            unique_groups = [x for y, x in sorted(zip(iter(map(GROUP_ID.get,unique_groups)), unique_groups))]
+        
+            run_times = dict()
+            
+            if not heuristic:
+                for rec in ['geocat','persongeocat']:
+                    self.final_rec = rec
+                    self.load_metrics(base=False,name_type=NameType.PRETTY)
+
+            if not references:
+                references = [list(self.metrics.keys())[0]]
+            line_num = line_start
+            if city != cities[-1]:
+                result_str[line_num] += "\t&"+'\multicolumn{%d}{c|}{%s}' % (num_metrics,CITIES_PRETTY[city])
+            else:
+                result_str[line_num] += "\t&"+'\multicolumn{%d}{c}{%s}' % (num_metrics,CITIES_PRETTY[city])
+            if city == cities[-1]:
+                result_str[line_num] += '\\\\'
+            line_num += 1
+            for i,k in enumerate(experiment_constants.METRICS_K):
+
+                if len(result_str[line_num]) == 0:
+                    result_str[line_num] += "\\hline \\rowcolor{Gray} \\textbf{Algorithm} & "+'& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
+                else:
+                    result_str[line_num] += '& '+ '& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
+                if city == cities[-1]:
+                    result_str[line_num] += "\\\\"
+                line_num += 1
+
+                metrics_mean = dict()
+                metrics_gain=dict()
+                group_metrics = dict()
+                for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                    metrics=metrics[k]
+
+                    metrics_mean[rec_using]=defaultdict(lambda: defaultdict(float))
+                    group_metrics[rec_using] = defaultdict(lambda: defaultdict(list))
+                    for obj in metrics:
+                        group = uid_group[obj['user_id']]
+                        group_metrics[rec_using][k][group].append(obj)
+                        for key in self.metrics_name:
+                            metrics_mean[rec_using][group][key]+=obj[key]
+
+                    for j,key in enumerate(self.metrics_name):
+                        for group in unique_groups:
+                            metrics_mean[rec_using][group][key]/=groups_count[group]
+                            
+                for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),group_metrics.values()):
+                    metrics_k=metrics[k]
+                    metrics_gain[rec_using] = dict()
+                    for group, group_metrics in metrics_k.items():
+                        metrics_gain[rec_using][group] = dict()
+                        if rec_using not in references:
+                            for metric_name in self.metrics_name:
+                                # print(group,len(group_metrics))
+                                # print(group,len(base_metrics[k][group]))
+                                statistic, pvalue = scipy.stats.wilcoxon(
+                                    [ms[metric_name] for ms in base_metrics[k][group]],
+                                    [ms[metric_name] for ms in group_metrics],
+                                )
+                                if pvalue > 0.05:
+                                    metrics_gain[rec_using][group][metric_name] = bullet_str
+                                else:
+                                    if metrics_mean[rec_using][group][metric_name] < metrics_mean[reference_name][group][metric_name]:
+                                        metrics_gain[rec_using][group][metric_name] = triangle_down_str
+                                    elif metrics_mean[rec_using][group][metric_name] > metrics_mean[reference_name][group][metric_name]:
+                                        metrics_gain[rec_using][group][metric_name] = triangle_up_str
+                                    else:
+                                        metrics_gain[rec_using][group][metric_name] = bullet_str 
+                        else:
+                            reference_name = rec_using
+                            base_metrics = metrics
+                            for metric_name in self.metrics_name:
+                                metrics_gain[rec_using][group][metric_name] = ''
+                                
+                metrics_max = dict()
+                for group in unique_groups:
+                    metrics_max[group] = {mn:(None,0) for mn in self.metrics_name}
+                for rec_using,rec_groups in metrics_mean.items():
+                    for group, rec_metrics in rec_groups.items():
+                        for metric_name, value in rec_metrics.items():
+                            if metrics_max[group][metric_name][1] < value:
+                                metrics_max[group][metric_name] = (rec_using,value)
+                is_metric_the_max = defaultdict(lambda: defaultdict(lambda: defaultdict(bool)))
+                for group in unique_groups:
+                    for metric_name,(rec_using,value) in metrics_max[group].items():
+                        is_metric_the_max[rec_using][group][metric_name] = True
+
+                for group in unique_groups:
+                    for rec_using,rec_metrics in metrics_mean.items():
+                        rec_metrics=rec_metrics[group]
+                        gain = metrics_gain[rec_using][group]
+
+                        if city == cities[0]:
+                            result_str[line_num] += rec_using + f"({group})"
+                        result_str[line_num] += ' &' + '& '.join(map(lambda x: "\\textbf{%.4f}%s" %(x[0],x[1]) if is_metric_the_max[rec_using][group][x[2]] else "%.4f%s"%(x[0],x[1])  ,zip(rec_metrics.values(),gain.values(),rec_metrics.keys())))
+
+                        if city == cities[-1]:
+                            result_str[line_num] += "\\\\"
+                        line_num += 1
+
+        result_str += "\\end{tabular}"
+        result_str += "\\end{table}"
+        result_str = result_str.__str__()
+        result_str = LATEX_HEADER+result_str
+        result_str += LATEX_FOOT
+        fout = open(self.data_directory+UTIL+'_'.join(references)+'_'+'side_'+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
+        fout.write(result_str)
+        fout.close()
+
+    def plot_precision_recall(self):
+        rec = list(self.metrics.keys())[-1]
+        metrics_ks = list(self.metrics.values())[-1]
+
+        plt.rcParams.update({'font.size': 18})
+        for k, metrics_k in metrics_ks.items():
+            fig = plt.figure()
+            ax=fig.add_subplot(111)
+            colors = get_my_color_scheme(2,ord_by_brightness=True,inverse_order=False)
+            df_p_metrics = pd.DataFrame(metrics_k)
+            df_p_metrics = df_p_metrics.set_index('user_id').sort_values(by=['precision','recall'])
+            ax.plot(df_p_metrics['precision'],df_p_metrics['recall'],color='k')
+            ax.set_xlabel(f"Precision@{k}")
+            ax.set_ylabel(f"Recall@{k}")
+            ax.set_title(f"{rec} in {CITIES_PRETTY[self.city]}")
+            fig.savefig(self.data_directory+IMG+f"prec_rec_{self.city}_{rec}_{k}.png",bbox_inches="tight")
+        
