@@ -52,7 +52,8 @@ class CatDivPropensity():
             "num_cat": self.cat_div_num_cat,
             "binomial": self.cat_div_binomial,
             "poi_ild": self.cat_div_poi_ild,
-            "inv_num_cat": self.cat_div_num_cat
+            "inv_num_cat": self.cat_div_num_cat,
+            "qtd_cat": self.cat_div_qtd_cat,
         }
 
         self.poi_cats = poi_cats
@@ -128,6 +129,11 @@ class CatDivPropensity():
         # return len(cats_visits)/(len(self.undirected_category_tree)-1)
         return len(cats_visits)
 
+    @classmethod
+    def cat_div_qtd_cat(cls, uid):
+        self = cls.getInstance()
+        cats_visits = self.users_categories_visits[uid]
+        return len(cats_visits)/(len(self.undirected_category_tree)-1)
 
     # @classmethod
     # def cat_div_binomial(cls):
@@ -171,6 +177,8 @@ class CatDivPropensity():
             self.cat_div_propensity = np.clip(self.cat_div_propensity,None,self.num_cat_norm_value)/self.num_cat_norm_value
         elif self.cat_div_method == 'inv_num_cat':
             self.cat_div_propensity = 1-np.clip(self.cat_div_propensity,None,self.num_cat_norm_value)/self.num_cat_norm_value
+        if self.cat_div_method == 'qtd_cat':
+            self.cat_div_propensity = self.cat_div_propensity/np.max(self.cat_div_propensity)
         # bins = np.append(np.arange(0,1,1/(3-1)),1)
         # centers = (bins[1:]+bins[:-1])/2
         # self.cat_div_propensity = bins[np.digitize(self.cat_div_propensity, centers)]

@@ -871,6 +871,7 @@ class RecRunner():
             pickle.dump(uid_group,fgroups)
             fgroups.close()
 
+            
         if self.final_rec_parameters['bins'] != None:
             bins = np.append(np.arange(0,1,1/(self.final_rec_parameters['bins']-1)),1)
             centers = (bins[1:]+bins[:-1])/2
@@ -878,6 +879,21 @@ class RecRunner():
         # fout = open(self.data_directory+UTIL+f'parameter_{self.get_final_rec_name()}.pickle',"wb")
         # pickle.dump(self.div_geo_cat_weight,fout)
         # fout.close()
+
+        if self.final_rec_parameters['div_cat_weight'] == None:
+            self.pcat_div_runner = CatDivPropensity.getInstance(
+                self.training_matrix,
+                self.undirected_category_tree,
+                'qtd_cat',
+                self.poi_cats)
+            print("Computing categoric diversification propensity with",
+                self.final_rec_parameters['cat_div_method'])
+            _cat_div_propensity=self.pcat_div_runner.compute_div_propensity()
+            self.div_cat_weight=np.ones(len(self.div_geo_cat_weight))*_cat_div_propensity
+        else:
+            self.div_cat_weight=np.ones(len(self.div_geo_cat_weight))*self.final_rec_parameters['div_cat_weight']
+        # print(self.div_cat_weight)
+        # raise SystemExit
 
     def persongeocat(self):
         self.persongeocat_preprocess()
@@ -1267,12 +1283,13 @@ class RecRunner():
             # if math.isnan(div_geo_cat_weight):
             #     print(f"User {uid} with nan value")
             div_weight=self.div_weight[uid]
+            div_cat_weight=self.div_cat_weight[uid]
             predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores,
                                                          self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
                                                          div_geo_cat_weight,div_weight,
                                                          'local_max',
                                                          gcobjfunc.OBJECTIVE_FUNCTIONS[self.final_rec_parameters['obj_func']],
-                                                         self.final_rec_parameters['div_cat_weight'])
+                                                         div_cat_weight)
 
             # print("uid → %d, time → %fs" % (uid, time.time()-start_time))
 
@@ -3074,7 +3091,7 @@ class RecRunner():
                 i+=1
             # print(ax.get_xlim()[1], ax.get_ylim()[0],ax.get_zlim()[1]*1.05)
             plt.figtext(0.01,0.65,s=box_text_string, color='black', fontsize=17,
-                    bbox=dict(facecolor='0.75',edgecolor='black', boxstyle='round,pad=0.1'))
+                    bbox=dict(facecolor='1.0',edgecolor='black', boxstyle='square,pad=0.1'))
 
             # from mpl_toolkits.axes_grid1 import make_axes_locatable
             # divider = make_axes_locatable(ax)
@@ -3096,10 +3113,10 @@ class RecRunner():
             # fig.colorbar(surf, fraction=0.046, pad=0.04)
             # ax.scatter(lambda_delta_like_xticks, phi, list(val_to_use.values()),cmap=plt.cm.CMRmap,vmin=np.min(list(val_to_use.values())), vmax=np.max(list(val_to_use.values())))
             ax.set(xticks=xticks, xticklabels=xlabels)
-            
-            ax.set_xlabel(r"$\lambda$-$\delta$",labelpad=66,**font)
-            ax.set_ylabel(r"$\phi$",**font)
-            ax.set_zlabel(f"{METRICS_PRETTY[metric]}@{k}",**font)
+            labels_fontsize = 19
+            ax.set_xlabel(r"$\lambda$-$\delta$",labelpad=69,fontsize=labels_fontsize)
+            ax.set_ylabel(r"$\phi$",labelpad=7,fontsize=labels_fontsize)
+            ax.set_zlabel(f"{METRICS_PRETTY[metric]}@{k}",fontsize=labels_fontsize)
             plt.subplots_adjust(left=-0.17,top=1.05,right=1.05)
 
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.png")
