@@ -76,8 +76,8 @@ SIZE_AWARENESS_RECS = { # unused
 }
 
 GROUP_ID = {
-    'cat_preference': '1',
-    'geo_preference': '2',
-    'geocat_preference': '3',
-    'no_preference': '4',
+    'geo_preference': '1',
+    'geocat_preference': '2',
+    'no_preference': '3',
+    'cat_preference': '4',
 }

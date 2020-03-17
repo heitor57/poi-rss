@@ -364,6 +364,7 @@ class RecRunner():
         self.user_final_predicted_score = {}
         
         self.metrics = {}
+        self.groups_epc = {}
         self.metrics_name = ['precision', 'recall', 'gc', 'ild','pr','epc']
         self.except_final_rec = except_final_rec
         self.welcome_message()
@@ -1478,17 +1479,33 @@ class RecRunner():
         else:
             return self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}"
 
-    def eval_rec_metrics(self,*,base=False,METRICS_KS = experiment_constants.METRICS_K):
+    def eval_rec_metrics(self,*,base=False,METRICS_KS = experiment_constants.METRICS_K,eval_group=True):
         if base:
             predictions = self.user_base_predicted_lid
         else:
             predictions = self.user_final_predicted_lid
 
+        if eval_group:
+            tmp_final_rec = self.final_rec
+            tmp_final_rec_parameters = self.final_rec_parameters
+            self.final_rec = 'persongeocat'
+            self.final_rec_parameters = {'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk', 'norm_method': 'quadrant','bins': None,'funnel':None}
+            uid_group = self.get_groups()
+            groups_count = Counter(uid_group.values())
+            unique_groups = list(groups_count.keys())
+            self.final_rec = tmp_final_rec
+            self.final_rec_parameters = tmp_final_rec_parameters
+        groups_epc = dict()
         for i,k in enumerate(METRICS_KS):
             if (k <= self.final_rec_list_size and not base) or (k <= self.base_rec_list_size and base):
                 print(f"running metrics at @{k}")
                 self.epc_val = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids,k)
-
+                if eval_group:
+                    groups_epc[k] = dict()
+                    for group in unique_groups:
+                        uids = [uid for uid, gid in uid_group.items() if gid == group]
+                        groups_epc[k][group] = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,uids,k)
+                    
                 # if base:
                 result_out = open(self.get_file_name_metrics(base,k), 'w')
                 # else:
@@ -1506,7 +1523,11 @@ class RecRunner():
             else:
                 print(f"Trying to evaluate list with @{k}, greather than final rec list size")
 
-    def load_metrics(self,*,base=False,name_type=NameType.PRETTY,METRICS_KS=experiment_constants.METRICS_K):
+        fout = open(self.data_directory+UTIL+f'groups_epc_{self.get_final_rec_name()}.pickle',"wb")
+        pickle.dump(groups_epc,fout)
+        fout.close()
+
+    def load_metrics(self,*,base=False,name_type=NameType.PRETTY,METRICS_KS=experiment_constants.METRICS_K,epc_group=False):
         if base:
             rec_using=self.base_rec
             if name_type == NameType.PRETTY:
@@ -1530,6 +1551,10 @@ class RecRunner():
 
         print("Loading %s..." % (rec_short_name))
 
+        if epc_group:
+            fin = open(self.data_directory+UTIL+f'groups_epc_{self.get_final_rec_name()}.pickle',"rb")
+            self.groups_epc[rec_short_name] = pickle.load(fin)
+            fin.close()
         self.metrics[rec_short_name]={}
         self.metrics_cities[rec_short_name] = self.city
         for i,k in enumerate(METRICS_KS):
@@ -2739,6 +2764,12 @@ class RecRunner():
         # print("user with most pois")
         # print(np.nonzero(self.training_matrix[np.argmax(np.count_nonzero(self.training_matrix,axis=1)),:])[0])
         # print([self.poi_coos[lid] for lid in np.nonzero(self.training_matrix[np.argmax(np.count_nonzero(self.training_matrix,axis=1)),:])[0]])
+
+        # self.final_rec_parameters = {'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk', 'norm_method': 'quadrant','bins': None,'funnel':None}
+        # uid_group = self.get_groups()
+        # groups_count = Counter(uid_group.values())
+        # unique_groups = list(groups_count.keys())
+        # unique_groups = [x for y, x in sorted(zip(iter(map(GROUP_ID.get,unique_groups)), unique_groups))]
         for geo_div_method in geo_div_methods:
             for cat_div_method in cat_div_methods:
                 geo_div_propensity = geo_div_propensities[geo_div_method]
@@ -2761,10 +2792,11 @@ class RecRunner():
                 groups['geocat_preference'] = ((cat_div_propensity >= cat_median) & (geo_div_propensity >= geo_median))
                 groups['no_preference'] = ((cat_div_propensity <= cat_median) & (geo_div_propensity <= geo_median))
 
-
                 assert(np.max(groups['no_preference'] & groups['cat_preference'] & groups['geo_preference'] & groups['geocat_preference']) == 0)
+                unique_groups = GROUP_ID.keys()
                 colors = get_my_color_scheme(len(groups),ord_by_brightness=True,inverse_order=False)
-                for (group, mask), color in zip(groups.items(),colors):
+                for group, color in zip(unique_groups,colors):
+                    mask = groups[group]
                     # print(mask)
                     # print(len(cat_div_propensity[mask]))
                     # print(len(geo_div_propensity[mask]))
@@ -2796,12 +2828,9 @@ class RecRunner():
                         f"No preference ({np.count_nonzero(groups['no_preference'])} users)",
                     ))
                 else:
-                    ax.legend((
-                        f"Group 1 ({np.count_nonzero(groups['cat_preference'])} users)",
-                        f"Group 2 ({np.count_nonzero(groups['geo_preference'])} users)",
-                        f"Group 3 ({np.count_nonzero(groups['geocat_preference'])} users)",
-                        f"Group 4 ({np.count_nonzero(groups['no_preference'])} users)",
-                    ),handletextpad=-0.6,scatteryoffsets=[0.5],
+                    
+                    ax.legend([f"Group {GROUP_ID[group]} ({np.count_nonzero(groups[group])} users)" for group in unique_groups]
+                              ,handletextpad=-0.6,scatteryoffsets=[0.5],
                               bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                               mode="expand", borderaxespad=0, ncol=2
                     )
@@ -3945,7 +3974,7 @@ class RecRunner():
             for x in xs:
                 ys.append(len(np.nonzero(val_exp<=x)[0])/num_users)
             ax.plot(xs,ys,color=color,marker='o')
-        ax.legend(list(map(CITIES_PRETTY.get,cities)))
+        ax.legend(list(map(CITIES_PRETTY.get,cities)),frameon=False)
         ax.set_xlabel("x")
         ax.set_ylabel("P($\delta \leq x)$")
         fig.savefig(self.data_directory+IMG+f"{'_'.join(cities)}_cdf_{self.final_rec_parameters['geo_div_method']}_{self.final_rec_parameters['cat_div_method']}.png",bbox_inches="tight")
@@ -3974,8 +4003,14 @@ class RecRunner():
                         metrics_mean[rec_using][group][key]+=obj[key]
                 
                 for j,key in enumerate(self.metrics_name):
-                    for group in unique_groups:
-                        metrics_mean[rec_using][group][key]/=groups_count[group]
+                    if key != 'epc':
+                        for group in unique_groups:
+                            metrics_mean[rec_using][group][key]/=groups_count[group]
+                    else:
+                        for group in unique_groups:
+                            metrics_mean[rec_using][group][key] = self.groups_epc[rec_using][k][group]
+
+                        
             reference_recommender = list(metrics_mean.keys())[0]
             reference_vals = metrics_mean.pop(reference_recommender)
 
@@ -4190,10 +4225,133 @@ class RecRunner():
             ax=fig.add_subplot(111)
             colors = get_my_color_scheme(2,ord_by_brightness=True,inverse_order=False)
             df_p_metrics = pd.DataFrame(metrics_k)
-            df_p_metrics = df_p_metrics.set_index('user_id').sort_values(by=['precision','recall'])
-            ax.plot(df_p_metrics['precision'],df_p_metrics['recall'],color='k')
-            ax.set_xlabel(f"Precision@{k}")
-            ax.set_ylabel(f"Recall@{k}")
+            df_p_metrics = df_p_metrics.set_index('user_id').sort_values(by=['precision','recall'],ascending=False)
+            ax.plot(df_p_metrics['recall'],df_p_metrics['precision'],color='k')
+            ax.set_xlabel(f"Recall@{k}")
+            ax.set_ylabel(f"Precision@{k}")
             ax.set_title(f"{rec} in {CITIES_PRETTY[self.city]}")
+            print(df_p_metrics[['recall','precision']])
             fig.savefig(self.data_directory+IMG+f"prec_rec_{self.city}_{rec}_{k}.png",bbox_inches="tight")
         
+    def print_groups_info(self):
+        df = pd.DataFrame([],
+                          columns=[
+                              'visits','visits_mean',
+                              'visits_std','cats_visited',
+                              'cats_visited_mean','cats_visited_std',
+                              'num_friends'
+                          ]
+        )
+        # self.persongeocat_preprocess()
+        # div_geo_cat_weight = self.div_geo_cat_weight
+        for uid in self.all_uids:
+            # beta = self.perfect_parameter[uid]
+            visited_lids = self.training_matrix[uid].nonzero()[0]
+            visits_mean = self.training_matrix[uid,visited_lids].mean()
+            visits_std = self.training_matrix[uid,visited_lids].std()
+            visits = self.training_matrix[uid,visited_lids].sum()
+            # uvisits = len(visited_lids)
+            cats_visits = defaultdict(int)
+            for lid in visited_lids:
+                for cat in self.poi_cats[lid]:
+                    cats_visits[cat] += 1
+            cats_visits = np.array(list(cats_visits.values()))
+            cats_visits_mean = cats_visits.mean()
+            cats_visits_std = cats_visits.std()
+            methods_values = []
+            num_friends = len(self.social_relations[uid])
+            df.loc[uid] = [visits,visits_mean,
+                           visits_std,len(cats_visits),
+                           cats_visits_mean,cats_visits_std,num_friends] + methods_values
+        
+        self.final_rec = 'persongeocat'
+        self.final_rec_parameters = {'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk', 'norm_method': 'quadrant','bins': None,'funnel':None}
+        uid_group = self.get_groups()
+
+        groups_count = Counter(uid_group.values())
+        unique_groups = list(groups_count.keys())
+        unique_groups = [x for y, x in sorted(zip(iter(map(GROUP_ID.get,unique_groups)), unique_groups))]
+
+        for group in unique_groups:
+            uids = [uid for uid, gid in uid_group.items() if gid == group]
+            print(group)
+            print(df.loc[uids].describe())
+        pass
+
+
+    def plot_recs_precision_recall(self, METRICS_KS = experiment_constants.METRICS_K, metrics=['recall','precision']):
+        # rec = list(self.metrics.keys())
+        # metrics_ks = list(self.metrics.values())
+
+        plt.rcParams.update({'font.size': 18})
+        for i, k in enumerate(METRICS_KS):
+            for metric_name in metrics:
+                fig = plt.figure()
+                ax=fig.add_subplot(111)
+                colors = get_my_color_scheme(len(self.metrics),ord_by_brightness=True,inverse_order=False)
+                j = 0
+                # min_index_not_zero = math.inf
+                for rec, metrics_ks in self.metrics.items():
+                    metrics_k = metrics_ks[k]
+                    user_num = len(metrics_k)
+                    df_p_metrics = pd.DataFrame(metrics_k)
+                    # if j == 0:
+                    #     sorted_idxs = df_p_metrics[metric_name].argsort()
+
+                    # df_p_metrics = df_p_metrics.iloc[sorted_idxs]
+                    # df_p_metrics = df_p_metrics.sort_values(by=[metric_name])
+                    # df_p_metrics = df_p_metrics.reset_index()
+                    # not_zero_idx = (df_p_metrics[metric_name] > 0).idxmax()
+                    # if not_zero_idx < min_index_not_zero:
+                    #     min_index_not_zero = not_zero_idx
+                    val = df_p_metrics[metric_name].to_numpy()
+                    print(val)
+                    xs = np.linspace(0,1,21)
+                    ys = []
+                    for x in xs:
+                        ys.append(len(np.nonzero(val<=x)[0])/user_num)
+                    # df_p_metrics = df_p_metrics.sort_values(by=[metric_name],ascending=False)
+                    ax.plot(xs,ys,colors[j])
+                    j+=1
+                # ax.set_xlim(min_index_not_zero,user_num)
+                ax.legend(list(self.metrics.keys()))
+                # ax.set_xlabel(f"Recall@{k}")
+                ax.set_xlabel("x")
+                ax.set_ylabel(f"$P({metric_name}@{k}\leq x)$")
+                # ax.set_ylabel(f"Precision@{k}")
+                ax.set_title(f"{CITIES_PRETTY[self.city]}")
+                fig.savefig(self.data_directory+IMG+f"prec_rec_{self.city}_{metric_name}_{k}.png",bbox_inches="tight")
+
+    def print_discover_mean_cities(self):
+        cities = ['lasvegas','phoenix']
+        final_rec = 'geocat'
+
+        num = len(cities)*len(experiment_constants.METRICS_K)
+        cities_metrics_mean = np.zeros(len(self.metrics_name))
+        for city in cities:
+            self.city = city
+            self.load_metrics(base=True,name_type=NameType.PRETTY)
+            self.load_metrics(base=False,name_type=NameType.PRETTY)
+           
+
+            for i,k in enumerate(experiment_constants.METRICS_K):
+                metrics_mean=dict()
+                for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                    metrics=metrics[k]
+
+                    metrics_mean[rec_using]=defaultdict(float)
+                    for obj in metrics:
+                        for key in self.metrics_name:
+                            metrics_mean[rec_using][key]+=obj[key]
+
+                    for j,key in enumerate(metrics_mean[rec_using]):
+                        metrics_mean[rec_using][key]/=len(metrics)
+                reference_recommender = list(metrics_mean.keys())[0]
+                reference_vals = metrics_mean.pop(reference_recommender)
+
+                for rec_using,rec_metrics in metrics_mean.items():
+                    cities_metrics_mean += -100+100*np.array(list(rec_metrics.values()))/np.array(list(reference_vals.values()))
+        print(f"MEAN GAIN in {', '.join(cities)}")
+        print({metric_name: val for metric_name, val in zip(self.metrics_name,cities_metrics_mean/num)})
+        
+        pass
