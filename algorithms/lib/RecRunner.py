@@ -375,6 +375,13 @@ class RecRunner():
 
         self.show_heuristic = False
         self.persons_plot_special_case = False
+        self.k_fold = None
+        self.fold = None
+        self.train_size = 0.8
+        self.recs_user_final_predicted_lid = {}
+        self.recs_user_final_predicted_score = {}
+        self.recs_user_base_predicted_lid = {}
+        self.recs_user_base_predicted_score = {}
 
     def message_start_section(self,string):
         print("------===%s===------" % (string))
@@ -506,7 +513,18 @@ class RecRunner():
     def get_base_rec_name(self):
         list_parameters=list(map(str,dict_to_list(self.base_rec_parameters)))
         string="_" if len(list_parameters)>0 else ""
-        return f"{self.city}_{self.base_rec}_{self.base_rec_list_size}"+\
+
+        if self.k_fold != None:
+            k_fold = f'{self.k_fold}_{self.fold}_'
+        else:
+            k_fold = ''
+
+        if self.train_size != None:
+            train_size = f'{self.train_size}_'
+        else:
+            train_size = ''
+
+        return f"{train_size}{k_fold}{self.city}_{self.base_rec}_{self.base_rec_list_size}"+\
                               string+'_'.join(list_parameters)
 
     def get_final_rec_name(self):
@@ -525,7 +543,7 @@ class RecRunner():
         #string="_" if len(list_parameters)>0 else ""
     def get_final_rec_short_name(self):
         if self.final_rec == 'geocat':
-            return f"{self.get_base_rec_short_name()}_{self.final_rec}_{self.final_rec_parameters['heuristic']}_{self.final_rec_parameters['obj_func']}"
+            return f"{self.get_base_rec_short_name()}_{self.final_rec}_{self.final_rec_parameters['div_geo_cat_weight']}_{self.final_rec_parameters['div_cat_weight']}"
         elif self.final_rec == 'persongeocat':
             string = f"{self.get_base_rec_short_name()}_{self.final_rec}"
             if self.persons_plot_special_case:
@@ -549,6 +567,11 @@ class RecRunner():
     def get_final_rec_pretty_name(self):
         if self.show_heuristic and self.final_rec == 'geocat':
             return f'{RECS_PRETTY[self.final_rec]}({HEURISTICS_PRETTY[self.final_rec_parameters["heuristic"]]})'
+        if self.final_rec == 'geocat' and self.final_rec_parameters['div_geo_cat_weight']==1:
+            if self.final_rec_parameters['div_cat_weight'] == 0:
+                return f'{RECS_PRETTY[self.final_rec]} (w.r.t. GC)'
+            elif self.final_rec_parameters['div_cat_weight'] == 1:
+                return f'{RECS_PRETTY[self.final_rec]} (w.r.t. LD)'
         return RECS_PRETTY[self.final_rec]
 
     def get_base_rec_file_name(self):
@@ -563,20 +586,26 @@ class RecRunner():
     def get_final_metrics_name(self):
         return self.data_directory+METRICS+self.get_final_rec_name()+f"{R_FORMAT}"
 
-    def load_base(self,user_data=False):
+    def load_base(self,user_data=False,test_data=True):
         CITY = self.city
 
         print(f"{CITY} city base loading")
 
-        # Train load
-        self.data_checkin_train = pickle.load(
-            open(self.data_directory+TRAIN+CITY+".pickle", "rb"))
+        if self.train_size != None:
+            self.training_matrix = pickle.load(open(self.data_directory+UTIL+f'train_val_{self.get_train_validation_name()}.pickle','rb'))
+            self.ground_truth = pickle.load(open(self.data_directory+UTIL+f'test_val_{self.get_train_validation_name()}.pickle','rb'))
 
-        # Test load
-        self.ground_truth = defaultdict(set)
-        for checkin in pickle.load(open(self.data_directory+TEST+CITY+".pickle", "rb")):
-            self.ground_truth[checkin['user_id']].add(checkin['poi_id'])
-        self.ground_truth = dict(self.ground_truth)
+        # Train load
+
+        if self.train_size == None:
+            self.data_checkin_train = pickle.load(
+                open(self.data_directory+TRAIN+CITY+".pickle", "rb"))
+
+            # Test load
+            self.ground_truth = defaultdict(set)
+            for checkin in pickle.load(open(self.data_directory+TEST+CITY+".pickle", "rb")):
+                self.ground_truth[checkin['user_id']].add(checkin['poi_id'])
+            self.ground_truth = dict(self.ground_truth)
         # Pois load
         self.poi_coos = {}
         self.poi_cats = {}
@@ -614,9 +643,10 @@ class RecRunner():
         self.poi_cats = {poi_id: [cats_to_int[cat] for cat in cats] for poi_id, cats in self.poi_cats.items()}
 
         # Training matrix create
-        self.training_matrix = np.zeros((user_num, poi_num),dtype=int)
-        for checkin in self.data_checkin_train:
-            self.training_matrix[checkin['user_id'], checkin['poi_id']] += 1
+        if self.train_size == None:
+            self.training_matrix = np.zeros((user_num, poi_num))
+            for checkin in self.data_checkin_train:
+                self.training_matrix[checkin['user_id'], checkin['poi_id']] += 1
 
         # print(len(self.data_checkin_train))
 
@@ -629,40 +659,40 @@ class RecRunner():
 
         if user_data:
             self.user_data = pickle.load(open(self.data_directory+USER+CITY+'.pickle','rb'))
+        if test_data:
+            self.test_data()
 
-        self.test_data()
+            print("Removing invalid users")
 
-        print("Removing invalid users")
+            self.training_matrix = self.training_matrix[self.all_uids]
 
-        self.training_matrix = self.training_matrix[self.all_uids]
+            uid_to_int = dict()
+            self.uid_to_int = uid_to_int
+            for i, uid in enumerate(self.all_uids):
+                uid_to_int[uid] = i
 
-        uid_to_int = dict()
-        self.uid_to_int = uid_to_int
-        for i, uid in enumerate(self.all_uids):
-            uid_to_int[uid] = i
+            for uid in self.invalid_uids:
+                del self.social_relations[uid]
+                if user_data:
+                    del self.user_data[uid]
 
-        for uid in self.invalid_uids:
-            del self.social_relations[uid]
+            self.ground_truth = dict((uid_to_int[key], value) for (key, value) in self.ground_truth.items())
+            self.social_relations = dict((uid_to_int[key], value) for (key, value) in self.social_relations.items())
             if user_data:
-                del self.user_data[uid]
-
-        self.ground_truth = dict((uid_to_int[key], value) for (key, value) in self.ground_truth.items())
-        self.social_relations = dict((uid_to_int[key], value) for (key, value) in self.social_relations.items())
-        if user_data:
-            self.user_data = dict((uid_to_int[key], value) for (key, value) in self.user_data.items())
-
-        
-        for uid, i in uid_to_int.items():
-            # self.ground_truth[uid_to_int[uid]] = self.ground_truth.pop(uid)
-            # self.social_relations[uid_to_int[uid]] = self.social_relations.pop(uid)
-            self.social_relations[i] = [uid_to_int[friend_uid] for friend_uid in self.social_relations[i]
-                                          if friend_uid in uid_to_int]
-            # self.user_data[uid_to_int[uid]] = self.user_data.pop(uid)
+                self.user_data = dict((uid_to_int[key], value) for (key, value) in self.user_data.items())
 
 
-        self.all_uids = [uid_to_int[uid] for uid in self.all_uids]
-        self.user_num = len(self.all_uids)
-        print("Finish removing invalid users")
+            for uid, i in uid_to_int.items():
+                # self.ground_truth[uid_to_int[uid]] = self.ground_truth.pop(uid)
+                # self.social_relations[uid_to_int[uid]] = self.social_relations.pop(uid)
+                self.social_relations[i] = [uid_to_int[friend_uid] for friend_uid in self.social_relations[i]
+                                            if friend_uid in uid_to_int]
+                # self.user_data[uid_to_int[uid]] = self.user_data.pop(uid)
+
+
+            self.all_uids = [uid_to_int[uid] for uid in self.all_uids]
+            self.user_num = len(self.all_uids)
+            print("Finish removing invalid users")
 
         if user_data:
             self.user_data = pd.DataFrame(self.user_data).T
@@ -677,7 +707,7 @@ class RecRunner():
         self.CHKS = int(len(self.all_uids)/multiprocessing.cpu_count()/8)
         self.CHKSL = int(len(self.all_uids)/multiprocessing.cpu_count())
         self.welcome_load()
-        
+
 
 
     def welcome_load(self):
@@ -686,7 +716,7 @@ class RecRunner():
         print("Chunk size set to %d for this base" %(self.CHKS))
         print("Large chunk size set to %d for this base" %(self.CHKSL))
 
-    def not_in_ground_truth_message(uid):
+    def not_in_ground_truth_message(self,uid):
         print(f"{uid} not in ground_truth [ERROR]")
 
     def usg(self):
@@ -701,7 +731,7 @@ class RecRunner():
         beta = self.base_rec_parameters['beta']
 
         U = UserBasedCF()
-        S = FriendBasedCF(eta=self.base_rec_parameters['eta'])
+        S = FriendBasedCF.getInstance(eta=self.base_rec_parameters['eta'])
         G = PowerLaw()
 
         U.pre_compute_rec_scores(training_matrix)
@@ -984,7 +1014,7 @@ class RecRunner():
                 train_ground_truth[checkin['user_id']].add(checkin['poi_id'])
             train_ground_truth = dict(train_ground_truth)
 
-            train_training_matrix = np.zeros((self.user_num, self.poi_num),dtype=int)
+            train_training_matrix = np.zeros((self.user_num, self.poi_num))
             for checkin in tr_checkin_data:
                 train_training_matrix[checkin['user_id'], checkin['poi_id']] += 1
 
@@ -1101,7 +1131,7 @@ class RecRunner():
             overall_scores = list(reversed(np.sort(overall_scores)))[
                 :self.base_rec_list_size]
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
 
     @classmethod
@@ -1137,7 +1167,7 @@ class RecRunner():
                     # print(self.perfect_parameter)
             predicted, overall_scores = max_predicted, max_overall_scores
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n", uid, max_div_weight
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
 
     @classmethod
@@ -1175,7 +1205,7 @@ class RecRunner():
                     # print(self.perfect_parameter)
             predicted, overall_scores = max_predicted, max_overall_scores
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n", uid, max_div_geo_cat_weight
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
 
     @classmethod
@@ -1188,7 +1218,7 @@ class RecRunner():
                 0:self.base_rec_list_size]
             predicted, overall_scores=self.pm2.pm2(uid,predicted,overall_scores,self.final_rec_list_size)
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
     
     @classmethod
@@ -1224,7 +1254,7 @@ class RecRunner():
             #actual = ground_truth[uid]
             # print(uid)
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
     @classmethod
     def run_mostpopular(cls,uid):
@@ -1246,7 +1276,7 @@ class RecRunner():
             self.user_base_predicted_lid[uid]=predicted
             self.user_base_predicted_score[uid]=overall_scores
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
 
     @classmethod
@@ -1266,7 +1296,7 @@ class RecRunner():
                                                          self.final_rec_parameters['div_cat_weight'])
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
 
     @classmethod
@@ -1298,7 +1328,7 @@ class RecRunner():
             # overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
 
     @classmethod
@@ -1323,7 +1353,7 @@ class RecRunner():
             # overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
 
     @classmethod
@@ -1344,7 +1374,7 @@ class RecRunner():
             # overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
     
     @classmethod
@@ -1365,24 +1395,43 @@ class RecRunner():
             # overall_scores = list(reversed(np.sort(overall_scores)))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
 
     def load_base_predicted(self):
-        result_file = open(self.data_directory+"result/reclist/"+self.get_base_rec_file_name(), 'r')
-        for i,line in enumerate(result_file):
-            obj=json.loads(line)
-            self.user_base_predicted_lid[obj['user_id']]=obj['predicted']
-            self.user_base_predicted_score[obj['user_id']]=obj['score']
+        if self.k_fold == None:
+            folds=  [None]
+        else:
+            folds = range(self.k_fold)
+
+        for self.fold in folds:
+            
+            result_file = open(self.data_directory+"result/reclist/"+self.get_base_rec_file_name(), 'r')
+            for i,line in enumerate(result_file):
+                obj=json.loads(line)
+                self.user_base_predicted_lid[obj['user_id']]=obj['predicted']
+                self.user_base_predicted_score[obj['user_id']]=obj['score']
+            self.recs_user_base_predicted_lid[self.get_base_rec_name()] = self.user_base_predicted_lid
+            self.recs_user_base_predicted_score[self.get_base_rec_name()] = self.user_base_predicted_score
+        
+
 
     def load_final_predicted(self):
-        result_file = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'r')
-        self.user_final_predicted_lid = dict()
-        self.user_final_predicted_score = dict()
-        for i,line in enumerate(result_file):
-            obj=json.loads(line)
-            self.user_final_predicted_lid[obj['user_id']]=obj['predicted']
-            self.user_final_predicted_score[obj['user_id']]=obj['score']
+        if self.k_fold == None:
+            folds=  [None]
+        else:
+            folds = range(self.k_fold)
+
+        for self.fold in folds:
+            result_file = open(self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'r')
+            self.user_final_predicted_lid = dict()
+            self.user_final_predicted_score = dict()
+            for i,line in enumerate(result_file):
+                obj=json.loads(line)
+                self.user_final_predicted_lid[obj['user_id']]=obj['predicted']
+                self.user_final_predicted_score[obj['user_id']]=obj['score']
+            self.recs_user_final_predicted_lid[self.get_final_rec_name()] = self.user_final_predicted_lid
+            self.recs_user_final_predicted_score[self.get_final_rec_name()] = self.user_final_predicted_score
 
     def message_recommender(self,base):
         if base:
@@ -1393,6 +1442,134 @@ class RecRunner():
         print(f"Base rec list size = {self.base_rec_list_size}")
         print(f"Final rec list size = {self.final_rec_list_size}")
 
+
+    def create_train_validation(self):
+        user_checkin_data = defaultdict(list)
+        # for uid, nuid in self.uid_to_int.items():
+        #     user_checkin_data[nuid] = []
+
+        for checkin in self.data_checkin_train:
+            user_checkin_data[checkin['user_id']].append({'poi_id':checkin['poi_id'],'date':checkin['date']})
+        all_uids = list(user_checkin_data.keys())
+        user_num = len(all_uids)
+        tr_checkin_data=[]
+        te_checkin_data=[]
+        TRAIN_SIZE = self.train_size
+        for i in tqdm(range(len(all_uids)),desc='train/test'):
+            user_id=i
+            checkin_list=user_checkin_data[user_id]
+            checkin_list=sorted(checkin_list, key = lambda i: i['date']) 
+            train_size=math.ceil(len(checkin_list)*TRAIN_SIZE)
+            #test_size=math.floor(len(checkin_list)*TEST_SIZE)
+            count=1
+            te_pois=set()
+            tr_pois=set()
+            initial_te_size=len(te_checkin_data)
+            final_te_size=len(te_checkin_data)
+            for checkin in checkin_list:
+                if count<=train_size:
+                    tr_pois.add(checkin['poi_id'])
+                    tr_checkin_data.append({'user_id':user_id,'poi_id':checkin['poi_id'],'date':checkin['date']})
+                else:
+                    te_pois.add(checkin['poi_id'])
+                    te_checkin_data.append({'user_id':user_id,'poi_id':checkin['poi_id'],'date':checkin['date']})
+                    final_te_size+=1
+                count+=1
+            int_pois=te_pois&tr_pois
+            rel_index=0
+            for i in range(initial_te_size,final_te_size):
+                i+=rel_index
+                if te_checkin_data[i]['poi_id'] in int_pois:
+                    te_checkin_data.pop(i)
+                    rel_index-=1
+
+        ground_truth = defaultdict(set)
+        for checkin in te_checkin_data:
+            ground_truth[checkin['user_id']].add(checkin['poi_id'])
+        ground_truth = dict(ground_truth)
+
+        training_matrix = np.zeros((user_num, self.poi_num))
+        for checkin in tr_checkin_data:
+            training_matrix[checkin['user_id'], checkin['poi_id']] += 1
+        ftecheckin=open(self.data_directory+UTIL+f'test_val_{self.get_train_validation_name()}.pickle','wb')
+        pickle.dump(ground_truth,ftecheckin)
+        ftecheckin.close()
+        ftrcheckin=open(self.data_directory+UTIL+f'train_val_{self.get_train_validation_name()}.pickle','wb')
+        pickle.dump(training_matrix,ftrcheckin)
+        ftrcheckin.close()
+
+    def get_train_validation_name(self):
+        return f'{self.train_size}_{self.city}'
+
+    def create_fold_train_test(self):
+        user_checkin_data = defaultdict(list)
+
+        for checkin in self.data_checkin_train:
+            user_checkin_data[checkin['user_id']].append({'poi_id':checkin['poi_id'],'date':checkin['date']})
+
+        tr_checkin_data=[]
+        te_checkin_data=[]
+        TRAIN_SIZE = 1-1/self.k_fold
+        TEST_SIZE = 1-TRAIN_SIZE
+        for i in tqdm(range(len(self.all_uids)),desc='train/test'):
+            user_id=i
+            checkin_list=user_checkin_data[user_id]
+            checkin_list=sorted(checkin_list, key = lambda i: i['date']) 
+            train_size=math.ceil(len(checkin_list)*TRAIN_SIZE)
+            test_size = len(checkin_list)-train_size
+            test_init = test_size*self.fold
+            test_end = test_size*(self.fold+1)
+            #test_size=math.floor(len(checkin_list)*TEST_SIZE)
+            count=1
+            te_pois=set()
+            tr_pois=set()
+            initial_te_size=len(te_checkin_data)
+            final_te_size=len(te_checkin_data)
+            for checkin in checkin_list:
+                if test_init <= count and count < test_end:
+                    te_pois.add(checkin['poi_id'])
+                    te_checkin_data.append({'user_id':user_id,'poi_id':checkin['poi_id'],'date':checkin['date']})
+                    final_te_size+=1
+                else:
+                    tr_pois.add(checkin['poi_id'])
+                    tr_checkin_data.append({'user_id':user_id,'poi_id':checkin['poi_id'],'date':checkin['date']})
+                count+=1
+            int_pois=te_pois&tr_pois
+            rel_index=0
+            for i in range(initial_te_size,final_te_size):
+                i+=rel_index
+                if te_checkin_data[i]['poi_id'] in int_pois:
+                    te_checkin_data.pop(i)
+                    rel_index-=1
+
+        ground_truth = defaultdict(set)
+        for checkin in te_checkin_data:
+            ground_truth[checkin['user_id']].add(checkin['poi_id'])
+        ground_truth = dict(ground_truth)
+
+        training_matrix = np.zeros((self.user_num, self.poi_num))
+        for checkin in tr_checkin_data:
+            training_matrix[checkin['user_id'], checkin['poi_id']] += 1
+        ftecheckin=open(self.data_directory+UTIL+f'test_{self.get_fold_name()}.pickle','wb')
+        pickle.dump(ground_truth,ftecheckin)
+        ftecheckin.close()
+        ftrcheckin=open(self.data_directory+UTIL+f'train_{self.get_fold_name()}.pickle','wb')
+        pickle.dump(training_matrix,ftrcheckin)
+        ftrcheckin.close()
+
+    def get_fold_name(self):
+        return f'{self.k_fold}_{self.fold}_{self.city}'
+        
+    def create_k_fold(self):
+        for fold in range(self.k_fold):
+            self.fold = fold
+            self.create_fold_train_test()
+        pass
+
+    def load_fold(self):
+        self.training_matrix = pickle.load(open(self.data_directory+UTIL+f'train_{self.get_fold_name()}.pickle','rb'))
+        self.ground_truth = pickle.load(open(self.data_directory+UTIL+f'test_{self.get_fold_name()}.pickle','rb'))
+    
     def run_base_recommender(self,check_already_exists=False):
 
         if check_already_exists == True and os.path.exists(self.data_directory+RECLIST+self.get_base_rec_file_name()):
@@ -1402,7 +1579,13 @@ class RecRunner():
 
         self.message_recommender(base=True)
         start_time = time.time()
-        base_recommender()
+        if self.k_fold != None:
+            for self.fold in range(self.k_fold):
+                self.load_fold()
+                base_recommender()
+        else:
+            base_recommender()
+
         final_time = time.time()-start_time
         fout = open(self.data_directory+UTIL+f'run_time_{self.get_base_rec_name()}.txt',"w")
         fout.write(str(final_time))
@@ -1416,7 +1599,13 @@ class RecRunner():
         if len(self.user_base_predicted_lid)>0:
             self.message_recommender(base=False)
             start_time = time.time()
-            final_recommender()
+
+            if self.k_fold != None:
+                for self.fold in range(self.k_fold):
+                    self.load_fold()
+                    final_recommender()
+            else:
+                final_recommender()
             final_time = time.time()-start_time
             fout = open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"w")
             fout.write(str(final_time))
@@ -1496,11 +1685,7 @@ class RecRunner():
         else:
             return self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}"
 
-    def eval_rec_metrics(self,*,base=False,METRICS_KS = experiment_constants.METRICS_K,eval_group=True):
-        if base:
-            predictions = self.user_base_predicted_lid
-        else:
-            predictions = self.user_final_predicted_lid
+    def eval_rec_metrics(self,*,base=False,METRICS_KS = experiment_constants.METRICS_K,eval_group=False):
 
         if eval_group:
             tmp_final_rec = self.final_rec
@@ -1512,37 +1697,54 @@ class RecRunner():
             unique_groups = list(groups_count.keys())
             self.final_rec = tmp_final_rec
             self.final_rec_parameters = tmp_final_rec_parameters
-        groups_epc = dict()
-        for i,k in enumerate(METRICS_KS):
-            if (k <= self.final_rec_list_size and not base) or (k <= self.base_rec_list_size and base):
-                print(f"running metrics at @{k}")
-                self.epc_val = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids,k)
-                if eval_group:
-                    groups_epc[k] = dict()
-                    for group in unique_groups:
-                        uids = [uid for uid, gid in uid_group.items() if gid == group]
-                        groups_epc[k][group] = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,uids,k)
-                    
-                # if base:
-                result_out = open(self.get_file_name_metrics(base,k), 'w')
-                # else:
-                #     result_out = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
-
-                self.message_recommender(base=base)
-
-                args=[(uid,base,k) for uid in self.all_uids]
-                results = run_parallel(self.eval,args,self.CHKSL)
-                print(pd.DataFrame([json.loads(result) for result in results]).mean().T)
-                # print(pd.DataFrame([json.loads(result) for result in results]).std().T)
-                for json_string_result in results:
-                    result_out.write(json_string_result)
-                result_out.close()
+            groups_epc = dict()
+        
+        if self.k_fold == None:
+            folds=  [None]
+        else:
+            folds = range(self.k_fold)
+        for self.fold in folds:
+            if base:
+                predictions = self.recs_user_base_predicted_lid[self.get_base_rec_name()]
+                self.user_base_predicted_lid = predictions
             else:
-                print(f"Trying to evaluate list with @{k}, greather than final rec list size")
+                predictions = self.recs_user_final_predicted_lid[self.get_final_rec_name()]
+                self.user_final_predicted_lid = predictions
+            if self.k_fold == None:
+                all_uids = self.all_uids
+            else:
+                all_uids = predictions.keys()
+            for i,k in enumerate(METRICS_KS):
+                if (k <= self.final_rec_list_size and not base) or (k <= self.base_rec_list_size and base):
+                    print(f"running metrics at @{k}")
+                    self.epc_val = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,predictions.keys(),k)
+                    if eval_group:
+                        groups_epc[k] = dict()
+                        for group in unique_groups:
+                            uids = [uid for uid, gid in uid_group.items() if gid == group]
+                            groups_epc[k][group] = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,all_uids,k)
 
-        fout = open(self.data_directory+UTIL+f'groups_epc_{self.get_final_rec_name()}.pickle',"wb")
-        pickle.dump(groups_epc,fout)
-        fout.close()
+                    # if base:
+                    result_out = open(self.get_file_name_metrics(base,k), 'w')
+                    # else:
+                    #     result_out = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
+
+                    self.message_recommender(base=base)
+
+                    args=[(uid,base,k) for uid in all_uids]
+                    results = run_parallel(self.eval,args,self.CHKSL)
+                    print(pd.DataFrame([json.loads(result) for result in results]).mean().T)
+                    # print(pd.DataFrame([json.loads(result) for result in results]).std().T)
+                    for json_string_result in results:
+                        result_out.write(json_string_result)
+                    result_out.close()
+                else:
+                    print(f"Trying to evaluate list with @{k}, greather than final rec list size")
+
+        if eval_group:
+            fout = open(self.data_directory+UTIL+f'groups_epc_{self.get_final_rec_name()}.pickle',"wb")
+            pickle.dump(groups_epc,fout)
+            fout.close()
 
     def load_metrics(self,*,base=False,name_type=NameType.PRETTY,METRICS_KS=experiment_constants.METRICS_K,epc_group=False):
         if base:
@@ -1804,7 +2006,6 @@ class RecRunner():
                 print(f"user {i} with empty ground truth")
                 has_some_error = True
                 # remove from tests
-                self.all_uids.remove(i)
                 self.invalid_uids.append(i)
             if train_size == 0:
                 print(f"user {i} with empty training data!!!!! Really bad error")
@@ -1813,9 +2014,11 @@ class RecRunner():
                 has_some_error_global = True
                 print("Training size is %d, test size is %d" %\
                       (train_size,test_size))
+        for uid in self.invalid_uids:
+            self.all_uids.remove(uid)
+
         if not has_some_error_global:
             print("No error encountered in base")
-            
     def print_parameters(self, base):
         print_dict(self.base_rec_parameters)
         if base == False:
@@ -3081,7 +3284,7 @@ class RecRunner():
                     string_to_put = '$%d^{%s}$-%.2f-%.2f-%.2f'%(i,int_what_ordinal(i),x,y,z)
 
                 box_text_string += string_to_put + '\n'
-                if i == 1:
+                if i == 3:
                     a = Arrow3D([x_real, x_real], [z, z], [p, z_up], mutation_scale=20,
                                 lw=1, arrowstyle="<|-", color='k',zorder=26)
                 else:
@@ -3284,7 +3487,7 @@ class RecRunner():
                                                        self.final_rec_list_size)
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
 
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
 
     def print_gc_hyperparameter(self):
@@ -3567,7 +3770,7 @@ class RecRunner():
                                                self.final_rec_list_size, self.final_rec_parameters['div_weight'])
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
 
-        self.not_in_ground_truth_message()
+        self.not_in_ground_truth_message(uid)
         return ""
 
     def plot_diff_to_perfect(self):
@@ -4372,3 +4575,255 @@ class RecRunner():
         print({metric_name: val for metric_name, val in zip(self.metrics_name,cities_metrics_mean/num)})
         
         pass
+
+
+    def print_latex_vert_cities_metrics_table(self,cities,prefix_name='',references=[],heuristic=False,recs=['gc','ld','binomial','pm2','geodiv','geocat']):
+        num_metrics = len(self.metrics_name)
+        if heuristic:
+            num_metrics += 1
+        result_str = r"\begin{table}[]" + "\n"
+        result_str += r"\begin{tabular}{" +'l|'+'l'*(num_metrics) + "}\n"
+        # result_str += "\begin{tabular}{" + 'l'*(num_metrics+1) + "}\n"
+
+        if cities == None:
+            cities = [self.city]
+        final_rec_list_size = self.final_rec_list_size
+
+        for city in cities:
+            self.city = city
+            self.final_rec_list_size = final_rec_list_size
+
+            self.load_metrics(base=True,name_type=NameType.PRETTY)
+
+            run_times = dict()
+
+            if not references:
+                references = [list(self.metrics.keys())[0]]
+
+            if not heuristic:
+                for rec in recs:
+                    self.final_rec = rec
+                    self.load_metrics(base=False,name_type=NameType.PRETTY)
+
+            result_str += "\t&"+'\multicolumn{%d}{c}{%s}\\\\\n' % (num_metrics,CITIES_PRETTY[city])
+
+            if heuristic:
+                self.final_rec_parameters = {'heuristic': 'local_max'}
+                self.load_metrics(base=False,name_type=NameType.PRETTY)
+
+            for i,k in enumerate(experiment_constants.METRICS_K):
+
+                if heuristic:
+                    self.final_rec_list_size = k
+                    for h in ['tabu_search', 'particle_swarm']:
+                        self.final_rec_parameters = {'heuristic': h}
+                        self.load_metrics(base=False,name_type=NameType.PRETTY,METRICS_KS=[k])
+                        run_times[self.get_final_rec_pretty_name()]=int(float(open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"r").read()))
+                    self.final_rec_parameters = {'heuristic': 'local_max'}
+                    run_times[self.get_final_rec_pretty_name()]=int(float(open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"r").read()))
+                    max_arg_run_time = max(run_times, key=run_times.get)
+
+                result_str += "\\hline \\rowcolor{Gray} \\textbf{Algorithm} & "+'& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
+
+                if heuristic:
+                    result_str += '& \\textbf{Time}'
+                result_str += "\\\\\n"
+                metrics_mean=dict()
+                metrics_gain=dict()
+                
+
+                for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                    metrics=metrics[k]
+
+                        # self.metrics[rec_using]
+                    metrics_mean[rec_using]=defaultdict(float)
+                    for obj in metrics:
+                        for key in self.metrics_name:
+                            metrics_mean[rec_using][key]+=obj[key]
+
+                    for j,key in enumerate(metrics_mean[rec_using]):
+                        metrics_mean[rec_using][key]/=len(metrics)
+
+                for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                    metrics_k=metrics[k]
+                    if rec_using not in references:
+                        metrics_gain[rec_using] = dict()
+                        for metric_name in self.metrics_name:
+                            statistic, pvalue = scipy.stats.wilcoxon(
+                                [ms[metric_name] for ms in base_metrics[k]],
+                                [ms[metric_name] for ms in metrics_k],
+                            )
+                            if pvalue > 0.05:
+                                metrics_gain[rec_using][metric_name] = bullet_str
+                            else:
+                                if metrics_mean[rec_using][metric_name] < metrics_mean[reference_name][metric_name]:
+                                    metrics_gain[rec_using][metric_name] = triangle_down_str
+                                elif metrics_mean[rec_using][metric_name] > metrics_mean[reference_name][metric_name]:
+                                    metrics_gain[rec_using][metric_name] = triangle_up_str
+                                else:
+                                    metrics_gain[rec_using][metric_name] = bullet_str 
+                    else:
+                        reference_name = rec_using
+                        base_metrics = metrics
+                        metrics_gain[rec_using] = dict()
+                        for metric_name in self.metrics_name:
+                            metrics_gain[rec_using][metric_name] = ''
+
+                metrics_max = {mn:(None,0) for mn in self.metrics_name}
+                for rec_using,rec_metrics in metrics_mean.items():
+                    for metric_name, value in rec_metrics.items():
+                        if metrics_max[metric_name][1] < value:
+                            metrics_max[metric_name] = (rec_using,value)
+                is_metric_the_max = defaultdict(lambda: defaultdict(bool))
+                for metric_name,(rec_using,value) in metrics_max.items():
+                    is_metric_the_max[rec_using][metric_name] = True
+
+                for rec_using,rec_metrics in metrics_mean.items():
+                    gain = metrics_gain[rec_using]
+                    result_str += rec_using + ' &' + '& '.join(map(lambda x: "\\textbf{%.4f}%s" %(x[0],x[1]) if is_metric_the_max[rec_using][x[2]] else "%.4f%s"%(x[0],x[1])  ,zip(rec_metrics.values(),gain.values(),rec_metrics.keys())))
+                    if heuristic:
+                        if rec_using not in references:
+                            if rec_using != max_arg_run_time:
+                                result_str += f'& {sec_to_hm(run_times[rec_using])}'
+                            else:
+                                result_str += f'& \\textbf{{{sec_to_hm(run_times[rec_using])}}}'
+                        else:
+                            result_str += f'& '
+                    result_str += "\\\\\n"
+            if city != cities[-1]:
+                result_str += '\\hline'
+
+
+        result_str += "\\end{tabular}\n"
+        result_str += "\\end{table}\n"
+        result_str = LATEX_HEADER + result_str
+        result_str += LATEX_FOOT
+        fout = open(self.data_directory+UTIL+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
+        fout.write(result_str)
+        fout.close()
+
+
+    def print_latex_discover_cities_metrics_table(self,cities,prefix_name='gc_ld',references=[],heuristic=False,phis=[0.0,1.0],METRICS_KS=[10]):
+        num_metrics = len(self.metrics_name)
+        if heuristic:
+            num_metrics += 1
+        result_str = r"\begin{table}[]" + "\n"
+        result_str += r"\begin{tabular}{" +'l|'+'l'*(num_metrics) + "}\n"
+        # result_str += "\begin{tabular}{" + 'l'*(num_metrics+1) + "}\n"
+
+        if cities == None:
+            cities = [self.city]
+        final_rec_list_size = self.final_rec_list_size
+
+        for city in cities:
+            self.city = city
+            self.final_rec_list_size = final_rec_list_size
+            self.final_rec_parameters = {}
+            self.load_metrics(base=False,name_type=NameType.PRETTY)
+
+            run_times = dict()
+
+            if not references:
+                references = [list(self.metrics.keys())[0]]
+
+            if not heuristic:
+                for phi in phis:
+                    self.final_rec_parameters = {'div_geo_cat_weight':1.0,'div_cat_weight':phi}
+                    self.load_metrics(base=False,name_type=NameType.PRETTY)
+
+            result_str += "\t&"+'\multicolumn{%d}{c}{%s}\\\\\n' % (num_metrics,CITIES_PRETTY[city])
+
+            if heuristic:
+                self.final_rec_parameters = {'heuristic': 'local_max'}
+                self.load_metrics(base=False,name_type=NameType.PRETTY)
+
+            for i,k in enumerate(METRICS_KS):
+
+                if heuristic:
+                    self.final_rec_list_size = k
+                    for h in ['tabu_search', 'particle_swarm']:
+                        self.final_rec_parameters = {'heuristic': h}
+                        self.load_metrics(base=False,name_type=NameType.PRETTY,METRICS_KS=[k])
+                        run_times[self.get_final_rec_pretty_name()]=int(float(open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"r").read()))
+                    self.final_rec_parameters = {'heuristic': 'local_max'}
+                    run_times[self.get_final_rec_pretty_name()]=int(float(open(self.data_directory+UTIL+f'run_time_{self.get_final_rec_name()}.txt',"r").read()))
+                    max_arg_run_time = max(run_times, key=run_times.get)
+
+                result_str += "\\hline \\rowcolor{Gray} \\textbf{Algorithm} & "+'& '.join(map(lambda x: "\\textbf{"+METRICS_PRETTY[x]+f"@{k}}}" ,self.metrics_name))
+
+                if heuristic:
+                    result_str += '& \\textbf{Time}'
+                result_str += "\\\\\n"
+                metrics_mean=dict()
+                metrics_gain=dict()
+                
+
+                for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                    metrics=metrics[k]
+
+                        # self.metrics[rec_using]
+                    metrics_mean[rec_using]=defaultdict(float)
+                    for obj in metrics:
+                        for key in self.metrics_name:
+                            metrics_mean[rec_using][key]+=obj[key]
+
+                    for j,key in enumerate(metrics_mean[rec_using]):
+                        metrics_mean[rec_using][key]/=len(metrics)
+
+                for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                    metrics_k=metrics[k]
+                    if rec_using not in references:
+                        metrics_gain[rec_using] = dict()
+                        for metric_name in self.metrics_name:
+                            statistic, pvalue = scipy.stats.wilcoxon(
+                                [ms[metric_name] for ms in base_metrics[k]],
+                                [ms[metric_name] for ms in metrics_k],
+                            )
+                            if pvalue > 0.05:
+                                metrics_gain[rec_using][metric_name] = bullet_str
+                            else:
+                                if metrics_mean[rec_using][metric_name] < metrics_mean[reference_name][metric_name]:
+                                    metrics_gain[rec_using][metric_name] = triangle_down_str
+                                elif metrics_mean[rec_using][metric_name] > metrics_mean[reference_name][metric_name]:
+                                    metrics_gain[rec_using][metric_name] = triangle_up_str
+                                else:
+                                    metrics_gain[rec_using][metric_name] = bullet_str 
+                    else:
+                        reference_name = rec_using
+                        base_metrics = metrics
+                        metrics_gain[rec_using] = dict()
+                        for metric_name in self.metrics_name:
+                            metrics_gain[rec_using][metric_name] = ''
+
+                metrics_max = {mn:(None,0) for mn in self.metrics_name}
+                for rec_using,rec_metrics in metrics_mean.items():
+                    for metric_name, value in rec_metrics.items():
+                        if metrics_max[metric_name][1] < value:
+                            metrics_max[metric_name] = (rec_using,value)
+                is_metric_the_max = defaultdict(lambda: defaultdict(bool))
+                for metric_name,(rec_using,value) in metrics_max.items():
+                    is_metric_the_max[rec_using][metric_name] = True
+
+                for rec_using,rec_metrics in metrics_mean.items():
+                    gain = metrics_gain[rec_using]
+                    result_str += rec_using + ' &' + '& '.join(map(lambda x: "\\textbf{%.4f}%s" %(x[0],x[1]) if is_metric_the_max[rec_using][x[2]] else "%.4f%s"%(x[0],x[1])  ,zip(rec_metrics.values(),gain.values(),rec_metrics.keys())))
+                    if heuristic:
+                        if rec_using not in references:
+                            if rec_using != max_arg_run_time:
+                                result_str += f'& {sec_to_hm(run_times[rec_using])}'
+                            else:
+                                result_str += f'& \\textbf{{{sec_to_hm(run_times[rec_using])}}}'
+                        else:
+                            result_str += f'& '
+                    result_str += "\\\\\n"
+            if city != cities[-1]:
+                result_str += '\\hline'
+
+
+        result_str += "\\end{tabular}\n"
+        result_str += "\\end{table}\n"
+        result_str = LATEX_HEADER + result_str
+        result_str += LATEX_FOOT
+        fout = open(self.data_directory+UTIL+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
+        fout.write(result_str)
+        fout.close()
