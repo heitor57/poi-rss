@@ -21,7 +21,7 @@ def dist(loc1, loc2):
     return arc * earth_radius
 
 
-class PowerLaw(object):
+class PowerLaw():
     def __init__(self, a=None, b=None):
         self.a = a
         self.b = b
@@ -58,7 +58,8 @@ class PowerLaw(object):
         x = np.log10(x)
         t = np.log10(t)
         w0, w1 = np.random.random(), np.random.random()
-        max_iterations = 2000
+        # max_iterations = 2000
+        max_iterations = 12000
         lambda_w = 0.1
         alpha = 1e-5
         for iteration in range(max_iterations):
