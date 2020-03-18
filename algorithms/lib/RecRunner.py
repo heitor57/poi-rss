@@ -3122,7 +3122,7 @@ class RecRunner():
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.png")
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.eps")
             
-    def print_latex_cities_metrics_table(self,cities,prefix_name='',references=[],heuristic=False,print_htime=False):
+    def print_latex_cities_metrics_table(self,cities,prefix_name='',references=[],heuristic=False,print_htime=False,recs=['gc','ld','binomial','pm2','geodiv','geocat']):
         num_cities = len(cities)
         num_metrics = len(self.metrics_name)
         result_str = Text()
@@ -3145,7 +3145,7 @@ class RecRunner():
             #     run_times[self.get_base_rec_pretty_name()] = open(self.data_directory+UTIL+f'run_time_{self.get_base_rec_name()}.txt',"r").read()
             
             if not heuristic:
-                for rec in ['gc','ld','geodiv','geocat']:
+                for rec in recs:
                     self.final_rec = rec
                     self.load_metrics(base=False,name_type=NameType.PRETTY)
 
