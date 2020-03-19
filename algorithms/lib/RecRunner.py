@@ -377,7 +377,7 @@ class RecRunner():
         self.persons_plot_special_case = False
         self.k_fold = None
         self.fold = None
-        self.train_size = 0.8
+        self.train_size = None
         self.recs_user_final_predicted_lid = {}
         self.recs_user_final_predicted_score = {}
         self.recs_user_base_predicted_lid = {}
@@ -3096,6 +3096,28 @@ class RecRunner():
                     ax.set_ylabel("$\delta$ diff to optimal")
                     fig.savefig(self.data_directory+IMG+f"{self.city}_ord_diff_{geo_div_method}_{cat_div_method}.png")
 
+    def print_usg_hyperparameter(self):
+        KS = [10]
+        inl = np.around(np.linspace(0,1,6),2)
+        l = []
+        for i in inl:
+            for j in inl:
+                l.append((i,j))
+                self.base_rec_parameters['alpha'], self.base_rec_parameters['beta'] = i, j
+                self.load_metrics(base=True,name_type=NameType.FULL,METRICS_KS=KS)
+        METRIC = 'recall'
+        for i,k in enumerate(KS):
+            metrics_mean=dict()
+            for i,params,metrics in zip(range(len(self.metrics)),l,self.metrics.values()):
+                metrics=metrics[k]
+                metrics_mean[params]=0
+                for obj in metrics:
+                    metrics_mean[params]+=obj[METRIC]
+                metrics_mean[params]/=len(metrics)
+            print(metrics_mean)
+            print(pd.Series(metrics_mean).sort_values(ascending=False))
+
+
 
     def plot_usg_hyperparameter(self):
         KS = [10]
@@ -3244,7 +3266,7 @@ class RecRunner():
                 val_to_use = dict()
                 for rec_using, metrics in metrics_mean.items():
                     val_to_use[rec_using] = metrics[metric]
-
+            
 
             print(pd.Series(val_to_use).sort_values(ascending=False))
             print(f"at @{k}")
@@ -4010,7 +4032,16 @@ class RecRunner():
         fig.savefig(self.data_directory+f"result/img/cluster_methods_{self.city}.png",bbox_inches="tight")
 
 
-        
+    def print_base_info(self):
+        val= list(map(len,self.poi_cats.values()))
+        print("POI Categories")
+        print(scipy.stats.describe(val))
+        print('median',np.median(val))
+
+        print("Visits")
+        val= np.sum(self.training_matrix,axis=1)
+        print(scipy.stats.describe(val))
+        print('median',np.median(val))
 
     def plot_base_info(self):
 
