@@ -3266,7 +3266,6 @@ class RecRunner():
                 val_to_use = dict()
                 for rec_using, metrics in metrics_mean.items():
                     val_to_use[rec_using] = metrics[metric]
-            
 
             print(pd.Series(val_to_use).sort_values(ascending=False))
             print(f"at @{k}")
@@ -3306,7 +3305,7 @@ class RecRunner():
                     string_to_put = '$%d^{%s}$-%.2f-%.2f-%.2f'%(i,int_what_ordinal(i),x,y,z)
 
                 box_text_string += string_to_put + '\n'
-                if i == 3:
+                if i == 1:
                     a = Arrow3D([x_real, x_real], [z, z], [p, z_up], mutation_scale=20,
                                 lw=1, arrowstyle="<|-", color='k',zorder=26)
                 else:
