@@ -366,6 +366,7 @@ class RecRunner():
         self.metrics = {}
         self.groups_epc = {}
         self.metrics_name = ['precision', 'recall', 'gc', 'ild','pr','epc']
+        
         self.except_final_rec = except_final_rec
         self.welcome_message()
         self.CHKS = 50 # chunk size for process pool executor
@@ -377,7 +378,7 @@ class RecRunner():
         self.persons_plot_special_case = False
         self.k_fold = None
         self.fold = None
-        self.train_size = None
+        self.train_size = 0.8
         self.recs_user_final_predicted_lid = {}
         self.recs_user_final_predicted_score = {}
         self.recs_user_base_predicted_lid = {}
@@ -502,7 +503,7 @@ class RecRunner():
             "ld": {'div_weight':0.25},
             # "ld": {'div_weight':1},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
-            "pm2": {'lambda': 1},
+            "pm2": {'div_weight': 1},
             "perfectpgeocat": {'k': 10,'interval': 2,'div_weight': 0.75,'div_cat_weight': 0.05, 'train_size': None},
             "pdpgeocat": {'k': 10,'interval': 2,'div_geo_cat_weight': 0.75},
             "gc": {'div_weight': 0.8},
@@ -959,7 +960,7 @@ class RecRunner():
         del self.binomial
 
     def pm2(self):
-        self.pm2 = Pm2(self.training_matrix,self.poi_cats,self.final_rec_parameters['lambda'])
+        self.pm2 = Pm2(self.training_matrix,self.poi_cats,self.final_rec_parameters['div_weight'])
         # for uid in self.all_uids:
         #     self.run_pm2(uid)
         args=[(uid,) for uid in self.all_uids]
@@ -1488,7 +1489,7 @@ class RecRunner():
             ground_truth[checkin['user_id']].add(checkin['poi_id'])
         ground_truth = dict(ground_truth)
 
-        training_matrix = np.zeros((user_num, self.poi_num))
+        training_matrix = np.zeros((user_num, self.poi_num),dtype=np.float32)
         for checkin in tr_checkin_data:
             training_matrix[checkin['user_id'], checkin['poi_id']] += 1
         ftecheckin=open(self.data_directory+UTIL+f'test_val_{self.get_train_validation_name()}.pickle','wb')
@@ -3511,14 +3512,14 @@ class RecRunner():
         self.not_in_ground_truth_message(uid)
         return ""
 
-    def print_gc_hyperparameter(self):
+    def print_div_weight_hyperparameter(self):
         KS = [10]
-        lp = np.around(np.linspace(0, 1, 21),decimals=2)
+        lp = np.around(np.linspace(0, 1, 11),decimals=2)
         l = []
         for div_weight in lp:
             l.append(div_weight)
             self.final_rec_parameters['div_weight'] = div_weight
-            self.load_metrics(base=False,pretty_name=False,short_name=False,METRICS_KS=KS)
+            self.load_metrics(base=False,name_type = NameType.FULL,METRICS_KS=KS)
 
         for i,k in enumerate(KS):
             metrics_mean=dict()
