@@ -226,7 +226,7 @@ from usg.PowerLaw import PowerLaw
 import geocat.objfunc as gcobjfunc
 from pgc.GeoDivPropensity import GeoDivPropensity
 from pgc.CatDivPropensity import CatDivPropensity
-from constants import experiment_constants, METRICS_PRETTY, RECS_PRETTY, CITIES_PRETTY, HEURISTICS_PRETTY, GROUP_ID
+from constants import experiment_constants, METRICS_PRETTY, RECS_PRETTY, CITIES_PRETTY, HEURISTICS_PRETTY, GROUP_ID, CITIES_BEST_PARAMETERS
 import metrics
 from geocat.Binomial import Binomial
 from geocat.Pm2 import Pm2
@@ -299,6 +299,7 @@ def print_dict(dictionary):
         print(f"{key} : {value}")
 
 class RecRunner():
+    PARAMETERS_BY_CITY = True
     _instance = None
     def save_result(self,results,base=True):
         if base:
@@ -343,13 +344,13 @@ class RecRunner():
         #     "geocat": ['div_weight','div_geo_cat_weight'],
         #     "persongeocat": ['div_weight']
         # }
+        self.city = city
         self.base_rec = base_rec
         self.final_rec = final_rec
 
         self.base_rec_parameters = base_rec_parameters
         self.final_rec_parameters = final_rec_parameters
 
-        self.city = city
 
         self.base_rec_list_size = base_rec_list_size
         self.final_rec_list_size = final_rec_list_size
@@ -378,11 +379,12 @@ class RecRunner():
         self.persons_plot_special_case = False
         self.k_fold = None
         self.fold = None
-        self.train_size = 0.8
+        self.train_size = None
         self.recs_user_final_predicted_lid = {}
         self.recs_user_final_predicted_score = {}
         self.recs_user_base_predicted_lid = {}
         self.recs_user_base_predicted_score = {}
+        
 
     def message_start_section(self,string):
         print("------===%s===------" % (string))
@@ -435,7 +437,10 @@ class RecRunner():
 
     @final_rec_parameters.setter
     def final_rec_parameters(self, parameters):
-        final_parameters = self.get_final_parameters()[self.final_rec]
+        if self.PARAMETERS_BY_CITY:
+            final_parameters = CITIES_BEST_PARAMETERS[self.city][self.final_rec]
+        else:
+            final_parameters = self.get_final_parameters()[self.final_rec]
         # for parameter in parameters.copy():
         #     if parameter not in final_parameters:
         #         del parameters[parameter]
@@ -491,23 +496,20 @@ class RecRunner():
             "geosoca": {'alpha': 0.3},
         }
 
-    @staticmethod
-    def get_final_parameters():
+    @classmethod
+    def get_final_parameters(cls):
         return  {
-            # "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'particle_swarm', 'obj_func': None, 'div_cat_weight': 0.05},
             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
             "persongeocat": {'div_weight':0.75,'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk',
                              'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': None,
                              'norm_method': 'default','funnel':None},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
-            # "ld": {'div_weight':1},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
             "pm2": {'div_weight': 1},
             "perfectpgeocat": {'k': 10,'interval': 2,'div_weight': 0.75,'div_cat_weight': 0.05, 'train_size': None},
             "pdpgeocat": {'k': 10,'interval': 2,'div_geo_cat_weight': 0.75},
             "gc": {'div_weight': 0.8},
-            # "gc": {'div_weight': 1},
             "random": {'div_weight': 1},
         }
 
@@ -559,6 +561,11 @@ class RecRunner():
             return string
         elif self.final_rec == 'geodiv':
             return f"{self.get_base_rec_short_name()}_{self.final_rec}"
+        elif self.final_rec == 'binomial':
+            string = f"{self.get_base_rec_short_name()}_{self.final_rec}"
+            string += f"_{self.final_rec_parameters['div_weight']}"
+            string += f"_{self.final_rec_parameters['alpha']}"
+            return string
         else:
             return f"{self.get_base_rec_short_name()}_{self.final_rec}"
 
@@ -3512,9 +3519,9 @@ class RecRunner():
         self.not_in_ground_truth_message(uid)
         return ""
 
-    def print_div_weight_hyperparameter(self):
+    def print_div_weight_hyperparameter(self,lp=np.around(np.linspace(0, 1, 11),decimals=2)):
         KS = [10]
-        lp = np.around(np.linspace(0, 1, 11),decimals=2)
+        # lp = np.around(np.linspace(0, 1, 11),decimals=2)
         l = []
         for div_weight in lp:
             l.append(div_weight)
@@ -4858,3 +4865,46 @@ class RecRunner():
         fout = open(self.data_directory+UTIL+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
+
+
+    def print_binomial_hyperparameter(self,inl):
+        KS = [10]
+        
+        l = []
+        for i in inl:
+            for j in inl:
+                if not(i == 0 and j != 0):
+                    l.append((i,j))
+                    self.final_rec_parameters['div_weight'], self.final_rec_parameters['alpha'] = i, j
+                    self.load_metrics(base=False,name_type=NameType.SHORT,METRICS_KS=KS)
+        for i,k in enumerate(KS):
+            metrics_mean=dict()
+            for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
+                metrics=metrics[k]
+
+                metrics_mean[rec_using]=defaultdict(float)
+                for obj in metrics:
+                    for key in self.metrics_name:
+                        metrics_mean[rec_using][key]+=obj[key]
+
+
+                for j,key in enumerate(metrics_mean[rec_using]):
+                    metrics_mean[rec_using][key]/=len(metrics)
+
+            metrics_utility_score=dict()
+            for rec_using in metrics_mean:
+                metrics_utility_score[rec_using]=dict()
+            for metric_name in self.metrics_name:
+                max_metric_value=0
+                min_metric_value=1
+                for rec_using,rec_metrics in metrics_mean.items():
+                    max_metric_value=max(max_metric_value,rec_metrics[metric_name])
+                    min_metric_value=min(min_metric_value,rec_metrics[metric_name])
+                for rec_using,rec_metrics in metrics_mean.items():
+                    metrics_utility_score[rec_using][metric_name]=(rec_metrics[metric_name]-min_metric_value)\
+                        /(max_metric_value-min_metric_value)
+            mauts = dict()
+            for rec_using,utility_scores in metrics_utility_score.items():
+                mauts[rec_using] = np.sum(list(utility_scores.values()))/len(utility_scores)
+
+            print(pd.Series(mauts).sort_values(ascending=False))
