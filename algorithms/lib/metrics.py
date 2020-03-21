@@ -27,6 +27,11 @@ def precisionk(actual, predicted):
 def recallk(actual, predicted):
     return 1.0 * len(set(actual) & set(predicted)) / len(actual)
 
+def f1k(precision, recall):
+    if precision == 0 and recall == 0:
+        return 0
+    return 2*(precision*recall)/(precision+recall)
+    
 
 def ndcgk(actual, predicted, k):
     idcg = 1.0

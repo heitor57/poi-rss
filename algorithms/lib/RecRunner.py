@@ -147,7 +147,7 @@ def get_my_color_scheme(num=None,ord_by_brightness=False,inverse_order=True):
         MY_COLOR_SCHEME=ord_scheme_brightness(MY_COLOR_SCHEME)
 
     if inverse_order:
-        MY_COLOR_SCHEME = list(reversed(MY_COLOR_SCHEME))
+        MY_COLOR_SCHEME = MY_COLOR_SCHEME[-num:]
 
     if num:
         return MY_COLOR_SCHEME[:num]
@@ -365,7 +365,7 @@ class RecRunner():
         
         self.metrics = {}
         self.groups_epc = {}
-        self.metrics_name = ['precision', 'recall', 'gc', 'ild','pr','epc']
+        self.metrics_name = ['f1', 'gc', 'ild','pr','epc']
         
         self.except_final_rec = except_final_rec
         self.welcome_message()
@@ -1662,7 +1662,7 @@ class RecRunner():
         # if not hasattr(self,'epc_val'):
         # epc_val=metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,self.all_uids)
         epc_val=self.epc_val
-
+        f1_val=metrics.f1k(precision_val,rec_val)
         # map_val = metrics.mapk(actual,predicted_at_k,k)
         # ndcg_val = metrics.ndcgk(actual,predicted_at_k,k)
         # ildg_val = metrics.ildgk(predicted_at_k,self.poi_coos)
@@ -1673,7 +1673,7 @@ class RecRunner():
         # this epc is maded like vargas, recsys'11
         #epc_val=metrics.epck(predicted_at_k,actual,uid,self.training_matrix)
         
-        d={'user_id':uid,'precision':precision_val,'recall':rec_val,'pr':pr_val,'ild':ild_val,'gc':gc_val,'epc':epc_val,
+        d={'user_id':uid,'precision':precision_val,'recall':rec_val,'pr':pr_val,'ild':ild_val,'gc':gc_val,'epc':epc_val,'f1': f1_val,
            # 'map':map_val,'ndcg':ndcg_val,
            # 'ildg': ildg_val
         }
@@ -1888,13 +1888,13 @@ class RecRunner():
                 rects[rec_using] = ax.bar(indexes+i*barWidth,rel_diffs,barWidth,label=rec_using,**next(styles))[0]
                 special_cases = rel_diffs > 100
                 for idx, value in zip(indexes[special_cases],rel_diffs[special_cases]):
-                    ax.annotate(f'{int(value)}%',xy=(idx+i*barWidth-barWidth,y_to_annotate),zorder=25,color='k',fontsize=18)
+                    ax.annotate(f'{int(value)}%',xy=(idx+i*barWidth-barWidth,y_to_annotate),zorder=25,color='k',fontsize=18,weight='bold')
                     y_to_annotate -= 10
 
                 special_cases = rel_diffs < -25
 
                 for idx, value in zip(indexes[special_cases],rel_diffs[special_cases]):
-                    ax.annotate(f'{int(value)}%',xy=(idx+i*barWidth-barWidth,neg_y_to_annotate),zorder=25,color='k',fontsize=18)
+                    ax.annotate(f'{int(value)}%',xy=(idx+i*barWidth-barWidth,neg_y_to_annotate),zorder=25,color='k',fontsize=18,weight='bold')
                     neg_y_to_annotate += 10
                 i+=1
             rects = list(rects.values())
@@ -2677,7 +2677,7 @@ class RecRunner():
                 rects[rec_using] = ax.bar(count+i*barWidth,val,barWidth,**next(styles),label=rec_using)[0]
                     # ax.bar(count+i*barWidth,val,barWidth,**GEOCAT_BAR_STYLE,label=rec_using)
                 if print_text:
-                    ax.text(count+i*barWidth-barWidth/2+barWidth*0.1,val+0.025,"%.2f"%(val),rotation=90)
+                    ax.text(count+i*barWidth-barWidth/2+barWidth*0.1,val+0.025,"%.2f"%(val),rotation=90,zorder=33)
                 i+=1
             #ax.set_xticks(np.arange(N+1)+barWidth*(np.floor((len(self.metrics))/2)-1)+barWidth/2)
         # ax.set_xticks(np.arange(N+1)+barWidth*len(metrics_utility_score)/2+barWidth/2)
