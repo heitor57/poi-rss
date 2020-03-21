@@ -299,7 +299,7 @@ def print_dict(dictionary):
         print(f"{key} : {value}")
 
 class RecRunner():
-    PARAMETERS_BY_CITY = True
+    PARAMETERS_BY_CITY = False
     _instance = None
     def save_result(self,results,base=True):
         if base:
@@ -366,7 +366,7 @@ class RecRunner():
         
         self.metrics = {}
         self.groups_epc = {}
-        self.metrics_name = ['f1', 'gc', 'ild','pr','epc']
+        self.metrics_name = ['precision', 'recall', 'gc', 'ild','pr','epc']
         
         self.except_final_rec = except_final_rec
         self.welcome_message()
@@ -379,7 +379,7 @@ class RecRunner():
         self.persons_plot_special_case = False
         self.k_fold = None
         self.fold = None
-        self.train_size = None
+        self.train_size = 0.8
         self.recs_user_final_predicted_lid = {}
         self.recs_user_final_predicted_score = {}
         self.recs_user_base_predicted_lid = {}
@@ -645,6 +645,7 @@ class RecRunner():
         self.undirected_category_tree = self.category_tree.shortest_paths()
 
         cats = self.category_tree.vs['name']
+        self.cat_num = len(cats)
         cats_to_int = dict()
         for i, cat in enumerate(cats):
             cats_to_int[cat] = i
@@ -954,7 +955,7 @@ class RecRunner():
         
     def binomial(self):
         self.binomial=Binomial.getInstance(self.training_matrix,self.poi_cats,
-            self.final_rec_parameters['div_weight'],self.final_rec_parameters['alpha'])
+                                           self.final_rec_parameters['div_weight'],self.final_rec_parameters['alpha'])
         self.binomial.compute_all_probabilities()
         # predicted = self.user_base_predicted_lid[0][
         #     0:self.base_rec_list_size]

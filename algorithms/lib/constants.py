@@ -85,16 +85,23 @@ GROUP_ID = {
 
 CITIES_BEST_PARAMETERS = {
     'lasvegas': {
-            "geocat": {'div_weight':1.0,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
-            "geodiv": {'div_weight':0.5},
-            "ld": {'div_weight':0.25},
-            "binomial": {'alpha': 1.0, 'div_weight': 1.0},
-            "pm2": {'div_weight': 0.6},
-            "gc": {'div_weight': 0.7},
+        "geocat": {'div_weight':1.0,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+        "geodiv": {'div_weight':0.5},
+        "ld": {'div_weight':0.25},
+        "binomial": {'alpha': 1.0, 'div_weight': 1.0},
+        "pm2": {'div_weight': 0.6},
+        "gc": {'div_weight': 0.7},
+        "persongeocat": {'div_weight':1.0,'cat_div_method': 'inv_num_cat',
+                         'geo_div_method': 'walk', 'obj_func': 'cat_weight',
+                         'div_cat_weight':0.05, 'bins': None,
+                         'norm_method': 'default','funnel':None},
     },
     'phoenix': {
             "geocat": {'div_weight':1.0,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
             "ld": {'div_weight':0.4},
+            "gc": {'div_weight':0.3},
+            "pm2": {'div_weight':1.0},
+            "geodiv": {'div_weight':1.0},
     },
     
 }
