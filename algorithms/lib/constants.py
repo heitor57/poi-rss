@@ -82,3 +82,19 @@ GROUP_ID = {
     'no_preference': '3',
     'cat_preference': '4',
 }
+
+CITIES_BEST_PARAMETERS = {
+    'lasvegas': {
+            "geocat": {'div_weight':1.0,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+            "geodiv": {'div_weight':0.5},
+            "ld": {'div_weight':0.25},
+            "binomial": {'alpha': 1.0, 'div_weight': 1.0},
+            "pm2": {'div_weight': 0.6},
+            "gc": {'div_weight': 0.7},
+    },
+    'phoenix': {
+            "geocat": {'div_weight':1.0,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+            "ld": {'div_weight':0.4},
+    },
+    
+}
