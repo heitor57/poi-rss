@@ -195,11 +195,11 @@ class Binomial:
         return self.coverage(uid,rec_list,rec_list_size,rec_list_genres)*\
             self.non_redundancy(uid,rec_list,rec_list_size,rec_list_genres)
 
-    def objective_function(self,uid,poi_id,score,rec_list,rec_list_size,rec_list_genres):
+    def objective_function(self,uid,poi_id,score,rec_list,rec_list_size,rec_list_genres,current_binom_div):
         crlg = rec_list_genres.copy()
         crlg.update(set(self.poi_cats[poi_id]))
         div=self.binom_div(uid,rec_list+[poi_id],rec_list_size,crlg)\
-                            -self.binom_div(uid,rec_list,rec_list_size,rec_list_genres)
+                            -current_binom_div
         return (1-self.div_weight)*score+self.div_weight*div
 
     def binomial(self,uid,tmp_rec_list,tmp_score_list,K):
@@ -209,6 +209,8 @@ class Binomial:
         
         final_scores=[]
         rec_list_genres=set()
+        current_binom_div=self.binom_div(uid,rec_list,K,rec_list_genres)
+
         for i in range_K:
             #print(i)
             poi_to_insert=None
@@ -218,7 +220,7 @@ class Binomial:
                 candidate_poi_id=tmp_rec_list[j]
                 candidate_score=tmp_score_list[j]
                 objective_value=self.objective_function(uid,candidate_poi_id,candidate_score,
-                                                        rec_list,K,rec_list_genres)
+                                                        rec_list,K,rec_list_genres,current_binom_div)
                 if objective_value > max_objective_value:
                     max_objective_value=objective_value
                     poi_to_insert=candidate_poi_id
@@ -230,4 +232,6 @@ class Binomial:
                 final_scores.append(max_objective_value)
                 # update genres of reclist
                 rec_list_genres.update(set(self.poi_cats[poi_to_insert]))
+                # update current binom div
+                current_binom_div = self.binom_div(uid,rec_list,K,rec_list_genres)
         return rec_list,final_scores
