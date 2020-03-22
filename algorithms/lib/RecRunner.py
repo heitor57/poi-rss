@@ -379,7 +379,7 @@ class RecRunner():
         self.persons_plot_special_case = False
         self.k_fold = None
         self.fold = None
-        self.train_size = 0.8
+        self.train_size = None
         self.recs_user_final_predicted_lid = {}
         self.recs_user_final_predicted_score = {}
         self.recs_user_base_predicted_lid = {}
@@ -954,7 +954,7 @@ class RecRunner():
 
         
     def binomial(self):
-        self.binomial=Binomial.getInstance(self.training_matrix,self.poi_cats,
+        self.binomial=Binomial.getInstance(self.training_matrix,self.poi_cats,self.cat_num,
                                            self.final_rec_parameters['div_weight'],self.final_rec_parameters['alpha'])
         self.binomial.compute_all_probabilities()
         # predicted = self.user_base_predicted_lid[0][

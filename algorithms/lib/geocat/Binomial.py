@@ -21,7 +21,7 @@ class Binomial:
             cls._instance.__init__(*args,**kwargs)
         return cls._instance
 
-    def __init__(self,training_matrix,poi_cats,div_weight=0.75,alpha=0.5):
+    def __init__(self,training_matrix,poi_cats,cat_num,div_weight=0.75,alpha=0.5):
         self.training_matrix=training_matrix
         self.poi_cats=poi_cats
         self.div_weight=div_weight
@@ -36,13 +36,18 @@ class Binomial:
         self.p_u_g = defaultdict(dict) # user probability
         self.p_g = defaultdict() # global probability
         self.p = defaultdict(dict) # final probability
+
+        self.poi_cat_matrix=np.zeros((len(poi_cats),cat_num),dtype=bool)
+        for lid, cats in poi_cats.items():
+            self.poi_cat_matrix[lid,cats] = True
     # itens of s that has the g genre
     def k_g_s(self,genre,items):
-        count=0
-        for item in items:
-            if genre in self.poi_cats[item]:
-                count+=1
-        return count
+        # count=0
+        # for item in items:
+        #     if genre in self.poi_cats[item]:
+        #         count+=1
+        # return count
+        return np.count_nonzero(self.poi_cat_matrix[items,:][:,genre],axis=0)
 
     # p^{''}_{g}
     def user_probability_genre(self, uid, genre):
@@ -54,10 +59,13 @@ class Binomial:
         return count/len(lids)
 
 
+    # deprecated !!!
     # p^{'}_{g}
     @classmethod
     def global_probability_genre(cls, genre):
         self = cls.getInstance()
+        # num_item_users_consumed = np.count_nonzero(self.training_matrix)
+        # count=np.count_nonzero(self.training_matrix*self.poi_cat_matrix[:,genre])
         num_item_users_consumed=0
         count=0
         for uid in range(self.training_matrix.shape[0]):
@@ -107,10 +115,16 @@ class Binomial:
         num_divs = 4
         chk_size_genres = int(len(self.genres)/num_cores/num_divs)
         chk_size_users = int(self.training_matrix.shape[0]/num_cores/num_divs)
-        args = [(genre,) for genre in self.genres]
-        result = run_parallel(self.global_probability_genre,args,chk_size_genres)
-        for genre, p_g in zip(self.genres,result):
-            self.p_g[genre]= p_g
+        # args = [(genre,) for genre in self.genres]
+        # result = run_parallel(self.global_probability_genre,args,chk_size_genres)
+        stime = time()
+        num_item_users_consumed = np.count_nonzero(self.training_matrix)
+        result = np.sum(np.matmul(np.where(self.training_matrix > 1, 1, self.training_matrix),self.poi_cat_matrix),axis=0)/num_item_users_consumed
+        for genre, p_g in enumerate(result):
+            self.p_g[genre] = p_g
+        print(f'{time()-stime}s')
+        # for genre, p_g in zip(self.genres,result):
+        #     self.p_g[genre]= p_g
         # for genre in tqdm(self.genres):
         #     self.p_g[genre]=self.global_probability_genre(genre)
         print("\tComputing user probability")
@@ -174,16 +188,18 @@ class Binomial:
         result_non_red=1
         if num_genres>0:
             exponent=1/num_genres
+            ks = self.k_g_s(list(genres),rec_list)
             
-            for genre in genres:
-                k=self.k_g_s(genre,rec_list)
+            for i, genre in enumerate(genres):
+                # k=self.k_g_s(genre,rec_list)
+                k=ks[i]
 
                 # binom=0
                 # for l in range(1,k-1):
                 #     binom+=scipy.stats.binom.pmf(n=rec_list_size,
                 #                                 p=self.p[uid][genre],k=l)
                 binom=np.sum(scipy.stats.binom.pmf(n=rec_list_size,
-                                p=self.p[uid][genre],k=list(range(1,k-1)))
+                                p=self.p[uid][genre],k=list(range(1,k)))
                                 )
                     #binom+=self.probability_mass_function(rec_list_size,l,self.p[uid][genre])
                 binom=(1-binom)**exponent
@@ -192,6 +208,13 @@ class Binomial:
         return result_non_red
         
     def binom_div(self, uid, rec_list,rec_list_size,rec_list_genres):
+        # stime = time()
+        # cov = self.coverage(uid,rec_list,rec_list_size,rec_list_genres)
+        # print(f'cov {time()-stime}s')
+        # stime = time()
+        # non_red = self.non_redundancy(uid,rec_list,rec_list_size,rec_list_genres)
+        # print(f'non_red {time()-stime}s')
+        # return cov*non_red
         return self.coverage(uid,rec_list,rec_list_size,rec_list_genres)*\
             self.non_redundancy(uid,rec_list,rec_list_size,rec_list_genres)
 
