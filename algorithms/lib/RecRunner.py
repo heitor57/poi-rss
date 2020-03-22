@@ -142,20 +142,20 @@ def ord_scheme_brightness(color_scheme):
     return color_scheme
 def get_my_color_scheme(num=None,ord_by_brightness=False,inverse_order=True):
     global MY_COLOR_SCHEME
-    MY_COLOR_SCHEME = MY_COLOR_SCHEME.copy()
+    my_color_scheme = MY_COLOR_SCHEME.copy()
     if ord_by_brightness:
-        MY_COLOR_SCHEME=ord_scheme_brightness(MY_COLOR_SCHEME)
+        my_color_scheme=ord_scheme_brightness(my_color_scheme)
 
     if inverse_order:
-        MY_COLOR_SCHEME = MY_COLOR_SCHEME[-num:]
+        my_color_scheme = my_color_scheme[-num:]
 
     if num:
-        return MY_COLOR_SCHEME[:num]
-    return MY_COLOR_SCHEME
+        return my_color_scheme[:num]
+    return my_color_scheme
             
 
 def gen_bar_cycle(num=6,ord_by_brightness=False,inverse_order=True):
-    MY_COLOR_SCHEME = get_my_color_scheme(num,ord_by_brightness,inverse_order)
+    my_color_scheme = get_my_color_scheme(num,ord_by_brightness,inverse_order)
 
     arrange = np.linspace(0,1,num)
     # hatch_cycler = cycler('hatch', ['///', '--', '...','\///', 'xxx', '\\\\','None','*'][:num])
@@ -163,7 +163,7 @@ def gen_bar_cycle(num=6,ord_by_brightness=False,inverse_order=True):
     # base_cycler = cycler('zorder', [10])*cycler('edgecolor',[adjust_lightness(color,amount=0.3) for color in ['#9595ff','#2a913e','#ffb2b2','#b5b355','#11166c','#ecd9c6','#939393'][:num]])
 
     # color_cycler = cycler('color', reversed(list(map(str,arrange))))
-    color_cycler = cycler('color', MY_COLOR_SCHEME)+cycler('edgecolor',[adjust_lightness(color,amount=0.3) for color in MY_COLOR_SCHEME])
+    color_cycler = cycler('color', my_color_scheme)+cycler('edgecolor',[adjust_lightness(color,amount=0.3) for color in my_color_scheme])
     # color_cycler = cycler('color', reversed([plt.get_cmap('Dark2')(i) for i in arrange]))
     linewidth_cycler = cycler('linewidth', [1])
     bar_cycle = (# hatch_cycler +
@@ -299,7 +299,7 @@ def print_dict(dictionary):
         print(f"{key} : {value}")
 
 class RecRunner():
-    PARAMETERS_BY_CITY = False
+    PARAMETERS_BY_CITY = True
     _instance = None
     def save_result(self,results,base=True):
         if base:
@@ -379,7 +379,7 @@ class RecRunner():
         self.persons_plot_special_case = False
         self.k_fold = None
         self.fold = None
-        self.train_size = None
+        self.train_size = 0.8
         self.recs_user_final_predicted_lid = {}
         self.recs_user_final_predicted_score = {}
         self.recs_user_base_predicted_lid = {}
@@ -2662,6 +2662,7 @@ class RecRunner():
                     metrics_mean[rec_using][key]/=len(metrics)
                     #print(f"{key}:{metrics_mean[rec_using][key]}")
             styles = gen_bar_cycle(len(self.metrics))()
+            # print(get_my_color_scheme(len(self.metrics)))
             # ax.spines['top'].set_visible(False)
             # ax.spines['right'].set_visible(False)
             # ax.spines['bottom'].set_visible(False)
