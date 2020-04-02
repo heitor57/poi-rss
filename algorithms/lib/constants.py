@@ -102,6 +102,7 @@ CITIES_BEST_PARAMETERS = {
             "gc": {'div_weight':0.3},
             "pm2": {'div_weight':1.0},
             "geodiv": {'div_weight':1.0},
+            "binomial": {'alpha': 1.0, 'div_weight': 1.0},
     },
     
 }

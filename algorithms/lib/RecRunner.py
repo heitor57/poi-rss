@@ -299,7 +299,7 @@ def print_dict(dictionary):
         print(f"{key} : {value}")
 
 class RecRunner():
-    PARAMETERS_BY_CITY = True
+    PARAMETERS_BY_CITY = False
     _instance = None
     def save_result(self,results,base=True):
         if base:
@@ -379,7 +379,7 @@ class RecRunner():
         self.persons_plot_special_case = False
         self.k_fold = None
         self.fold = None
-        self.train_size = 0.8
+        self.train_size = None
         self.recs_user_final_predicted_lid = {}
         self.recs_user_final_predicted_score = {}
         self.recs_user_base_predicted_lid = {}
@@ -499,9 +499,9 @@ class RecRunner():
     @classmethod
     def get_final_parameters(cls):
         return  {
-            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
-            "persongeocat": {'div_weight':0.75,'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk',
-                             'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': None,
+            "geocat": {'div_weight':1.0,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+            "persongeocat": {'div_weight':1.0,'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk',
+                             'obj_func': 'cat_weight', 'div_cat_weight':0.25, 'bins': None,
                              'norm_method': 'default','funnel':None},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
@@ -1694,7 +1694,7 @@ class RecRunner():
         else:
             return self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}"
 
-    def eval_rec_metrics(self,*,base=False,METRICS_KS = experiment_constants.METRICS_K,eval_group=False):
+    def eval_rec_metrics(self,*,base=False,METRICS_KS = experiment_constants.METRICS_K,eval_group=True):
 
         if eval_group:
             tmp_final_rec = self.final_rec
@@ -3356,7 +3356,7 @@ class RecRunner():
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.png")
             fig.savefig(self.data_directory+IMG+f"{self.city}_{k}_{self.base_rec}_geocat_hyperparameter.eps")
             
-    def print_latex_cities_metrics_table(self,cities,prefix_name='',references=[],heuristic=False,print_htime=False,recs=['gc','ld','binomial','pm2','geodiv','geocat']):
+    def print_latex_cities_metrics_table(self,cities,prefix_name='',references=[],heuristic=False,print_htime=False,recs=['gc','ld','geodiv','geocat']):
         num_cities = len(cities)
         num_metrics = len(self.metrics_name)
         result_str = Text()
