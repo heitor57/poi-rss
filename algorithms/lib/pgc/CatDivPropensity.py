@@ -61,6 +61,15 @@ class CatDivPropensity():
         self.users_categories_visits = cat_utils.get_users_cat_visits(self.training_matrix,
                                                                       self.poi_cats)
 
+        # import scipy.stats
+        # # print('mean walk',self.mean_walk)
+        # print(scipy.stats.describe(list(map(len,self.users_categories_visits))))
+        # import matplotlib.pyplot as plt
+        # fig, ax = plt.subplots(1,1)
+        # ax.hist(list(map(len,self.users_categories_visits)))
+        # fig.savefig('resultadotemp2.png')
+
+
         self.cat_div_propensity = None
     
     @classmethod

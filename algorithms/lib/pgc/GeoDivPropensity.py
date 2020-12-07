@@ -55,6 +55,31 @@ class GeoDivPropensity():
                                                                       self.poi_cats)
         self.mean_walk=self.cmean_dist_pois()
         self.users_mean_walk=self.cmean_dist_users()
+
+        # import scipy.stats
+        # print('mean walk',self.mean_walk)
+        # print(scipy.stats.describe(self.users_mean_walk))
+        import matplotlib.pyplot as plt
+        num_bins = 50
+        heights, bins, _ = plt.hist(self.users_mean_walk,bins=num_bins,color='k')
+        bin_width = np.diff(bins)[0]
+        bin_pos = bins[:-1] + bin_width / 2
+        mask = (bin_pos <= self.mean_walk)
+        fig, ax = plt.subplots(1,1)
+        ax.bar(bin_pos[mask], heights[mask], width=bin_width, color='red')
+        ax.bar(bin_pos[~mask], heights[~mask], width=bin_width, color='black')
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.spines['bottom'].set_visible(False)
+        ax.set_yticklabels([])
+        ax.set_xticklabels([])
+        ax.set_xticks([])
+        ax.set_yticks([])
+        fig.savefig('resultadotemp.png',bbox_inches='tight')
+        fig.savefig('resultadotemp.eps',bbox_inches='tight')
+        raise SystemExit
+        
         self.geo_div_method = geo_div_method
         self.GEO_METHODS = {
             "walk": self.geo_div_walk,

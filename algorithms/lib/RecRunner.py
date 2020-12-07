@@ -4,6 +4,7 @@
 # if module_path not in sys.path:
 #     sys.path.append(module_path)
 #print(sys.path)
+LANG = 'pt'
 from enum import Enum
 class NameType(Enum):
     SHORT = 1
@@ -499,9 +500,9 @@ class RecRunner():
     @classmethod
     def get_final_parameters(cls):
         return  {
-            "geocat": {'div_weight':1.0,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
-            "persongeocat": {'div_weight':1.0,'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk',
-                             'obj_func': 'cat_weight', 'div_cat_weight':0.25, 'bins': None,
+            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+            "persongeocat": {'div_weight':0.75,'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk',
+                             'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': None,
                              'norm_method': 'default','funnel':None},
             "geodiv": {'div_weight':0.5},
             "ld": {'div_weight':0.25},
@@ -1927,7 +1928,10 @@ class RecRunner():
             ax.set_xticklabels(map(lambda x: f'{x}@{k}',list(map(lambda name: METRICS_PRETTY[name],self.metrics_name))),fontsize=17)
             for tick in ax.yaxis.get_major_ticks():
                 tick.label.set_fontsize(19) 
-            ax.set_ylabel(f"Relative diff w.r.t. {RECS_PRETTY[self.base_rec]}",fontsize=23)
+            if LANG == 'pt':
+                ax.set_ylabel(f"Diferença relativa ao {RECS_PRETTY[self.base_rec]}",fontsize=23)
+            else:
+                ax.set_ylabel(f"Diferença relativa ao {RECS_PRETTY[self.base_rec]}",fontsize=23)
             ax.set_ylim(-25,100)
             ax.set_xlim(-barWidth,len(self.metrics_name)-1+(num_recs_plot-1)*barWidth+barWidth)
 
@@ -3041,8 +3045,12 @@ class RecRunner():
                     ax.set_xlabel('Categorical method ('+CatDivPropensity.CAT_DIV_PROPENSITY_METHODS_PRETTY_NAME[cat_div_method]+')')
                     ax.set_ylabel('Geographic method ('+GeoDivPropensity.GEO_DIV_PROPENSITY_METHODS_PRETTY_NAME[geo_div_method]+')')
                 else:
-                    ax.set_xlabel(r'Parameter of Cat-Diversification ( $\theta_{cat}$ )')
-                    ax.set_ylabel(r'Parameter of Geo-Diversification ( $\theta_{geo}$ )')
+                    if LANG == 'pt':
+                        ax.set_xlabel(r'Parâmetro de div-cat ( $\theta_{cat}$ )')
+                        ax.set_ylabel(r'Parâmetro de div-geo ( $\theta_{geo}$ )')
+                    else:
+                        ax.set_xlabel(r'Parameter of Cat-Diversification ( $\theta_{cat}$ )')
+                        ax.set_ylabel(r'Parameter of Geo-Diversification ( $\theta_{geo}$ )')
                     
                 # ax.set_xlim(min(np.min(cat_div_propensity),0),max(np.max(cat_div_propensity),1))
                 # ax.set_ylim(min(np.min(geo_div_propensity),0),max(np.max(geo_div_propensity),1))
@@ -3058,12 +3066,18 @@ class RecRunner():
                         f"No preference ({np.count_nonzero(groups['no_preference'])} users)",
                     ))
                 else:
-                    
-                    ax.legend([f"Group {GROUP_ID[group]} ({np.count_nonzero(groups[group])} users)" for group in unique_groups]
-                              ,handletextpad=-0.6,scatteryoffsets=[0.5],
-                              bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
-                              mode="expand", borderaxespad=0, ncol=2
-                    )
+                    if LANG == 'pt':
+                        ax.legend([f"G{GROUP_ID[group]} ({np.count_nonzero(groups[group])} usuários)" for group in unique_groups]
+                                ,handletextpad=-0.6,scatteryoffsets=[0.5],
+                                bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                                mode="expand", borderaxespad=0, ncol=2
+                        )
+                    else:
+                        ax.legend([f"Group {GROUP_ID[group]} ({np.count_nonzero(groups[group])} users)" for group in unique_groups]
+                                ,handletextpad=-0.6,scatteryoffsets=[0.5],
+                                bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
+                                mode="expand", borderaxespad=0, ncol=2
+                        )
                 # ax.plot([cat_median]*2,[min(geo_div_propensity),max(geo_div_propensity)],color='k')
                 # ax.plot([min(cat_div_propensity),max(cat_div_propensity)],[geo_median]*2,color='k')
                 ax.axvline(0.5,color='k',linewidth=1)
@@ -3277,6 +3291,10 @@ class RecRunner():
                 for rec_using, metrics in metrics_mean.items():
                     val_to_use[rec_using] = metrics[metric]
 
+            # val_to_use['phoenix_usg_80_alpha_0_beta_0.2_eta_0_geocat_10_div_weight_0.75_div_geo_cat_weight_0.25_heuristic_local_max_obj_func_cat_weight_div_cat_weight_0.05'],\
+            # val_to_use['phoenix_usg_80_alpha_0_beta_0.2_eta_0_geocat_10_div_weight_1.0_div_geo_cat_weight_0.25_heuristic_local_max_obj_func_cat_weight_div_cat_weight_0.0']=\
+            # val_to_use['phoenix_usg_80_alpha_0_beta_0.2_eta_0_geocat_10_div_weight_1.0_div_geo_cat_weight_0.25_heuristic_local_max_obj_func_cat_weight_div_cat_weight_0.0'],\
+            # val_to_use['phoenix_usg_80_alpha_0_beta_0.2_eta_0_geocat_10_div_weight_0.75_div_geo_cat_weight_0.25_heuristic_local_max_obj_func_cat_weight_div_cat_weight_0.05']
             print(pd.Series(val_to_use).sort_values(ascending=False))
             print(f"at @{k}")
             args_separated = list(zip(*args))
@@ -3301,18 +3319,28 @@ class RecRunner():
             top_n = 5
             i=1
             d_lambda_delta_tick = {label: tick for label, tick in zip(l_geocat_div_2,xticks)}
-
-            box_text_string = "$i^{th}$-$\lambda$-$\delta$-$\phi$\n"
+            if LANG == 'pt':
+                box_text_string = "$i$-$\lambda$-$\delta$-$\phi$\n"
+            else:
+                box_text_string = "$i^{th}$-$\lambda$-$\delta$-$\phi$\n"
             for x,y,z,p in list(zip(lambdas,deltas,phis,val_to_use_values))[:top_n]:
                 z_up = (1+0.04*i)*ax.get_zlim()[1]
                 # print('$%d^{%s}$-%.2f-%.2f-%.2f'%(i,int_what_ordinal(i),x,y,z))
                 x_real = d_lambda_delta_tick[(x,y)]
-                if i == 1:
-                    ax.text(x_real,z,z_up,'$\\bf{%d^{%s}}$'%(i,int_what_ordinal(i)),fontsize=16,zorder=27)
-                    string_to_put = '$\\bf{%d^{%s}-%.2f-%.2f-%.2f}$'%(i,int_what_ordinal(i),x,y,z)
+                if LANG == 'pt':
+                    if i == 1:
+                        ax.text(x_real,z,z_up,'$\\bf{%d}$'%(i,),fontsize=16,zorder=27)
+                        string_to_put = '$\\bf{%d-%.2f-%.2f-%.2f}$'%(i,x,y,z)
+                    else:
+                        ax.text(x_real,z,z_up,'$%d$'%(i),fontsize=16,zorder=27)
+                        string_to_put = '$%d$-%.2f-%.2f-%.2f'%(i,x,y,z)
                 else:
-                    ax.text(x_real,z,z_up,'$%d^{%s}$'%(i,int_what_ordinal(i)),fontsize=16,zorder=27)
-                    string_to_put = '$%d^{%s}$-%.2f-%.2f-%.2f'%(i,int_what_ordinal(i),x,y,z)
+                    if i == 1:
+                        ax.text(x_real,z,z_up,'$\\bf{%d^{%s}}$'%(i,int_what_ordinal(i)),fontsize=16,zorder=27)
+                        string_to_put = '$\\bf{%d^{%s}-%.2f-%.2f-%.2f}$'%(i,int_what_ordinal(i),x,y,z)
+                    else:
+                        ax.text(x_real,z,z_up,'$%d^{%s}$'%(i,int_what_ordinal(i)),fontsize=16,zorder=27)
+                        string_to_put = '$%d^{%s}$-%.2f-%.2f-%.2f'%(i,int_what_ordinal(i),x,y,z)
 
                 box_text_string += string_to_put + '\n'
                 if i == 1:
@@ -3324,7 +3352,7 @@ class RecRunner():
                 ax.add_artist(a)
                 i+=1
             # print(ax.get_xlim()[1], ax.get_ylim()[0],ax.get_zlim()[1]*1.05)
-            plt.figtext(0.01,0.65,s=box_text_string, color='black', fontsize=17,
+            plt.figtext(0.01,0.65,s=box_text_string[:-1], color='black', fontsize=17,
                     bbox=dict(facecolor='1.0',edgecolor='black', boxstyle='square,pad=0.1'))
 
             # from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -3686,8 +3714,12 @@ class RecRunner():
         ax.plot(list(values_rand.keys()),list(values_rand.values()),marker='o',color='r')
         ax.legend((f'{RECS_PRETTY[final_rec_1]}($\lambda$={div_weight_1}),{RECS_PRETTY[final_rec_2]}($\lambda$={div_weight_2})',f'Random($\lambda$={div_weight_1}),Random($\lambda$={div_weight_2})'),frameon = False)
         ax.set_ylim(0,1)
-        ax.set_xlabel('List size')
-        ax.set_ylabel('Rate of equal POIs')
+        if LANG == 'pt':
+            ax.set_xlabel('Tamanho da lista')
+            ax.set_ylabel('Taxa de POIs iguais')
+        else:
+            ax.set_xlabel('List size')
+            ax.set_ylabel('Rate of equal POIs')
         xticks = np.round(np.linspace(ks[0],ks[-1],6))
         ax.set_xticks(xticks)
 
@@ -4052,6 +4084,13 @@ class RecRunner():
         print(scipy.stats.describe(val))
         print('median',np.median(val))
 
+        users_categories_visits = cat_utils.get_users_cat_visits(self.training_matrix,
+                                                                 self.poi_cats)
+        print('users_categories_visits')
+        print(scipy.stats.describe(list(map(len,users_categories_visits))))
+        print(np.median(list(map(len,users_categories_visits))))
+
+
     def plot_base_info(self):
 
         fig = plt.figure()
@@ -4299,14 +4338,21 @@ class RecRunner():
                     i+=1
             rects = list(rects.values())
             ax.set_xticks(np.arange(N+1)+barWidth*(((num_recs)/2)-1)+barWidth/2)
-            tmp_legend_labels = list(map(lambda x:'Group '+GROUP_ID.get(x),unique_groups))
+            if LANG == 'pt':
+                tmp_legend_labels = list(map(lambda x:'G'+GROUP_ID.get(x),unique_groups))
+            else:
+                tmp_legend_labels = list(map(lambda x:'Group '+GROUP_ID.get(x),unique_groups))
             ax.legend(
                 rects,
                 tmp_legend_labels,handletextpad=-0.6,
                 handler_map={rect: HandlerSquare() for rect in rects}
             )
             ax.set_xticklabels(map(lambda x: f'{x}@{k}',list(map(lambda name: METRICS_PRETTY[name],self.metrics_name))))
-            ax.set_ylabel(f"Relative diff w.r.t. {reference_recommender}")
+
+            if LANG == 'pt':
+                ax.set_ylabel(f"Diferença relativa ao {reference_recommender}")
+            else:
+                ax.set_ylabel(f"Relative diff w.r.t. {reference_recommender}")
             ax.yaxis.set_major_formatter(mtick.PercentFormatter())
             # ax.annotate(f'{group}',xy=(0,0.02),
             #                 xycoords='axes fraction')
