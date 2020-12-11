@@ -324,6 +324,7 @@ class RecRunner():
             "mostpopular": self.mostpopular,
             "usg": self.usg,
             "geosoca": self.geosoca,
+            "geomf": self.geomf,
         }
         self.FINAL_RECOMMENDERS = {
             "geocat": self.geocat,
@@ -495,6 +496,7 @@ class RecRunner():
             # "usg": {'alpha': 0.1, 'beta': 0.1, 'eta': 0.05},
             "usg": {'alpha': 0, 'beta': 0.2, 'eta': 0},
             "geosoca": {'alpha': 0.3},
+            "geomf": {'K': 100, 'delta': 50, 'gamma': 0.01, 'epsilon': 10, 'lambda_': 10, 'max_iters': 7},
         }
 
     @classmethod
@@ -4956,3 +4958,30 @@ class RecRunner():
                 mauts[rec_using] = np.sum(list(utility_scores.values()))/len(utility_scores)
 
             print(pd.Series(mauts).sort_values(ascending=False))
+
+    def geomf(self):
+        geomf = GeoMF(**self.base_rec_parameters)
+        geomf.train(self.training_matrix,self.poi_coos)
+        self.geomf = geomf
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_geomf,args,self.CHKS)
+        self.save_result(results,base=True)
+
+    @classmethod
+    def run_geomf(cls, uid):
+        self = cls.getInstance()
+        geomf = self.geomf
+        if uid in self.ground_truth:
+
+            overall_scores = normalize([geomf.predict(uid,lid)
+                            if self.training_matrix[uid, lid] == 0 else -1
+                            for lid in self.all_lids])
+            overall_scores = np.array(overall_scores)
+
+            predicted = list(reversed(overall_scores.argsort()))[
+                :self.base_rec_list_size]
+            overall_scores = list(reversed(np.sort(overall_scores)))[
+                :self.base_rec_list_size]
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
+        self.not_in_ground_truth_message(uid)
+        return ""
