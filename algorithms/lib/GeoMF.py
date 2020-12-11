@@ -9,6 +9,7 @@ class GeoMF:
         self.lambda_ = lambda_
         self.max_iters = max_iters
         self.grid_distance = grid_distance
+        self.data = object()
 
     def train(self,training_matrix, poi_coos):
         C = sparse.csr_matrix(training_matrix)
@@ -61,6 +62,10 @@ class GeoMF:
         Xt = self.optimize_activity(M,Ct, Wt, Xt, Yt, YtY, Ut, V)
         X = Xt.T
         X[X < 0] = 0
+        self.data.X = X
+        self.data.Y = Y
+        self.data.P = P
+        self.data.Q = Q
 
     def optimize_latent_factors(self,M,n,W_u,W_i,P,Q,C,X,Y):
         Im = sparse.identity(M)
@@ -150,3 +155,6 @@ class GeoMF:
                         alpha = alpha / beta
                         xp = xn
         return x
+
+    def predict(self, uid, lid):
+        return self.data.P[uid, :].dot(self.data.Q[lid, :]) + self.data.X[uid, :].dot(self.data.Y[lid, :])
