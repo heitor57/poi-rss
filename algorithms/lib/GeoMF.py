@@ -203,7 +203,7 @@ class GeoMF:
                     else:
                         alpha = alpha * beta
                 else:
-                    if ~suff_decr | (xp != xn).getnnz()==0:
+                    if ~suff_decr | np.count_nonzero(xp != xn) == 0:
                         x = xp
                         break
                     else:
