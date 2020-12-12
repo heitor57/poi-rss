@@ -227,6 +227,7 @@ from usg.PowerLaw import PowerLaw
 import geocat.objfunc as gcobjfunc
 from pgc.GeoDivPropensity import GeoDivPropensity
 from pgc.CatDivPropensity import CatDivPropensity
+from GeoMF import GeoMF
 from constants import experiment_constants, METRICS_PRETTY, RECS_PRETTY, CITIES_PRETTY, HEURISTICS_PRETTY, GROUP_ID, CITIES_BEST_PARAMETERS
 import metrics
 from geocat.Binomial import Binomial
@@ -321,10 +322,10 @@ class RecRunner():
                  base_rec_list_size, final_rec_list_size, data_directory,
                  base_rec_parameters={}, final_rec_parameters={},except_final_rec=[]):
         self.BASE_RECOMMENDERS = {
+            "geomf": self.geomf,
             "mostpopular": self.mostpopular,
             "usg": self.usg,
             "geosoca": self.geosoca,
-            "geomf": self.geomf,
         }
         self.FINAL_RECOMMENDERS = {
             "geocat": self.geocat,
@@ -492,11 +493,11 @@ class RecRunner():
     @staticmethod
     def get_base_parameters():
         return {
+            "geomf": {'K': 100, 'delta': 50, 'gamma': 0.01, 'epsilon': 10, 'lambda_': 10, 'max_iters': 7, 'grid_distance':0.5},
             "mostpopular": {},
             # "usg": {'alpha': 0.1, 'beta': 0.1, 'eta': 0.05},
             "usg": {'alpha': 0, 'beta': 0.2, 'eta': 0},
             "geosoca": {'alpha': 0.3},
-            "geomf": {'K': 100, 'delta': 50, 'gamma': 0.01, 'epsilon': 10, 'lambda_': 10, 'max_iters': 7},
         }
 
     @classmethod

@@ -10,17 +10,17 @@ class GeoMF:
         self.lambda_ = lambda_
         self.max_iters = max_iters
         self.grid_distance = grid_distance
-        self.data = object()
+        self.data = {}
 
     def train(self,training_matrix, poi_coos):
         C = sparse.csr_matrix(training_matrix)
-        print(C)
+        # print(C)
         M = training_matrix.shape[0] # users
         N = training_matrix.shape[1] # items
         W = C.copy()
-        print(W)
+        # print(W)
         W[W!=0] = np.log(1+W[W!=0]*10**self.epsilon)
-        print(W)
+        # print(W)
 
         C = C>0
 
@@ -63,10 +63,10 @@ class GeoMF:
 
         print("Optimizing latent factors")
         self.optimize_latent_factors(M,N,W_u,W_i,P,Q,C,X,Y)
-        print("P:")
-        print(P)
-        print("Q:")
-        print(Q)
+        # print("P:")
+        # print(P)
+        # print("Q:")
+        # print(Q)
         Ct = C.T
         Wt = W.T
         Yt = Y.T
@@ -75,10 +75,10 @@ class GeoMF:
         Xt = self.optimize_activity(Ct, Wt, X.T, Yt, YtY, P.T, Q)
         X = Xt.T
         X[X < 0] = 0
-        self.data.X = X
-        self.data.Y = Y
-        self.data.P = P
-        self.data.Q = Q
+        self.data['X'] = X
+        self.data['Y'] = Y
+        self.data['P'] = P
+        self.data['Q'] = Q
 
     def optimize_latent_factors(self,M,N,W_u,W_i,P,Q,C,X,Y):
         Im = sparse.identity(M)
@@ -177,10 +177,10 @@ class GeoMF:
             grad = grad_i.A.flatten() + YC @ (x.T @ YC).T + YtY @ x;
             J = np.array(range(len(grad)))
             Ind = (grad < 0) | (x > 0)
-            print(Ind.shape)
-            print(J[Ind].shape)
-            print(grad[Ind].shape)
-            print(np.repeat(1,len(J[Ind])).shape)
+            # print(Ind.shape)
+            # print(J[Ind].shape)
+            # print(grad[Ind].shape)
+            # print(np.repeat(1,len(J[Ind])).shape)
 
             grad = sparse.csr_matrix((grad[Ind], (J[Ind],np.repeat(0,len(J[Ind])))), (len(grad), 1)).A.flatten()
             # grad_invariant = sparse.csr_matrix((grad_invariant[ind],(J[ind], np.repeat(1,len(grad_invariant[ind])))), (len(grad_invariant), 1));
@@ -212,4 +212,4 @@ class GeoMF:
         return x
 
     def predict(self, uid, lid):
-        return self.data.P[uid, :].dot(self.data.Q[lid, :]) + self.data.X[uid, :].dot(self.data.Y[lid, :])
+        return self.data['P'][uid, :].dot(self.data['Q'][lid, :]) + self.data['X'][uid, :].dot(self.data['Y'][lid, :])
