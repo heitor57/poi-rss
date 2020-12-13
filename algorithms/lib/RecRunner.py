@@ -4994,6 +4994,8 @@ class RecRunner():
     def geodiv2020(self):
         geodiv2020 = GeoDiv2020()
         geodiv2020.train(self.training_matrix,self.poi_coos)
+        print("exiting!!")
+        raise SystemExit
         self.cache['geodiv2020'] = geodiv2020
         args=[(uid,) for uid in self.all_uids]
         results = run_parallel(self.run_geodiv2020,args,self.CHKS)

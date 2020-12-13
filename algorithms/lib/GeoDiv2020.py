@@ -75,6 +75,8 @@ class GeoDiv2020:
         self.th_far = th_far
 
         print(f"a {self.a} b {self.b} x_0 {x_0} th_far {th_far}")
+
+    # def closeness(self,poi_1,poi_2):
         
     def active_area_selection(self,uid,training_matrix, poi_coos):
         user_log = training_matrix[uid]
