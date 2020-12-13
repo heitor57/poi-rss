@@ -228,6 +228,7 @@ import geocat.objfunc as gcobjfunc
 from pgc.GeoDivPropensity import GeoDivPropensity
 from pgc.CatDivPropensity import CatDivPropensity
 from GeoMF import GeoMF
+from GeoDiv2020 import GeoDiv2020
 from constants import experiment_constants, METRICS_PRETTY, RECS_PRETTY, CITIES_PRETTY, HEURISTICS_PRETTY, GROUP_ID, CITIES_BEST_PARAMETERS
 import metrics
 from geocat.Binomial import Binomial
@@ -328,6 +329,7 @@ class RecRunner():
             "geosoca": self.geosoca,
         }
         self.FINAL_RECOMMENDERS = {
+            "geodiv2020": self.geodiv2020,
             "geocat": self.geocat,
             "persongeocat": self.persongeocat,
             "geodiv": self.geodiv,
@@ -503,6 +505,7 @@ class RecRunner():
     @classmethod
     def get_final_parameters(cls):
         return  {
+            "geodiv2020": {'div_weight':0.5},
             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
             "persongeocat": {'div_weight':0.75,'cat_div_method': 'inv_num_cat', 'geo_div_method': 'walk',
                              'obj_func': 'cat_weight', 'div_cat_weight':0.05, 'bins': None,
@@ -4963,7 +4966,7 @@ class RecRunner():
     def geomf(self):
         geomf = GeoMF(**self.base_rec_parameters)
         geomf.train(self.training_matrix,self.poi_coos)
-        self.geomf = geomf
+        self.cache['geomf'] = geomf
         args=[(uid,) for uid in self.all_uids]
         results = run_parallel(self.run_geomf,args,self.CHKS)
         self.save_result(results,base=True)
@@ -4971,7 +4974,7 @@ class RecRunner():
     @classmethod
     def run_geomf(cls, uid):
         self = cls.getInstance()
-        geomf = self.geomf
+        geomf = self.cache['geomf']
         if uid in self.ground_truth:
 
             overall_scores = normalize([geomf.predict(uid,lid)
@@ -4983,6 +4986,33 @@ class RecRunner():
                 :self.base_rec_list_size]
             overall_scores = list(reversed(np.sort(overall_scores)))[
                 :self.base_rec_list_size]
+            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
+        self.not_in_ground_truth_message(uid)
+        return ""
+
+
+    def geodiv2020(self):
+        geodiv2020 = GeoDiv2020()
+        geodiv2020.train(self.training_matrix,self.poi_coos)
+        self.cache['geodiv2020'] = geodiv2020
+        args=[(uid,) for uid in self.all_uids]
+        results = run_parallel(self.run_geodiv2020,args,self.CHKS)
+        self.save_result(results,base=False)
+
+    @classmethod
+    def run_geodiv2020(cls, uid):
+        self = cls.getInstance()
+        geodiv2020 = self.cache['geodiv2020']
+        if uid in self.ground_truth:
+            predicted = self.user_base_predicted_lid[uid][
+                0:self.base_rec_list_size]
+            overall_scores = self.user_base_predicted_score[uid][
+                0:self.base_rec_list_size]
+            
+            predicted, overall_scores = gcobjfunc.geodiv(uid, self.training_matrix, predicted, overall_scores,
+                                                         self.poi_neighbors, self.final_rec_list_size,
+                                                         self.final_rec_parameters['div_weight'])
+
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         self.not_in_ground_truth_message(uid)
         return ""
