@@ -90,14 +90,14 @@ class GeoDiv2020:
         for i in range(len(pois_ids)):
             for j in range(len(pois_ids)):
                 if j > i and _dist(poi_coos[pois_ids[i]],poi_coos[pois_ids[j]]) <= 2*self.th_far:
-                    g.add_edges([(str(i),str(j))])
+                    g.add_edges([(str(pois_ids[i]),str(pois_ids[j]))])
 
         graphs = []
         for i in range(len(pois_ids)):
             vertices = [j.name for j in g.bfsiter(i)]
             new_g = igraph.Graph()
             new_g.add_vertices(vertices)
-            for edge in [(vertices[j],vertices[j+1]) for j in range(len(vertices)-1)]:
+            for edge in [(int(vertices[j]),int(vertices[j+1])) for j in range(len(vertices)-1)]:
                 new_g.add_edge(edge)
 
             # to_delete_ids = [v.index for v in G.vs if '@enron.com' not in v['label']]
