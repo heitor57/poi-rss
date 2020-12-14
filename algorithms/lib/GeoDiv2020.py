@@ -2,6 +2,7 @@ import numpy as np
 import igraph
 import math
 from collections import defaultdict
+import sklearn.neighbors
 
 def _dist(loc1, loc2):
     lat1, long1 = loc1[0], loc1[1]
@@ -81,7 +82,7 @@ class GeoDiv2020:
         # print("+-----")
         # print(list(map(self.pr_d,np.arange(0,10,0.1))))
         # print("=-----")
-        self.zero_probability = th_0
+        self.zero_probability = t_0
         th_far = 0
         acc_value = 0
         for i in range(600):
@@ -94,31 +95,26 @@ class GeoDiv2020:
         print(f"a {self.a} b {self.b} t_0 {t_0} th_far {th_far}")
         self.accumulated_dist_probabilities = np.cumsum(list(map(self.pr_d,np.append(np.arange(0,th_far,0.1),th_far))))
         # self.dist_probabilities = np.cumsum(np.arange(0,th_far))
-        
 
-    def closeness(self,dist_km):
-        dist_km = np.round(dist_km,1)
-        if dist_km > self.th_far:
-            return 0
-        else:
-            return 1-self.accumulated_dist_probabilities[dist_km]/self.accumulated_dist_probabilities[self.th_far]
-        # self.accumulated_cover(np.round(dist_km,1))
-        # for i in range(np.round(dist_km*10)):
-        #     if acc_value+t_0 >= self.threshold_area:
-        #         break
-        #     acc_value+=self.pr_d(th_far)
-        #     th_far += 0.1
-    def active_area_selection(self,uid,training_matrix, poi_coos):
+        num_lids = len(list(poi_coos.keys()))
+        poi_coos_ = np.zeros((num_lids,2))
+        for lid in poi_coos.keys():
+            poi_coos_[lid] = poi_coos[lid]
+        self.poi_coos_balltree = sklearn.neighbors.BallTree(np.array(poi_coos_),metric="haversine")
+        self.training_matrix = training_matrix
+        self.poi_coos = poi_coos
+        
+    def active_area_selection(self,uid):
+        training_matrix = self.training_matrix
+        poi_coos = self.poi_coos
+
         user_log = training_matrix[uid]
         num_total_checkins = np.count_nonzero(user_log)
         pois_ids = np.nonzero(user_log)[0]
-        # log_poi_ids=list()
-        # for lid in user_log.nonzero()[0]:
-        #     for visits in range(int(user_log[lid])):
-        #         log_poi_ids.append(lid)
-        # vertices = np.arange(len(log_poi_ids))
+
         g = igraph.Graph()
         g.add_vertices(map(str,list(range(len(pois_ids)))))
+        # self.poi_coos_balltree.query_radius([poi_coos[lid] for lid in poi_ids],2*self.th_far)
         for i in range(len(pois_ids)):
             for j in range(len(pois_ids)):
                 if j > i and _dist(poi_coos[pois_ids[i]],poi_coos[pois_ids[j]]) <= 2*self.th_far:
@@ -140,101 +136,161 @@ class GeoDiv2020:
         graphs_order = [len(i.vs) for i in graphs]
         sorted_lists = reversed(sorted(zip(graphs_order,graphs)))
         graphs =  [element for _, element in sorted_lists]
-        areas = set()
+        areas_lids = set()
         num_checkins = 0
         for new_g in graphs:
-            areas.add(list(map(lambda x: int(x),new_g.vs['name'])))
+            areas_lids.add(list(map(lambda x: int(x),new_g.vs['name'])))
             
             num_checkins += len(new_g.vs)
             if num_checkins/num_total_checkins >= self.threshold_area:
                 break
             
-        return areas
+        return areas_lids
+
+    def objective(self,uid,rec_list,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids,old_pr):
+        pr=self.pr(uid,rec_list,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids)
+        div=max(0,pr-old_pr)
+        return (score**(1-div_weight))*(div**div_weight)
+
+    def pr(self,uid,rec_list,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids):
+        sum_quantities_checkins=0
+        not_nearby = np.count_nonzero(list(summed_closeness_candidates_lids.values()))
+        for log_lid in user_valid_lids:
+            p_c_r = self.quantity(uid,rec_list, log_lid,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids)
+            if req_u >= p_c_r:
+                sum_quantities_checkins += ((req_u-p_c_r)**2)*self.training_matrix[uid,log_lid]
+            
+                
+        dp_u = sum_quantities_checkins + 0.5*(not_nearby/K)**2
+        return 1 - dp_u/ideal_dp_u
+
+
+
+    def quantity(self,uid,rec_list, log_lid,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids):
+        proximities = [proximity_to_checkins(self,uid,lid, log_lid,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids)
+         for lid in rec_list]
+        return np.sum(proximities)
+    # p'(c,l)
+    def proximity_to_checkins(self,uid,lid, log_lid,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids):
+        closeness(_dist(self.poi_coos[lid],self.poi_coos))
+        user_log_lids = closeness_user_log_lids_to_candidates_lids.keys()
+        return closeness_user_log_lids_to_candidates_lids[log_lid][lid]/\
+            [summed_closeness_candidates_lids[lid]]
         
 
-    def predict(self,uid,training_matrix,poi_coos,tmp_rec_list,tmp_score_list,K):
+    def closeness(self,dist_km):
+        dist_km = np.round(dist_km,1)
+        if dist_km > self.th_far:
+            return 0
+        else:
+            return 1-self.accumulated_dist_probabilities[dist_km]/self.accumulated_dist_probabilities[self.th_far]
+
+    def predict(self,uid,tmp_rec_list,tmp_score_list,K):
 
         range_K=range(K)
         rec_list=[]
-        active_area_selection(uid,training_matrix, poi_coos)
+        areas_lids = self.active_area_selection(uid)
+        lids_original_indexes = {lid:i for i,lid in enumerate(tmp_rec_list)}
 
-        user_log=training_matrix[uid]
+        pois_in_areas = self.poi_coos_balltree.query_radius([poi_coos[lid] for lid in areas_ids],2*self.th_far)
+        pois_in_areas = set(pois_in_areas)
+        candidate_pois = pois_in_areas.intersection(tmp_rec_list)
+        if len(candidate_pois) < K:
+            available_lids = candidate_pois - set(tmp_rec_list)
+            candidate_pois.union(available_lids[K-len(candidate_pois)])
+
+        candidate_lids = candidate_pois # mutate while recommending
+        candidate_scores = [tmp_score_list[lids_original_indexes[lid]] for lid in candidate_lids]
+
+
+        user_valid_lids = pois_in_areas.copy() # doenst mutate
+        closeness_user_log_lids_to_candidates_lids = {lid_1: {lid_2: self.closeness(_dist(lid_1,lid_2)) for lid_2 in candidate_lids} for lid_1 in areas_lids}
+
+        summed_closeness_candidates_lids = {lid_1:
+                                            np.sum([closeness_user_log_lids_to_candidates_lids[lid_2][lid_1] for lid_2 in closeness_user_log_lids_to_candidates_lids.keys()])
+                                            for lid_1 in candidate_lids}
+
+        num_valid_checkins = np.sum(self.training_matrix[uid,user_valid_lids])
+        req_u = K/num_valid_checkins
+        ideal_dp_u = num_valid_checkins*req_u**2+0.5
+        # user_log=training_matrix[uid]
         #print(mean_visits)
-        log_poi_ids=list()
-        poi_cover=list()
-        for lid in user_log.nonzero()[0]:
-            for visits in range(int(user_log[lid])):
-                poi_cover.append(0)
-                log_poi_ids.append(lid)
-        log_size=len(log_poi_ids)
-        assert user_log[user_log.nonzero()[0]].sum() == len(poi_cover)
+        # log_poi_ids=list()
+        # poi_cover=list()
+        # for lid in user_log.nonzero()[0]:
+        #     for visits in range(int(user_log[lid])):
+        #         poi_cover.append(0)
+        #         log_poi_ids.append(lid)
+        # log_size=len(log_poi_ids)
+        # assert user_log[user_log.nonzero()[0]].sum() == len(poi_cover)
 
-        current_proportionality=0
-        final_scores=[]
-        log_neighbors=dict()
-        for poi_id in tmp_rec_list:
-            neighbors=list()
-            for id_neighbor in poi_neighbors[poi_id]:
-                for i in range(log_size):
-                    log_poi_id=log_poi_ids[i]
-                    if log_poi_id == id_neighbor:
-                        neighbors.append(i)
-            log_neighbors[poi_id]=neighbors
+        # current_proportionality=0
+        # final_scores=[]
+        # log_neighbors=dict()
+        # for poi_id in tmp_rec_list:
+        #     neighbors=list()
+        #     for id_neighbor in poi_neighbors[poi_id]:
+        #         for i in range(log_size):
+        #             log_poi_id=log_poi_ids[i]
+        #             if log_poi_id == id_neighbor:
+        #                 neighbors.append(i)
+        #     log_neighbors[poi_id]=neighbors
 
-        
         for i in range_K:
             #print(i)
             poi_to_insert=None
             max_objective_value=-200
-            for j in range(len(tmp_rec_list)):
-                candidate_poi_id=tmp_rec_list[j]
-                candidate_score=tmp_score_list[j]
+            for j in range(len(candidate_lids)):
+                candidate_poi_id=candidate_lids[j]
+                candidate_score=candidate_scores[j]
                 #objective_value=geodiv_objective_function(candidate_poi_id,log_poi_id,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id],current_proportionality,div_weight,candidate_score)
-                objective_value=geodiv_objective_function(candidate_poi_id,log_poi_ids,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id],
-                                            current_proportionality,div_weight,candidate_score)
+                # objective_value=geodiv_objective_function(candidate_poi_id,log_poi_ids,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id],
+                #                             current_proportionality,div_weight,candidate_score)
+                objective_value = objective(self,uid,rec_list,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids,old_pr)
 
                 if objective_value > max_objective_value:
                     max_objective_value=objective_value
                     poi_to_insert=candidate_poi_id
+
             if poi_to_insert is not None:
-                rm_idx=tmp_rec_list.index(poi_to_insert)
-                tmp_rec_list.pop(rm_idx)
-                tmp_score_list.pop(rm_idx)
+                rm_idx=candidate_lids.index(poi_to_insert)
+                candidate_lids.pop(rm_idx)
+                candidate_scores.pop(rm_idx)
                 rec_list.append(poi_to_insert)
                 final_scores.append(max_objective_value)
-                current_proportionality=update_geo_cov(poi_to_insert,log_poi_ids,K,poi_cover,poi_neighbors,log_neighbors[poi_to_insert])
+                # current_proportionality=update_geo_cov(poi_to_insert,log_poi_ids,K,poi_cover,poi_neighbors,log_neighbors[poi_to_insert])
 
         return rec_list,final_scores
     
-def update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover,poi_neighbors,neighbors):
-    log_size=len(log_poi_ids)
-    num_neighbors=len(neighbors)
-    vl=1
-    COVER_OF_POI=log_size/rec_list_size
-    accumulated_cover=0
-    # Cover calc
-    if num_neighbors<1:
-        accumulated_cover+=COVER_OF_POI
-    else:
-        cover_of_neighbor=COVER_OF_POI/num_neighbors
-        for index in neighbors:
-            poi_cover[index]+=cover_of_neighbor
-    accumulated_cover/=log_size
-    # end PR and DP
+# def update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover,poi_neighbors,neighbors):
+#     log_size=len(log_poi_ids)
+#     num_neighbors=len(neighbors)
+#     vl=1
+#     COVER_OF_POI=log_size/rec_list_size
+#     accumulated_cover=0
+#     # Cover calc
+#     if num_neighbors<1:
+#         accumulated_cover+=COVER_OF_POI
+#     else:
+#         cover_of_neighbor=COVER_OF_POI/num_neighbors
+#         for index in neighbors:
+#             poi_cover[index]+=cover_of_neighbor
+#     accumulated_cover/=log_size
+#     # end PR and DP
 
-    DP=0
+#     DP=0
     
-    for i in range(log_size):
-        lid=i
-        if vl>=poi_cover[lid]:
-            DP+=(vl-poi_cover[lid])**2
-    DP+=(accumulated_cover**2)/2
-    DP_IDEAL=log_size+0.5
-    PR=1-DP/(DP_IDEAL)
+#     for i in range(log_size):
+#         lid=i
+#         if vl>=poi_cover[lid]:
+#             DP+=(vl-poi_cover[lid])**2
+#     DP+=(accumulated_cover**2)/2
+#     DP_IDEAL=log_size+0.5
+#     PR=1-DP/(DP_IDEAL)
     
-    return PR
-def geodiv_objective_function(poi_id,log_poi_ids,rec_list_size,poi_cover,poi_neighbors,neighbors,current_proportionality,div_weight,score):
-    pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover,poi_neighbors,neighbors)
-    div=max(0,pr-current_proportionality)
-    return (score**(1-div_weight))*(div**div_weight)
+#     return PR
+# def geodiv_objective_function(poi_id,log_poi_ids,rec_list_size,poi_cover,poi_neighbors,neighbors,current_proportionality,div_weight,score):
+#     pr=update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover,poi_neighbors,neighbors)
+#     div=max(0,pr-current_proportionality)
+#     return (score**(1-div_weight))*(div**div_weight)
 
