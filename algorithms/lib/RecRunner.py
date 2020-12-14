@@ -1701,7 +1701,7 @@ class RecRunner():
         else:
             return self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}"
 
-    def eval_rec_metrics(self,*,base=False,METRICS_KS = experiment_constants.METRICS_K,eval_group=True):
+    def eval_rec_metrics(self,*,base=False,METRICS_KS = experiment_constants.METRICS_K,eval_group=False):
 
         if eval_group:
             tmp_final_rec = self.final_rec
