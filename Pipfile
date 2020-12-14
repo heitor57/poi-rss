@@ -25,6 +25,8 @@ sklearn = "*"
 imblearn = "*"
 python-igraph = "*"
 bz2file = "*"
+numba = "*"
+tbb = "*"
 
 [requires]
 python_version = "3.7"

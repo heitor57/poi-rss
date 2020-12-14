@@ -1,6 +1,21 @@
 import geo_utils
 from scipy import sparse
 import numpy as np
+from numba import njit, prange
+
+@njit
+def _set_y(Y,N,poi_coos,num_grids_lat,num_grids_lon,grid_distance,min_lat,min_lon,max_lat,max_lon,delta):
+    for i in range(N):
+        poi_coo = poi_coos[i]
+        for lat_grid in range(num_grids_lat): 
+            for lon_grid in range(num_grids_lon):
+                grid_lat = (lat_grid+0.5)*grid_distance + min_lat
+                grid_lon = (lon_grid+0.5)*grid_distance + min_lon
+                dist = geo_utils.haversine(poi_coo[0],poi_coo[1],grid_lat,grid_lon)
+                if dist < delta:
+                    Y[i,lat_grid*num_grids_lon + lon_grid] = np.exp(-dist/1.5)
+    return Y
+
 class GeoMF:
     def __init__(self,K,delta,gamma,epsilon,lambda_,max_iters,grid_distance):
         self.K = K
@@ -51,15 +66,20 @@ class GeoMF:
             W_i[i] = sparse.spdiags(W[:,i].A[0],diags=0,m=M,n=M)
 
         print("Calculating areas transition probabilities")
-        for i in range(N):
-            poi_coo = poi_coos[i]
-            for lat_grid in range(num_grids_lat): 
-                for lon_grid in range(num_grids_lon):
-                    grid_lat = (lat_grid+0.5)*self.grid_distance + min_lat
-                    grid_lon = (lon_grid+0.5)*self.grid_distance + min_lon
-                    dist = geo_utils.haversine(poi_coo[0],poi_coo[1],grid_lat,grid_lon)
-                    if dist < self.delta:
-                        Y[i,lat_grid*num_grids_lon + lon_grid] = np.exp(-dist/1.5)
+
+        _set_y(Y,N,np.array([coo for k,coo in poi_coos.items()]),num_grids_lat,num_grids_lon,self.grid_distance,min_lat,min_lon,max_lat,max_lon,self.delta)
+        # print(Y.max())
+        # print(Y.min())
+        # print(Y)
+        # for i in range(N):
+        #     poi_coo = poi_coos[i]
+        #     for lat_grid in range(num_grids_lat): 
+        #         for lon_grid in range(num_grids_lon):
+        #             grid_lat = (lat_grid+0.5)*self.grid_distance + min_lat
+        #             grid_lon = (lon_grid+0.5)*self.grid_distance + min_lon
+        #             dist = geo_utils.haversine(poi_coo[0],poi_coo[1],grid_lat,grid_lon)
+        #             if dist < self.delta:
+        #                 Y[i,lat_grid*num_grids_lon + lon_grid] = np.exp(-dist/1.5)
 
         print("Optimizing latent factors")
         self.optimize_latent_factors(M,N,W_u,W_i,P,Q,C,X,Y)
