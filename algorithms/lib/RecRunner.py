@@ -4992,7 +4992,7 @@ class RecRunner():
 
 
     def geodiv2020(self):
-        geodiv2020 = GeoDiv2020()
+        geodiv2020 = GeoDiv2020(**self.final_rec_parameters)
         geodiv2020.train(self.training_matrix,self.poi_coos)
         print("exiting!!")
         raise SystemExit

@@ -1,5 +1,7 @@
 import numpy as np
 import igraph
+import math
+from collections import defaultdict
 
 def _dist(loc1, loc2):
     lat1, long1 = loc1[0], loc1[1]
@@ -31,53 +33,81 @@ class GeoDiv2020:
                 for j in range(i+1, len(lids)):
                     lid1, lid2 = lids[i], lids[j]
                     coo1, coo2 = poi_coos[lid1], poi_coos[lid2]
-                    distance = int(_dist(coo1, coo2)*10)
+                    distance = np.round(_dist(coo1, coo2))
                     distribution[distance] += 1
+
         total = 1.0 * sum(distribution.values())
         for distance in distribution:
             distribution[distance] /= total
+
         distribution = sorted(distribution.items(), key=lambda k: k[0])
         return zip(*distribution)
 
     def pr_d(self, d):
-        d = max(0.01, d)
-        return self.a * (d ** self.b)
+        # d = max(0.01, d)
+        if d < 0.1: # There is no way with d<0.1
+            return self.zero_probability
+        p= min(self.a * ((d*10) ** self.b),1)
+        return p
+
 
     def train(self,training_matrix, poi_coos):
 
-        x, t = self.compute_distance_distribution(check_in_matrix, poi_coos)
+        x, t = self.compute_distance_distribution(training_matrix, poi_coos)
+        print(x)
+        print(t)
         x_0 = x[0]
         t_0 = t[0]
-        x = np.log2(x[1:])
-        t = np.log2(t[1:])
-        w0, w1 = np.random.random(), np.random.random()
+        x = np.log10(np.array(x[1:]))
+        t = np.log10(t[1:])
+        # w0, w1 = np.random.random(), np.random.random()
+        w0, w1 = 0.1, -0.1
+        # w0 = x_0
         max_iterations = 12000
         lambda_w = 0.1
-        alpha = 1e-5
+        alpha = 0.000001
         for iteration in range(max_iterations):
-            ew = 0.0
-            d_w0, d_w1 = 0.0, 0.0
+            # d_w0, d_w1 = 0.0, 0.0
             d_w0 = np.sum(w0 + w1 * x - t)
             d_w1 = np.sum((w0 + w1 * x - t) * x)
             w0 -= alpha * (d_w0 + lambda_w * w0)
             w1 -= alpha * (d_w1 + lambda_w * w1)
-            # ew += 0.5 * (w0 + w1 * x[n] - t[n])**2
-            # ew += 0.5 * lambda_w * (w0**2 + w1**2)
+            # if iteration > max_iterations-20:
+            #     ew = 0.5 * (w0 + w1 * x - t)**2
+            #     ew = np.sum(ew)+ 0.5 * lambda_w * (w0**2 + w1**2)
+            #     print(ew,np.sqrt(np.mean((w0 + w1 * x - t)**2)))
 
-        self.a, self.b = 2**w0, w1
+        self.a, self.b = 10**w0, w1
+        # print("+-----")
+        # print(list(map(self.pr_d,np.arange(0,10,0.1))))
+        # print("=-----")
+        self.zero_probability = th_0
         th_far = 0
         acc_value = 0
         for i in range(600):
             if acc_value >= self.threshold_area:
                 break
-            acc_value+=self.pr_d(th_far*10)
+            acc_value+=self.pr_d(th_far)
             th_far += 0.1
         self.th_far = th_far
 
-        print(f"a {self.a} b {self.b} x_0 {x_0} th_far {th_far}")
-
-    # def closeness(self,poi_1,poi_2):
+        print(f"a {self.a} b {self.b} t_0 {t_0} th_far {th_far}")
+        self.accumulated_dist_probabilities = np.cumsum(list(map(self.pr_d,np.append(np.arange(0,th_far,0.1),th_far))))
+        # self.dist_probabilities = np.cumsum(np.arange(0,th_far))
         
+
+    def closeness(self,dist_km):
+        dist_km = np.round(dist_km,1)
+        if dist_km > self.th_far:
+            return 0
+        else:
+            return 1-self.accumulated_dist_probabilities[dist_km]/self.accumulated_dist_probabilities[self.th_far]
+        # self.accumulated_cover(np.round(dist_km,1))
+        # for i in range(np.round(dist_km*10)):
+        #     if acc_value+t_0 >= self.threshold_area:
+        #         break
+        #     acc_value+=self.pr_d(th_far)
+        #     th_far += 0.1
     def active_area_selection(self,uid,training_matrix, poi_coos):
         user_log = training_matrix[uid]
         num_total_checkins = np.count_nonzero(user_log)
@@ -118,12 +148,63 @@ class GeoDiv2020:
             num_checkins += len(new_g.vs)
             if num_checkins/num_total_checkins >= self.threshold_area:
                 break
-
+            
         return areas
         
 
-    def predict(self):
-        pass
+    def predict(self,uid,training_matrix,poi_coos,tmp_rec_list,tmp_score_list,K):
+
+        range_K=range(K)
+        rec_list=[]
+        active_area_selection(uid,training_matrix, poi_coos)
+
+        user_log=training_matrix[uid]
+        #print(mean_visits)
+        log_poi_ids=list()
+        poi_cover=list()
+        for lid in user_log.nonzero()[0]:
+            for visits in range(int(user_log[lid])):
+                poi_cover.append(0)
+                log_poi_ids.append(lid)
+        log_size=len(log_poi_ids)
+        assert user_log[user_log.nonzero()[0]].sum() == len(poi_cover)
+
+        current_proportionality=0
+        final_scores=[]
+        log_neighbors=dict()
+        for poi_id in tmp_rec_list:
+            neighbors=list()
+            for id_neighbor in poi_neighbors[poi_id]:
+                for i in range(log_size):
+                    log_poi_id=log_poi_ids[i]
+                    if log_poi_id == id_neighbor:
+                        neighbors.append(i)
+            log_neighbors[poi_id]=neighbors
+
+        
+        for i in range_K:
+            #print(i)
+            poi_to_insert=None
+            max_objective_value=-200
+            for j in range(len(tmp_rec_list)):
+                candidate_poi_id=tmp_rec_list[j]
+                candidate_score=tmp_score_list[j]
+                #objective_value=geodiv_objective_function(candidate_poi_id,log_poi_id,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id],current_proportionality,div_weight,candidate_score)
+                objective_value=geodiv_objective_function(candidate_poi_id,log_poi_ids,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id],
+                                            current_proportionality,div_weight,candidate_score)
+
+                if objective_value > max_objective_value:
+                    max_objective_value=objective_value
+                    poi_to_insert=candidate_poi_id
+            if poi_to_insert is not None:
+                rm_idx=tmp_rec_list.index(poi_to_insert)
+                tmp_rec_list.pop(rm_idx)
+                tmp_score_list.pop(rm_idx)
+                rec_list.append(poi_to_insert)
+                final_scores.append(max_objective_value)
+                current_proportionality=update_geo_cov(poi_to_insert,log_poi_ids,K,poi_cover,poi_neighbors,log_neighbors[poi_to_insert])
+
+        return rec_list,final_scores
     
 def update_geo_cov(poi_id,log_poi_ids,rec_list_size,poi_cover,poi_neighbors,neighbors):
     log_size=len(log_poi_ids)
@@ -157,54 +238,3 @@ def geodiv_objective_function(poi_id,log_poi_ids,rec_list_size,poi_cover,poi_nei
     div=max(0,pr-current_proportionality)
     return (score**(1-div_weight))*(div**div_weight)
 
-def geodiv(uid,training_matrix,tmp_rec_list,tmp_score_list,
-            poi_neighbors,K,div_weight):
-    
-    range_K=range(K)
-    rec_list=[]
-    
-    user_log=training_matrix[uid]
-    #print(mean_visits)
-    log_poi_ids=list()
-    poi_cover=list()
-    for lid in user_log.nonzero()[0]:
-        for visits in range(int(user_log[lid])):
-            poi_cover.append(0)
-            log_poi_ids.append(lid)
-    log_size=len(log_poi_ids)
-    assert user_log[user_log.nonzero()[0]].sum() == len(poi_cover)
-
-    current_proportionality=0
-    final_scores=[]
-    log_neighbors=dict()
-    for poi_id in tmp_rec_list:
-        neighbors=list()
-        for id_neighbor in poi_neighbors[poi_id]:
-            for i in range(log_size):
-                log_poi_id=log_poi_ids[i]
-                if log_poi_id == id_neighbor:
-                    neighbors.append(i)
-        log_neighbors[poi_id]=neighbors
-    for i in range_K:
-        #print(i)
-        poi_to_insert=None
-        max_objective_value=-200
-        for j in range(len(tmp_rec_list)):
-            candidate_poi_id=tmp_rec_list[j]
-            candidate_score=tmp_score_list[j]
-            #objective_value=geodiv_objective_function(candidate_poi_id,log_poi_id,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id],current_proportionality,div_weight,candidate_score)
-            objective_value=geodiv_objective_function(candidate_poi_id,log_poi_ids,K,poi_cover.copy(),poi_neighbors,log_neighbors[candidate_poi_id],
-                                        current_proportionality,div_weight,candidate_score)
-            
-            if objective_value > max_objective_value:
-                max_objective_value=objective_value
-                poi_to_insert=candidate_poi_id
-        if poi_to_insert is not None:
-            rm_idx=tmp_rec_list.index(poi_to_insert)
-            tmp_rec_list.pop(rm_idx)
-            tmp_score_list.pop(rm_idx)
-            rec_list.append(poi_to_insert)
-            final_scores.append(max_objective_value)
-            current_proportionality=update_geo_cov(poi_to_insert,log_poi_ids,K,poi_cover,poi_neighbors,log_neighbors[poi_to_insert])
-    
-    return rec_list,final_scores
