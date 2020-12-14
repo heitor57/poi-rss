@@ -4977,9 +4977,10 @@ class RecRunner():
         geomf = self.cache['geomf']
         if uid in self.ground_truth:
 
-            overall_scores = normalize([geomf.predict(uid,lid)
-                            if self.training_matrix[uid, lid] == 0 else -1
-                            for lid in self.all_lids])
+            geomf_scores = geomf.predict(uid,self.all_lids)
+            overall_scores = normalize([geomf_scores[lid]
+                                        if self.training_matrix[uid, lid] == 0 else -1
+                                        for lid in self.all_lids])
             overall_scores = np.array(overall_scores)
 
             predicted = list(reversed(overall_scores.argsort()))[
