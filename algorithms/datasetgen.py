@@ -17,12 +17,14 @@ from lib.parallel_util import run_parallel
 from lib.constants import geocat_constants,experiment_constants
 from tqdm import tqdm
 import math
+import sklearn
+import sklearn.neighbors
 
 SPLIT_YEAR=2017
-
-# cities=['lasvegas','phoenix','charlotte','madison']
+earth_radius = 6371000/1000 # km in earth
+cities=['lasvegas','phoenix','charlotte','madison']
 # cities=experiment_constants.CITIES
-cities=['madison']
+#cities=['madison']
 
 dict_alias_title,category_tree,dict_alias_depth=cat_utils.cat_structs("../data/categories.json")
 undirected_category_tree=category_tree.to_undirected()
@@ -198,7 +200,7 @@ print(time.time()-start_time)
 # In[7]:
 
 
-genoptions=['poi','neighbor','user','checkin'# ,'test','train'
+genoptions=['poi','neighbor','user','checkin','test','train'
             ,'user_data']
 genoptions=['checkin',
             'poi','neighbor',
@@ -299,11 +301,12 @@ for city in cities:
     if 'neighbor' in genoptions:
         poi_neighbors={}
         pois_id=[pois_id_to_int[pid] for pid in pois_id]
-        pois_coos = np.array([(city_poi_data[pid]['latitude'],city_poi_data[pid]['longitude']) for pid in pois_id])
+        pois_coos = np.array([(city_poi_data[pid]['latitude'],city_poi_data[pid]['longitude']) for pid in pois_id])*np.pi/180
         
-        poi_coos_balltree = sklearn.neighbors.BallTree(poi_coos,metric="haversine")
+        poi_coos_balltree = sklearn.neighbors.BallTree(pois_coos,metric="haversine")
 
-        poi_neighbors = {lid: self.poi_coos_balltree.query_radius([pois_coos[lid]],NEIGHBOR_DISTANCE) for lid in pois_id}
+        poi_neighbors = {lid: list(poi_coos_balltree.query_radius([pois_coos[lid]],geocat_constants.NEIGHBOR_DISTANCE/earth_radius)[0]) for lid in pois_id}
+        # print(poi_neighbors)
         # args=[(lid,) for lid in pois_id]
         # def neighbors_searcher(poi_id):
         #     neighbors=list()

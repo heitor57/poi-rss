@@ -24,6 +24,7 @@ colorama = "*"
 sklearn = "*"
 imblearn = "*"
 python-igraph = "*"
+bz2file = "*"
 
 [requires]
 python_version = "3.7"

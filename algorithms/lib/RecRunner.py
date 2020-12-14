@@ -4977,7 +4977,8 @@ class RecRunner():
         geomf = self.cache['geomf']
         if uid in self.ground_truth:
 
-            geomf_scores = geomf.predict(uid,self.all_lids)
+            geomf_scores = geomf.predict(uid,self.all_lids)[0]
+            # print(np.max(geomf_scores),np.max(geomf.data['P'][uid]),np.min(geomf.data['P'][uid]))
             overall_scores = normalize([geomf_scores[lid]
                                         if self.training_matrix[uid, lid] == 0 else -1
                                         for lid in self.all_lids])

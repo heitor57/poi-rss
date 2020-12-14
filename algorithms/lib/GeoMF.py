@@ -212,4 +212,4 @@ class GeoMF:
         return x
 
     def predict(self, uid, lid):
-        return self.data['P'][uid, :].dot(self.data['Q'][lid, :]) + self.data['X'][uid, :].dot(self.data['Y'][lid, :])
+        return self.data['P'][uid, :].dot(self.data['Q'][lid, :].T) + self.data['X'][uid, :].dot(self.data['Y'][lid, :].T)
