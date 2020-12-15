@@ -135,19 +135,23 @@ class GeoDiv2020:
             if len(vertices) > 1:
                 graphs.append(new_g)
 
+        # print(graphs)
         graphs_order = [len(i.vs) for i in graphs]
         sorted_lists = reversed(sorted(zip(graphs_order,graphs)))
         graphs =  [element for _, element in sorted_lists]
-        areas_lids = set()
+        areas_lids = []
         num_checkins = 0
         for new_g in graphs:
-            areas_lids.union(list(map(lambda x: int(x),new_g.vs['name'])))
+            # print(set(map(lambda x: int(x),new_g.vs['name'])))
+            tmp = list(map(lambda x: int(x),new_g.vs['name']))
+            areas_lids.extend(tmp)
+            # print(areas_lids)
             
             num_checkins += len(new_g.vs)
             if num_checkins/num_total_checkins >= self.threshold_area:
                 break
             
-        return areas_lids
+        return list(set(areas_lids))
 
     def objective(self,uid,rec_list,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids,old_pr):
         pr=self.pr(uid,rec_list,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids)
@@ -194,12 +198,20 @@ class GeoDiv2020:
         areas_lids = self.active_area_selection(uid)
         lids_original_indexes = {lid:i for i,lid in enumerate(tmp_rec_list)}
 
-        pois_in_areas = self.poi_coos_balltree.query_radius([poi_coos[lid] for lid in areas_lids],2*self.th_far_radius)
-        pois_in_areas = set(pois_in_areas)
+        # print(np.array([self.poi_coos[lid] for lid in areas_lids]))
+        # print(areas_lids)
+        # print(np.array([self.poi_coos[lid] for lid in areas_lids])*np.pi/180)
+        pois_in_areas = self.poi_coos_balltree.query_radius(np.array([self.poi_coos[lid] for lid in areas_lids])*np.pi/180,2*self.th_far_radius)
+        # print(pois_in_areas)
+        # print
+        tmp = set()
+        for i in pois_in_areas:
+           tmp.union(i) 
+        pois_in_areas = tmp
         candidate_pois = pois_in_areas.intersection(tmp_rec_list)
         if len(candidate_pois) < K:
-            available_lids = candidate_pois - set(tmp_rec_list)
-            candidate_pois.union(available_lids[K-len(candidate_pois)])
+            available_lids = list(pois_in_areas - candidate_pois)
+            candidate_pois.union(available_lids[:K-len(candidate_pois)])
 
         candidate_lids = candidate_pois # mutate while recommending
         candidate_scores = [tmp_score_list[lids_original_indexes[lid]] for lid in candidate_lids]
