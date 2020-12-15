@@ -28,16 +28,20 @@ def _compute_dist_std(poi_coos):
     return std
         
 @njit
-def _set_y(Y,N,poi_coos,num_grids_lat,num_grids_lon,grid_distance,min_lat,min_lon,max_lat,max_lon,delta,std):
+def _set_y(Y,N,poi_coos,num_grids_lat,num_grids_lon,grid_distance,min_lat,min_lon,max_lat,max_lon,delta):
+    # lat_step = (max_lat - min_lat) / M;
+    # lon_step = (max_lon - min_lon) / N;
     for i in range(N):
         poi_coo = poi_coos[i]
         for lat_grid in range(num_grids_lat): 
             for lon_grid in range(num_grids_lon):
                 grid_lat = (lat_grid+0.5)*grid_distance + min_lat
                 grid_lon = (lon_grid+0.5)*grid_distance + min_lon
+                # grid_lat = (lat_grid+0.5)*lat_step
+                # grid_lon = (lon_grid+0.5)*lon_step
                 dist = geo_utils.haversine(poi_coo[0],poi_coo[1],grid_lat,grid_lon)
                 if dist < delta:
-                    Y[i,lat_grid*num_grids_lon + lon_grid] = np.exp(-dist/std)
+                    Y[i,lat_grid*num_grids_lon + lon_grid] = np.exp(-dist/1.5)
     return Y
 
 class GeoMF:
@@ -60,8 +64,8 @@ class GeoMF:
         # print(W)
         W[W!=0] = np.log(1+W[W!=0]*10**self.epsilon)
 
-        self.std = _compute_dist_std(np.array([coo for k,coo in poi_coos.items()]))
-        print("Distance STD: ",self.std)
+        # self.std = _compute_dist_std(np.array([coo for k,coo in poi_coos.items()]))
+        # print("Distance STD: ",self.std)
         # print(W)
 
         C = C>0
@@ -94,7 +98,7 @@ class GeoMF:
 
         print("Calculating areas transition probabilities")
 
-        _set_y(Y,N,np.array([coo for k,coo in poi_coos.items()]),num_grids_lat,num_grids_lon,self.grid_distance,min_lat,min_lon,max_lat,max_lon,self.delta,self.std)
+        _set_y(Y,N,np.array([coo for k,coo in poi_coos.items()]),num_grids_lat,num_grids_lon,self.grid_distance,min_lat,min_lon,max_lat,max_lon,self.delta)
         # print(Y.max())
         # print(Y.min())
         # print(Y)

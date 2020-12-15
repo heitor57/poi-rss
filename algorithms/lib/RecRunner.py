@@ -495,7 +495,7 @@ class RecRunner():
     @staticmethod
     def get_base_parameters():
         return {
-            "geomf": {'K': 100, 'delta': 50, 'gamma': 0.01, 'epsilon': 10, 'lambda_': 10, 'max_iters': 7, 'grid_distance':3.0},
+            "geomf": {'K': 100, 'delta': 50, 'gamma': 0.01, 'epsilon': 10, 'lambda_': 10, 'max_iters': 7, 'grid_distance':0.5},
             "mostpopular": {},
             # "usg": {'alpha': 0.1, 'beta': 0.1, 'eta': 0.05},
             "usg": {'alpha': 0, 'beta': 0.2, 'eta': 0},
