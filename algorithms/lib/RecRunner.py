@@ -4979,8 +4979,9 @@ class RecRunner():
 
             geomf_scores = geomf.predict(uid,self.all_lids)[0]
             # print(np.max(geomf_scores),np.max(geomf.data['P'][uid]),np.min(geomf.data['P'][uid]))
+            min_score = np.min(geomf_scores)
             overall_scores = normalize([geomf_scores[lid]
-                                        if self.training_matrix[uid, lid] == 0 else -1
+                                        if self.training_matrix[uid, lid] == 0 else min_score-999
                                         for lid in self.all_lids])
             overall_scores = np.array(overall_scores)
 

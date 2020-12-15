@@ -59,7 +59,7 @@ class GeoDiv2020:
         print(t)
         x_0 = x[0]
         t_0 = t[0]
-        x = np.log10(np.array(x[1:]))
+        x = np.log10(x[1:])
         t = np.log10(t[1:])
         # w0, w1 = np.random.random(), np.random.random()
         w0, w1 = 0.1, -0.1
@@ -235,7 +235,7 @@ class GeoDiv2020:
         #             if log_poi_id == id_neighbor:
         #                 neighbors.append(i)
         #     log_neighbors[poi_id]=neighbors
-
+        old_pr = 0
         for i in range_K:
             #print(i)
             poi_to_insert=None
@@ -258,6 +258,7 @@ class GeoDiv2020:
                 candidate_scores.pop(rm_idx)
                 rec_list.append(poi_to_insert)
                 final_scores.append(max_objective_value)
+                old_pr = objective(self,uid,rec_list,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids,old_pr)
                 # current_proportionality=update_geo_cov(poi_to_insert,log_poi_ids,K,poi_cover,poi_neighbors,log_neighbors[poi_to_insert])
 
         return rec_list,final_scores
