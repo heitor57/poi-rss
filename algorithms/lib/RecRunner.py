@@ -4983,12 +4983,12 @@ class RecRunner():
             geomf_scores = geomf_scores-np.min(geomf_scores)
             geomf_scores = geomf_scores/np.max(geomf_scores)
             # print(geomf_scores.min(),geomf_scores.max())
-            overall_scores = [geomf_scores[lid]
+            overall_scores = normalize([geomf_scores[lid]
                                         if self.training_matrix[uid, lid] == 0 else -1
-                                        for lid in self.all_lids]
+                                        for lid in self.all_lids])
             overall_scores = np.array(overall_scores)
-            overall_scores = overall_scores-np.min(overall_scores)
-            overall_scores = overall_scores/np.max(overall_scores)
+            # overall_scores = overall_scores-np.min(overall_scores)
+            # overall_scores = overall_scores/np.max(overall_scores)
 
             predicted = list(reversed(overall_scores.argsort()))[
                 :self.base_rec_list_size]
