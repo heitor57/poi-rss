@@ -3,6 +3,7 @@ import igraph
 import math
 from collections import defaultdict
 import sklearn.neighbors
+import constants
 
 def _dist(loc1, loc2):
     lat1, long1 = loc1[0], loc1[1]
@@ -91,6 +92,7 @@ class GeoDiv2020:
             acc_value+=self.pr_d(th_far)
             th_far += 0.1
         self.th_far = th_far
+        self.th_far_radius = self.th_far/constants.EARTH_RADIUS
 
         print(f"a {self.a} b {self.b} t_0 {t_0} th_far {th_far}")
         self.accumulated_dist_probabilities = np.cumsum(list(map(self.pr_d,np.append(np.arange(0,th_far,0.1),th_far))))
@@ -100,7 +102,7 @@ class GeoDiv2020:
         poi_coos_ = np.zeros((num_lids,2))
         for lid in poi_coos.keys():
             poi_coos_[lid] = poi_coos[lid]
-        self.poi_coos_balltree = sklearn.neighbors.BallTree(np.array(poi_coos_),metric="haversine")
+        self.poi_coos_balltree = sklearn.neighbors.BallTree(np.array(poi_coos_)*np.pi/180,metric="haversine")
         self.training_matrix = training_matrix
         self.poi_coos = poi_coos
         
@@ -192,7 +194,7 @@ class GeoDiv2020:
         areas_lids = self.active_area_selection(uid)
         lids_original_indexes = {lid:i for i,lid in enumerate(tmp_rec_list)}
 
-        pois_in_areas = self.poi_coos_balltree.query_radius([poi_coos[lid] for lid in areas_ids],2*self.th_far)
+        pois_in_areas = self.poi_coos_balltree.query_radius([poi_coos[lid] for lid in areas_ids],2*self.th_far_radius)
         pois_in_areas = set(pois_in_areas)
         candidate_pois = pois_in_areas.intersection(tmp_rec_list)
         if len(candidate_pois) < K:

@@ -14,6 +14,8 @@ class geocat_constants:
     DIV_WEIGHT=0.75 # lambda, geo vs cat_DIV_WEIGHT = 0.75 # lambda, geo vs cat
 
 
+EARTH_RADIUS = 6371
+
 class usg_constants:
     eta=0.05
 

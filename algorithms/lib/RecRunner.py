@@ -5014,8 +5014,7 @@ class RecRunner():
             overall_scores = self.user_base_predicted_score[uid][
                 0:self.base_rec_list_size]
             
-            predicted, overall_scores = gcobjfunc.geodiv(uid, self.training_matrix, predicted, overall_scores,
-                                                         self.poi_neighbors, self.final_rec_list_size,
+            predicted, overall_scores = geodiv2020.predict(uid,predicted,overall_scores,self.final_rec_list_size,
                                                          self.final_rec_parameters['div_weight'])
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
