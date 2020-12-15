@@ -28,21 +28,25 @@ def _compute_dist_std(poi_coos):
     return std
         
 @njit
-def _set_y(Y,N,poi_coos,num_grids_lat,num_grids_lon,grid_distance,min_lat,min_lon,max_lat,max_lon,delta):
-    # lat_step = (max_lat - min_lat) / M;
-    # lon_step = (max_lon - min_lon) / N;
-    for i in range(N):
-        poi_coo = poi_coos[i]
-        for lat_grid in range(num_grids_lat): 
-            for lon_grid in range(num_grids_lon):
-                grid_lat = (lat_grid+0.5)*grid_distance + min_lat
-                grid_lon = (lon_grid+0.5)*grid_distance + min_lon
+def _set_y(Y,N,poi_coos,num_grids_lat,num_grids_lon,min_lat,min_lon,max_lat,max_lon,delta):
+    lat_step = (max_lat - min_lat) / num_grids_lat;
+    lon_step = (max_lon - min_lon) / num_grids_lon;
+    # print("---")
+    # print(max_lat, max_lon)
+    # print("---")
+    for lat_grid in range(num_grids_lat): 
+        for lon_grid in range(num_grids_lon):
+            grid_lat = (lat_grid+0.5)*lat_step + min_lat
+            grid_lon = (lon_grid+0.5)*lon_step + min_lon
+            # print(grid_lat,grid_lon)
+            for i in range(N):
+                poi_coo = poi_coos[i]
                 # grid_lat = (lat_grid+0.5)*lat_step
                 # grid_lon = (lon_grid+0.5)*lon_step
                 dist = geo_utils.haversine(poi_coo[0],poi_coo[1],grid_lat,grid_lon)
                 if dist < delta:
                     Y[i,lat_grid*num_grids_lon + lon_grid] = np.exp(-dist/1.5)
-    return Y
+
 
 class GeoMF:
     def __init__(self,K,delta,gamma,epsilon,lambda_,max_iters,grid_distance):
@@ -77,15 +81,22 @@ class GeoMF:
         max_lat = np.max(lat_lon[:,0])
         min_lon = np.min(lat_lon[:,1])
         max_lon = np.max(lat_lon[:,1])
+        print("min max")
+        print("lat")
+        print(min_lat,max_lat)
+        print("lon")
+        print(min_lon,max_lon)
         
         dist_lat = geo_utils.haversine(min_lat,min_lon,max_lat,min_lon)
         dist_lon = geo_utils.haversine(min_lat,min_lon,min_lat,max_lon)
 
+        # print(dist_lat,dist_lon)
         num_grids_lat = int(np.ceil(dist_lat/self.grid_distance))
         num_grids_lon = int(np.ceil(dist_lon/self.grid_distance))
         print(f"num grids in lat: {num_grids_lat}, num grids in lon: {num_grids_lon}")
 
-        X = np.random.rand(M,num_grids_lat*num_grids_lon)
+        # X = np.random.rand(M,num_grids_lat*num_grids_lon)
+        X = np.zeros((M,num_grids_lat*num_grids_lon))
         Y = np.zeros((N,num_grids_lat*num_grids_lon))
 
         W_u = dict()
@@ -98,7 +109,10 @@ class GeoMF:
 
         print("Calculating areas transition probabilities")
 
-        _set_y(Y,N,np.array([coo for k,coo in poi_coos.items()]),num_grids_lat,num_grids_lon,self.grid_distance,min_lat,min_lon,max_lat,max_lon,self.delta)
+        _set_y(Y,N,np.array([coo for k,coo in poi_coos.items()]),num_grids_lat,num_grids_lon,min_lat,min_lon,max_lat,max_lon,self.delta)
+
+
+        # print
         # print(Y.max())
         # print(Y.min())
         # print(Y)
@@ -139,11 +153,11 @@ class GeoMF:
             print(f"iteration {i}")
             QtQ = Q.T @ Q
             for j in range(M):
+                P[j] =np.linalg.inv(Q.T@(W_u[j])@Q+QtQ+self.gamma*Ik) @ Q.T @ (W_u[j]+In) @ (C[j,:].A.flatten() -Y @ X[j,:])
                 # print((Q.T @ W_u[j]).shape)
                 # print((C[j,:] -Y @ X[j]).shape)
                 # print((Q.T @ W_u[j] @ (C[j,:] -Y @ X[j]).T).shape)
                 # print( np.linalg.inv(Q.T @ W_u[j] @ (C[j,:] -Y @ X[j]).T).shape)
-                P[j] =np.linalg.inv(Q.T@(W_u[j]-In)@Q+QtQ+self.gamma*Ik) @ Q.T @ W_u[j] @ (C[j,:].A.flatten() -Y @ X[j,:])
                 # P[j] = sparse.linalg.inv(Q.T@(W_u[j]-In)+QtQ+self.gamma*Ik) @ Q.T @ W_u[j] @ (C[j,:] -Y @ X[j])
                 # print((Q.T @ W_u[j] @ Q + QtQ + self.gamma*Ik))
                 # print((Q.T @ W_u[j] + Q.T))
@@ -159,7 +173,7 @@ class GeoMF:
 
             PtP = P.T @ P
             for j in range(N):
-                Q[j] =np.linalg.inv(P.T@(W_i[j]-Im)@P+PtP+self.gamma*Ik) @ P.T @ W_i[j] @ (C[:,j].A.flatten() -X @ Y[j,:])
+                Q[j] =np.linalg.inv(P.T@(W_i[j])@P+PtP+self.gamma*Ik) @ P.T @ (W_i[j]+Im) @ (C[:,j].A.flatten() -X @ Y[j,:])
                 # Q[j] = sparse.linalg.inv(P.T@(W_i[j]-Im)+PtP+self.gamma*Ik) @ P.T @ W_i[j] @ (C[:,j] -X @ Y[j])
                 # Q[j] = sparse.linalg.inv(P.T@(W_i[j]-Im)+PtP+self.gamma*Ik) @ P.T @ W_i[j] @ (C[:,j] -X @ Y[j])
                 # Q[j] = np.linalg.solve((P.T @ W_i[j] @ P + PtP + self.gamma*Ik),((P.T @ W_i[j] + P.T) @ (C[:,j].T.A - X @ Y[j,:].T)))
@@ -167,11 +181,23 @@ class GeoMF:
 
     def optimize_activity(self, Ct, Wt, Xt, Yt, YtY, Ut, V):
         reg = self.lambda_
+        # print("Yt::")
+        # print(Yt)
+        # print("V::")
+        # print(V)
         YtV = Yt @ V
         L, M = Xt.shape
+        L, N = Yt.shape 
         user_cell = [None]*M
         item_cell = [None]*M
         val_cell = [None]*M
+
+        # N_ones = np.ones(N)
+        # M_ones = np.ones(M)
+        Im = sparse.identity(M)
+        In = sparse.identity(N)
+        Ik = sparse.identity(self.K)
+
         for i in range(M):
             w = Wt[:,i].A.flatten()
             r = Ct[:,i].A.flatten()
@@ -188,9 +214,15 @@ class GeoMF:
             subYt = Yt[:, Ind]
             subV = V[Ind, :]
             YC = subYt @ Wi
+            # print("YtV::")
+            # print(YtV)
+            # print("Ut::")
+            # print(Ut[:,i])
             grad_invariant =  YC @ (np.sqrt(wi) * (subV @ Ut[:,i])) - subYt @ (wi * ri + ri) + YtV @ Ut[:,i] + reg;
             J = np.array(range(len(grad_invariant)))
+            # print(grad_invariant)
             ind = grad_invariant <= 0
+
             # print(ind)
             # print(grad_invariant)
             # print(grad_invariant[ind])

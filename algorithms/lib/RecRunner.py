@@ -495,7 +495,7 @@ class RecRunner():
     @staticmethod
     def get_base_parameters():
         return {
-            "geomf": {'K': 100, 'delta': 50, 'gamma': 0.01, 'epsilon': 10, 'lambda_': 10, 'max_iters': 7, 'grid_distance':0.5},
+            "geomf": {'K': 100, 'delta': 50, 'gamma': 0.01, 'epsilon': 10, 'lambda_': 10, 'max_iters': 7, 'grid_distance':3.0},
             "mostpopular": {},
             # "usg": {'alpha': 0.1, 'beta': 0.1, 'eta': 0.05},
             "usg": {'alpha': 0, 'beta': 0.2, 'eta': 0},
@@ -4978,7 +4978,7 @@ class RecRunner():
         if uid in self.ground_truth:
 
             geomf_scores = geomf.predict(uid,self.all_lids)[0]
-            # print(np.max(geomf_scores),np.max(geomf.data['P'][uid]),np.min(geomf.data['P'][uid]))
+            print(np.min(geomf_scores),np.max(geomf_scores),np.min(geomf.data['X'][uid]),np.max(geomf.data['X'][uid]))
             min_score = np.min(geomf_scores)
             overall_scores = normalize([geomf_scores[lid]
                                         if self.training_matrix[uid, lid] == 0 else min_score-999
