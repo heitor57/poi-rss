@@ -137,8 +137,14 @@ class GeoDiv2020:
 
         # print(graphs)
         graphs_order = [len(i.vs) for i in graphs]
-        sorted_lists = reversed(sorted(zip(graphs_order,graphs)))
-        graphs =  [element for _, element in sorted_lists]
+        # sorted_lists = 
+        # try:
+        graphs =  [element for _, element in reversed(sorted(zip(graphs_order,graphs), key=lambda pair: pair[0]))]
+        # except:
+        #     print("GR ORDER:",graphs_order)
+        #     print("GRs :",graphs)
+        #     print("ZIPP:",list(zip(graphs_order,graphs)))
+        #     graphs =  [element for _, element in reversed(sorted(list(zip(graphs_order,graphs))))]
         areas_lids = []
         num_checkins = 0
         for new_g in graphs:
@@ -196,6 +202,7 @@ class GeoDiv2020:
         range_K=range(K)
         rec_list=[]
         areas_lids = self.active_area_selection(uid)
+        user_valid_lids = areas_lids
         lids_original_indexes = {lid:i for i,lid in enumerate(tmp_rec_list)}
 
         # print(np.array([self.poi_coos[lid] for lid in areas_lids]))
@@ -217,7 +224,6 @@ class GeoDiv2020:
         candidate_scores = [tmp_score_list[lids_original_indexes[lid]] for lid in candidate_lids]
 
 
-        user_valid_lids = pois_in_areas.copy() # doenst mutate
         closeness_user_log_lids_to_candidates_lids = {lid_1: {lid_2: self.closeness(_dist(lid_1,lid_2)) for lid_2 in candidate_lids} for lid_1 in areas_lids}
 
         summed_closeness_candidates_lids = {lid_1:
@@ -239,7 +245,8 @@ class GeoDiv2020:
         # assert user_log[user_log.nonzero()[0]].sum() == len(poi_cover)
 
         # current_proportionality=0
-        # final_scores=[]
+        final_scores=[]
+        rec_list = []
         # log_neighbors=dict()
         # for poi_id in tmp_rec_list:
         #     neighbors=list()
