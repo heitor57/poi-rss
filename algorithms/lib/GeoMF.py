@@ -61,6 +61,7 @@ class GeoMF:
         W[W!=0] = np.log(1+W[W!=0]*10**self.epsilon)
 
         self.std = _compute_dist_std([coo for k,coo in poi_coos.items()])
+        print("Distance STD: ",self.std)
         # print(W)
 
         C = C>0
