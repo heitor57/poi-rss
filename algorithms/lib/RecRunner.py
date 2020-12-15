@@ -4979,9 +4979,12 @@ class RecRunner():
 
             geomf_scores = geomf.predict(uid,self.all_lids)[0]
             # print(np.min(geomf_scores),np.max(geomf_scores),np.min(geomf.data['X'][uid]),np.max(geomf.data['X'][uid]))
-            min_score = np.min(geomf_scores)
+            # min_score = np.min(geomf_scores)
+            geomf_scores = geomf_scores-np.min(geomf_scores)
+            geomf_scores = geomf_scores/np.max(geomf_scores)
+            # print(geomf_scores.min(),geomf_scores.max())
             overall_scores = normalize([geomf_scores[lid]
-                                        if self.training_matrix[uid, lid] == 0 else min_score-1
+                                        if self.training_matrix[uid, lid] == 0 else -1
                                         for lid in self.all_lids])
             overall_scores = np.array(overall_scores)
 
@@ -5015,6 +5018,8 @@ class RecRunner():
                 0:self.base_rec_list_size]
             
             predicted, overall_scores = geodiv2020.predict(uid,predicted,overall_scores,self.final_rec_list_size)
+            print(np.min(overall_scores),np.max(overall_scores))
+            # print(predicted)
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         self.not_in_ground_truth_message(uid)
