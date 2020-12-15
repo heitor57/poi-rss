@@ -4997,8 +4997,8 @@ class RecRunner():
     def geodiv2020(self):
         geodiv2020 = GeoDiv2020(**self.final_rec_parameters)
         geodiv2020.train(self.training_matrix,self.poi_coos)
-        print("exiting!!")
-        raise SystemExit
+        # print("exiting!!")
+        # raise SystemExit
         self.cache['geodiv2020'] = geodiv2020
         args=[(uid,) for uid in self.all_uids]
         results = run_parallel(self.run_geodiv2020,args,self.CHKS)
@@ -5014,8 +5014,7 @@ class RecRunner():
             overall_scores = self.user_base_predicted_score[uid][
                 0:self.base_rec_list_size]
             
-            predicted, overall_scores = geodiv2020.predict(uid,predicted,overall_scores,self.final_rec_list_size,
-                                                         self.final_rec_parameters['div_weight'])
+            predicted, overall_scores = geodiv2020.predict(uid,predicted,overall_scores,self.final_rec_list_size)
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         self.not_in_ground_truth_message(uid)
