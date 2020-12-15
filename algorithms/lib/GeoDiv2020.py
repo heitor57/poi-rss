@@ -115,7 +115,7 @@ class GeoDiv2020:
         pois_ids = np.nonzero(user_log)[0]
 
         g = igraph.Graph()
-        g.add_vertices(map(str,list(range(len(pois_ids)))))
+        g.add_vertices(map(str,pois_ids))
         # self.poi_coos_balltree.query_radius([poi_coos[lid] for lid in poi_ids],2*self.th_far)
         for i in range(len(pois_ids)):
             for j in range(len(pois_ids)):
@@ -123,12 +123,12 @@ class GeoDiv2020:
                     g.add_edges([(str(pois_ids[i]),str(pois_ids[j]))])
 
         graphs = []
-        for i in range(len(pois_ids)):
-            vertices = [j.name for j in g.bfsiter(i)]
+        while len(g.vs) != 0:
+            vertices = [j['name'] for j in g.bfsiter(0)] # first vertice
             new_g = igraph.Graph()
             new_g.add_vertices(vertices)
-            for edge in [(int(vertices[j]),int(vertices[j+1])) for j in range(len(vertices)-1)]:
-                new_g.add_edge(edge)
+            for edge in [(str(vertices[j]),str(vertices[j+1])) for j in range(len(vertices)-1)]:
+                new_g.add_edge(*edge)
 
             # to_delete_ids = [v.index for v in G.vs if '@enron.com' not in v['label']]
             g.delete_vertices(vertices)
@@ -141,7 +141,7 @@ class GeoDiv2020:
         areas_lids = set()
         num_checkins = 0
         for new_g in graphs:
-            areas_lids.add(list(map(lambda x: int(x),new_g.vs['name'])))
+            areas_lids.union(list(map(lambda x: int(x),new_g.vs['name'])))
             
             num_checkins += len(new_g.vs)
             if num_checkins/num_total_checkins >= self.threshold_area:
@@ -194,7 +194,7 @@ class GeoDiv2020:
         areas_lids = self.active_area_selection(uid)
         lids_original_indexes = {lid:i for i,lid in enumerate(tmp_rec_list)}
 
-        pois_in_areas = self.poi_coos_balltree.query_radius([poi_coos[lid] for lid in areas_ids],2*self.th_far_radius)
+        pois_in_areas = self.poi_coos_balltree.query_radius([poi_coos[lid] for lid in areas_lids],2*self.th_far_radius)
         pois_in_areas = set(pois_in_areas)
         candidate_pois = pois_in_areas.intersection(tmp_rec_list)
         if len(candidate_pois) < K:
