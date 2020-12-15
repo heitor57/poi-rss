@@ -4,7 +4,31 @@ import numpy as np
 from numba import njit, prange
 
 @njit
-def _set_y(Y,N,poi_coos,num_grids_lat,num_grids_lon,grid_distance,min_lat,min_lon,max_lat,max_lon,delta):
+def _compute_dist_std(poi_coos):
+    n= len(poi_coos)
+    dist_sum = 0
+    num_sum = 0
+    for i in range(n):
+        for j in range(n):
+            if j > i:
+                dist = geo_utils.haversine(poi_coos[i][0],poi_coos[i][1],poi_coos[j][0],poi_coos[j][1])
+                dist_sum+= dist
+                num_sum += 1
+
+    mean_dist = dist_sum/num_sum
+    dist_sum_final = 0
+    for i in range(n):
+        for j in range(n):
+            if j > i:
+                dist = geo_utils.haversine(poi_coos[i][0],poi_coos[i][1],poi_coos[j][0],poi_coos[j][1])
+                dist_sum_final += (dist-mean_dist)**2
+
+    variance = dist_sum_final / (num_sum-1)
+    std = np.sqrt(variance)
+    return std
+        
+@njit
+def _set_y(Y,N,poi_coos,num_grids_lat,num_grids_lon,grid_distance,min_lat,min_lon,max_lat,max_lon,delta,std):
     for i in range(N):
         poi_coo = poi_coos[i]
         for lat_grid in range(num_grids_lat): 
@@ -13,7 +37,7 @@ def _set_y(Y,N,poi_coos,num_grids_lat,num_grids_lon,grid_distance,min_lat,min_lo
                 grid_lon = (lon_grid+0.5)*grid_distance + min_lon
                 dist = geo_utils.haversine(poi_coo[0],poi_coo[1],grid_lat,grid_lon)
                 if dist < delta:
-                    Y[i,lat_grid*num_grids_lon + lon_grid] = np.exp(-dist/1.5)
+                    Y[i,lat_grid*num_grids_lon + lon_grid] = np.exp(-dist/std)
     return Y
 
 class GeoMF:
@@ -35,6 +59,8 @@ class GeoMF:
         W = C.copy()
         # print(W)
         W[W!=0] = np.log(1+W[W!=0]*10**self.epsilon)
+
+        self.std = _compute_dist_std([coo for k,coo in poi_coos.items()])
         # print(W)
 
         C = C>0
@@ -67,7 +93,7 @@ class GeoMF:
 
         print("Calculating areas transition probabilities")
 
-        _set_y(Y,N,np.array([coo for k,coo in poi_coos.items()]),num_grids_lat,num_grids_lon,self.grid_distance,min_lat,min_lon,max_lat,max_lon,self.delta)
+        _set_y(Y,N,np.array([coo for k,coo in poi_coos.items()]),num_grids_lat,num_grids_lon,self.grid_distance,min_lat,min_lon,max_lat,max_lon,self.delta,self.std)
         # print(Y.max())
         # print(Y.min())
         # print(Y)
