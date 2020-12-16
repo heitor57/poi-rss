@@ -25,7 +25,7 @@ rr = RecRunner.getInstance(baser, "geodiv2020", city, 80, 10,
                            "/home/heitor/recsys/data")
 rr.load_base()
 
-lp = np.around(np.linspace(0, 1, 11),decimals=2)
+lp = np.around(np.append(np.arange(0.25,1,0.25),1),decimals=2)
 for div_weight in lp:
     rr.final_rec_parameters['div_weight'] = div_weight
     rr.eval_rec_metrics(METRICS_KS=[10])

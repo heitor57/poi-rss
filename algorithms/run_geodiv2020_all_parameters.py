@@ -26,7 +26,7 @@ rr = RecRunner.getInstance(baser, "geodiv2020", city, 80, 10,
 rr.load_base()
 rr.load_base_predicted()
 
-lp = np.around(np.linspace(0, 1, 11),decimals=2)
+lp = np.around(np.append(np.arange(0.25,1,0.25),1),decimals=2)
 for div_weight in lp:
     rr.final_rec_parameters['div_weight'] = div_weight
     rr.run_final_recommender(check_already_exists=True)
