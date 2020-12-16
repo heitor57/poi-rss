@@ -56,8 +56,8 @@ class GeoDiv2020:
     def train(self,training_matrix, poi_coos):
 
         x, t = self.compute_distance_distribution(training_matrix, poi_coos)
-        print(x)
-        print(t)
+        # print(x)
+        # print(t)
         x_0 = x[0]
         t_0 = t[0]
         x = np.log10(x[1:])
@@ -91,11 +91,11 @@ class GeoDiv2020:
                 break
             acc_value+=self.pr_d(th_far)
             th_far += 0.1
-        self.th_far = th_far
+        self.th_far = np.round(th_far,1)
         self.th_far_radius = self.th_far/constants.EARTH_RADIUS
 
         print(f"a {self.a} b {self.b} t_0 {t_0} th_far {th_far}")
-        dists = np.round(np.append(np.arange(0,th_far,0.1),th_far),1)
+        dists = np.round(np.append(np.arange(0,self.th_far,0.1),self.th_far),1)
         self.accumulated_dist_probabilities = {dists[i]: v for i, v in enumerate(np.cumsum(list(map(self.pr_d,dists))))}
         print(self.accumulated_dist_probabilities)
         # self.dist_probabilities = np.cumsum(np.arange(0,th_far))
@@ -168,7 +168,10 @@ class GeoDiv2020:
 
     def pr(self,uid,rec_list,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids):
         sum_quantities_checkins=0
-        not_nearby = np.count_nonzero(list(summed_closeness_candidates_lids.values()))
+        not_nearby = 0
+        for lid in rec_list:
+            not_nearby += summed_closeness_candidates_lids[lid] == 0
+        # not_nearby = np.count_nonzero(list(summed_closeness_candidates_lids.values()))
         for log_lid in user_valid_lids:
             p_c_r = self.quantity(uid,rec_list, log_lid,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids)
             if req_u >= p_c_r:
@@ -212,14 +215,26 @@ class GeoDiv2020:
         user_all_consumed_lids = set(np.nonzero(self.training_matrix[uid])[0])
         lids_original_indexes = {lid:i for i,lid in enumerate(tmp_rec_list)}
 
-        pois_in_areas = self.poi_coos_balltree.query_radius(np.array([self.poi_coos[lid] for lid in areas_lids])*np.pi/180,2*self.th_far_radius)
+        # try:
+        if len(areas_lids) == 0:
+            pois_in_areas = set()
+            print(f"User {uid} doenst have any area so it is returning top-{K} of base recommender")
+            return tmp_rec_list[:K], tmp_score_list[:K]
+        else:
+            pois_in_areas = self.poi_coos_balltree.query_radius(np.array([self.poi_coos[lid] for lid in areas_lids])*np.pi/180,2*self.th_far_radius)
+        # except:
+        #     for lid in areas_lids:
+        #         print(uid,self.poi_coos[lid])
+        #     print(user_all_consumed_lids,areas_lids)
+        #     raise SystemExit
         tmp = set()
         for i in pois_in_areas:
-           tmp = tmp.union(i) 
+           tmp = tmp.union(i)
         pois_in_areas = tmp - user_all_consumed_lids
         candidate_pois = pois_in_areas.intersection(tmp_rec_list)
         # print("cand:",candidate_pois)
         if len(candidate_pois) < K:
+            print(f"Need to complete, added {K-len(candidate_pois)} user {uid}")
             available_lids = list(set(tmp_rec_list) - candidate_pois)
             candidate_pois = candidate_pois.union(available_lids[:K-len(candidate_pois)])
 
