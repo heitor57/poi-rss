@@ -2,6 +2,22 @@ import geo_utils
 from scipy import sparse
 import numpy as np
 from numba import njit, prange
+import ctypes
+from parallel_util import run_parallel
+from threadpoolctl import threadpool_limits
+
+import multiprocessing as mp
+
+            #     P[j] =np.linalg.inv(Q.T@(W_u[j])@Q+QtQ+Ik_gamma) @ Q.T @ (W_u[j]+In) @ (C[j,:].A.flatten() -Y @ X[j,:])
+
+
+def _P_update(data_id,j):
+    data = ctypes.cast(data_id, ctypes.py_object).value
+    return np.linalg.inv(data['Q'].T@(data['W_u'][j])@data['Q']+data['QtQ']+data['Ik_gamma']) @ data['Q'].T @ (data['W_u'][j]+data['In']) @ (data['C'][j,:].A.flatten() -data['Y'] @ data['X'][j,:])
+
+def _Q_update(data_id,j):
+    data = ctypes.cast(data_id, ctypes.py_object).value
+    return np.linalg.inv(data['P'].T@(data['W_i'][j])@data['P']+data['PtP']+data['Ik_gamma']) @ data['P'].T @ (data['W_i'][j]+data['Im']) @ (data['C'][:,j].A.flatten() -data['X'] @ data['Y'][j,:])
 
 @njit
 def _compute_dist_std(poi_coos):
@@ -149,34 +165,35 @@ class GeoMF:
         Im = sparse.identity(M)
         In = sparse.identity(N)
         Ik = sparse.identity(self.K)
+        Ik_gamma = self.gamma*Ik
+        QtQ = None
+        PtP = None
         for i in range(self.max_iters):
             print(f"iteration {i}")
             QtQ = Q.T @ Q
-            for j in range(M):
-                P[j] =np.linalg.inv(Q.T@(W_u[j])@Q+QtQ+self.gamma*Ik) @ Q.T @ (W_u[j]+In) @ (C[j,:].A.flatten() -Y @ X[j,:])
-                # print((Q.T @ W_u[j]).shape)
-                # print((C[j,:] -Y @ X[j]).shape)
-                # print((Q.T @ W_u[j] @ (C[j,:] -Y @ X[j]).T).shape)
-                # print( np.linalg.inv(Q.T @ W_u[j] @ (C[j,:] -Y @ X[j]).T).shape)
-                # P[j] = sparse.linalg.inv(Q.T@(W_u[j]-In)+QtQ+self.gamma*Ik) @ Q.T @ W_u[j] @ (C[j,:] -Y @ X[j])
-                # print((Q.T @ W_u[j] @ Q + QtQ + self.gamma*Ik))
-                # print((Q.T @ W_u[j] + Q.T))
-                # print(C[j,:].T.A - (Y @ X[j,:].T))
-                # print(((Q.T @ W_u[j] + Q.T) @ (C[j,:].T - Y @ X[j,:].T)))
-                # print((Q.T @ W_u[j] @ Q + QtQ + self.gamma*Ik).shape)
-                # print(((Q.T @ W_u[j] + Q.T) @ (C[j,:].T.A - Y @ X[j,:].T)).shape)
-                # print(C[j,:].T.A.shape)
-                # print((Y @ X[j,:].T).shape)
-                # print((C[j,:].T.A - Y @ X[j,:].T).shape)
-                # P[j] = np.linalg.solve((Q.T @ W_u[j] @ Q + QtQ + self.gamma*Ik),((Q.T @ W_u[j] + Q.T) @ (C[j,:].T.A - Y @ X[j,:].T)))
+            data = {'P': P,'Q': Q, 'W_u': W_u, 'W_i': W_i, 'PtP': PtP, 'QtQ': QtQ, 'Ik_gamma': Ik_gamma, 'C': C, 'Y': Y, 'X': X, 'Im': Im, 'In': In}
+            with threadpool_limits(limits=1, user_api='blas'):
+                args=[(id(data),j,) for j in range(M)]
+                results = run_parallel(_P_update,args,int(M/mp.cpu_count()/2))
 
+            for j, result in enumerate(results):
+                P[j] = result
+
+            # for j in range(M):
+            #     P[j] =np.linalg.inv(Q.T@(W_u[j])@Q+QtQ+Ik_gamma) @ Q.T @ (W_u[j]+In) @ (C[j,:].A.flatten() -Y @ X[j,:])
 
             PtP = P.T @ P
-            for j in range(N):
-                Q[j] =np.linalg.inv(P.T@(W_i[j])@P+PtP+self.gamma*Ik) @ P.T @ (W_i[j]+Im) @ (C[:,j].A.flatten() -X @ Y[j,:])
-                # Q[j] = sparse.linalg.inv(P.T@(W_i[j]-Im)+PtP+self.gamma*Ik) @ P.T @ W_i[j] @ (C[:,j] -X @ Y[j])
-                # Q[j] = sparse.linalg.inv(P.T@(W_i[j]-Im)+PtP+self.gamma*Ik) @ P.T @ W_i[j] @ (C[:,j] -X @ Y[j])
-                # Q[j] = np.linalg.solve((P.T @ W_i[j] @ P + PtP + self.gamma*Ik),((P.T @ W_i[j] + P.T) @ (C[:,j].T.A - X @ Y[j,:].T)))
+
+            data = {'P': P,'Q': Q, 'W_u': W_u, 'W_i': W_i, 'PtP': PtP, 'QtQ': QtQ, 'Ik_gamma': Ik_gamma, 'C': C, 'Y': Y, 'X': X, 'Im': Im, 'In': In}
+            with threadpool_limits(limits=1, user_api='blas'):
+                args=[(id(data),j,) for j in range(N)]
+                results = run_parallel(_Q_update,args,int(N/mp.cpu_count()/2))
+
+            for j, result in enumerate(results):
+                Q[j] = result
+
+            # for j in range(N):
+            #     Q[j] =np.linalg.inv(P.T@(W_i[j])@P+PtP+Ik_gamma) @ P.T @ (W_i[j]+Im) @ (C[:,j].A.flatten() -X @ Y[j,:])
 
 
     def optimize_activity(self, Ct, Wt, Xt, Yt, YtY, Ut, V):

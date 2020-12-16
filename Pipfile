@@ -27,6 +27,7 @@ python-igraph = "*"
 bz2file = "*"
 numba = "*"
 tbb = "*"
+threadpoolctl = "*"
 
 [requires]
 python_version = "3.7"
