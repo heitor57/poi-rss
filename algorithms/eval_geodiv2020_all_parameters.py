@@ -28,4 +28,5 @@ rr.load_base()
 lp = np.around(np.append(np.arange(0.25,1,0.25),1),decimals=2)
 for div_weight in lp:
     rr.final_rec_parameters['div_weight'] = div_weight
+    rr.load_final_predicted()
     rr.eval_rec_metrics(METRICS_KS=[10])
