@@ -19,6 +19,9 @@ def _Q_update(data_id,j):
     data = ctypes.cast(data_id, ctypes.py_object).value
     return np.linalg.inv(data['P'].T@(data['W_i'][j])@data['P']+data['PtP']+data['Ik_gamma']) @ data['P'].T @ (data['W_i'][j]+data['Im']) @ (data['C'][:,j].A.flatten() -data['X'] @ data['Y'][j,:])
 
+def _set_new_w(w,n):
+    return sparse.spdiags(w.A[0],diags=0,m=n,n=n)
+
 @njit
 def _compute_dist_std(poi_coos):
     n= len(poi_coos)
@@ -43,15 +46,15 @@ def _compute_dist_std(poi_coos):
     std = np.sqrt(variance)
     return std
         
-@njit
+@njit(parallel=True)
 def _set_y(Y,N,poi_coos,num_grids_lat,num_grids_lon,min_lat,min_lon,max_lat,max_lon,delta):
     lat_step = (max_lat - min_lat) / num_grids_lat;
     lon_step = (max_lon - min_lon) / num_grids_lon;
     # print("---")
     # print(max_lat, max_lon)
     # print("---")
-    for lat_grid in range(num_grids_lat): 
-        for lon_grid in range(num_grids_lon):
+    for lat_grid in prange(num_grids_lat): 
+        for lon_grid in prange(num_grids_lon):
             grid_lat = (lat_grid+0.5)*lat_step + min_lat
             grid_lon = (lon_grid+0.5)*lon_step + min_lon
             # print(grid_lat,grid_lon)
@@ -115,13 +118,27 @@ class GeoMF:
         X = np.zeros((M,num_grids_lat*num_grids_lon))
         Y = np.zeros((N,num_grids_lat*num_grids_lon))
 
+
+        
         W_u = dict()
-        for i in range(M):
-            W_u[i] = sparse.spdiags(W[i,:].A[0],diags=0,m=N,n=N)
+        args=[(W[i,:],N) for i in range(M)]
+        results = run_parallel(_set_new_w,args,int(M/mp.cpu_count()))
+        for i, result in enumerate(results):
+            W_u[i] = result
 
         W_i = dict()
-        for i in range(N):
-            W_i[i] = sparse.spdiags(W[:,i].A[0],diags=0,m=M,n=M)
+        args=[(W[:,i],M) for i in range(N)]
+        results = run_parallel(_set_new_w,args,int(N/mp.cpu_count()))
+        for i, result in enumerate(results):
+            W_i[i] = result
+
+        # W_u = dict()
+        # for i in range(M):
+        #     W_u[i] = sparse.spdiags(W[i,:].A[0],diags=0,m=N,n=N)
+
+        # W_i = dict()
+        # for i in range(N):
+        #     W_i[i] = sparse.spdiags(W[:,i].A[0],diags=0,m=M,n=M)
 
         print("Calculating areas transition probabilities")
 
