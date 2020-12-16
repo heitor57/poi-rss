@@ -164,7 +164,7 @@ class GeoDiv2020:
     def objective(self,uid,rec_list,final_scores,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids,old_pr):
         pr=self.pr(uid,rec_list,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids)
         div=max(0,pr-old_pr)
-        return (np.mean(final_scores)**(1-self.div_weight))*(div**self.div_weight)
+        return (np.mean(final_scores)**(1-self.div_weight))*(div**self.div_weight), pr
 
     def pr(self,uid,rec_list,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids):
         sum_quantities_checkins=0
@@ -219,9 +219,9 @@ class GeoDiv2020:
         pois_in_areas = tmp - user_all_consumed_lids
         candidate_pois = pois_in_areas.intersection(tmp_rec_list)
         # print("cand:",candidate_pois)
-        # if len(candidate_pois) < K:
-        #     available_lids = list(set(tmp_rec_list) - candidate_pois)
-        #     candidate_pois = candidate_pois.union(available_lids[:K-len(candidate_pois)])
+        if len(candidate_pois) < K:
+            available_lids = list(set(tmp_rec_list) - candidate_pois)
+            candidate_pois = candidate_pois.union(available_lids[:K-len(candidate_pois)])
 
         candidates_lids = list(candidate_pois) # mutate while recommending
         candidates_scores = [tmp_score_list[lids_original_indexes[lid]] for lid in candidates_lids]
@@ -256,7 +256,7 @@ class GeoDiv2020:
             for j in range(len(candidates_lids)):
                 candidate_poi_id=candidates_lids[j]
                 candidate_score=candidates_scores[j]
-                objective_value = self.objective(uid,rec_list+[candidate_poi_id],final_scores+[candidate_score],
+                objective_value, pr = self.objective(uid,rec_list+[candidate_poi_id],final_scores+[candidate_score],
                                                  req_u,user_valid_lids,K,ideal_dp_u,
                                                  closeness_user_log_lids_to_candidates_lids,
                                                  summed_closeness_candidates_lids,old_pr)
@@ -271,7 +271,7 @@ class GeoDiv2020:
                 candidates_scores.pop(rm_idx)
                 rec_list.append(poi_to_insert)
                 final_scores.append(max_objective_value)
-                old_pr = self.objective(uid,rec_list,final_scores,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids,old_pr)
+                objective_value, old_pr = self.objective(uid,rec_list,final_scores,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids,old_pr)
                 # current_proportionality=update_geo_cov(poi_to_insert,log_poi_ids,K,poi_cover,poi_neighbors,log_neighbors[poi_to_insert])
 
         return rec_list,final_scores

@@ -5020,8 +5020,10 @@ class RecRunner():
                 0:self.base_rec_list_size]
             
             predicted, overall_scores = geodiv2020.predict(uid,predicted,overall_scores,self.final_rec_list_size)
-            print(np.min(overall_scores),np.max(overall_scores))
+            # print(np.min(overall_scores),np.max(overall_scores))
             # print(predicted)
+            # print(predicted,overall_scores)
+            assert(self.final_rec_list_size == len(predicted))
 
             return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n"
         self.not_in_ground_truth_message(uid)
