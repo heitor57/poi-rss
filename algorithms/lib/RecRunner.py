@@ -4930,7 +4930,7 @@ class RecRunner():
                 if not(i == 0 and j != 0):
                     l.append((i,j))
                     self.final_rec_parameters['div_weight'], self.final_rec_parameters['alpha'] = i, j
-                    self.load_metrics(base=False,name_type=NameType.SHORT,METRICS_KS=KS)
+                    self.load_metrics(base=False,name_type=NameType.FULL,METRICS_KS=KS)
         for i,k in enumerate(KS):
             metrics_mean=dict()
             for i,rec_using,metrics in zip(range(len(self.metrics)),self.metrics.keys(),self.metrics.values()):
