@@ -17,12 +17,18 @@ questions = [
                     message="City to use",
                     choices=experiment_constants.CITIES,
                     ),
+  inquirer.List('baser',
+                    message="Base recommender",
+                    choices=list(RecRunner.get_base_parameters().keys()),
+                    ),
+
 ]
 
 answers = inquirer.prompt(questions)
 city = answers['city']
+baser = answers['baser']
 
-rr=RecRunner("usg","geocat",city,80,20,"/home/heitor/recsys/data")
+rr=RecRunner(baser,"geocat",city,80,20,"/home/heitor/recsys/data")
 # rr.load_base()
 
 # rr.run_base_recommender()
@@ -68,7 +74,7 @@ rr=RecRunner("usg","geocat",city,80,20,"/home/heitor/recsys/data")
 # rr.set_final_rec_parameters({'cat_div_method':'std_norm'})
 # rr.load_metrics(base=False)
 rr.load_metrics(base=True)
-for rec in ['ld','binomial','pm2','geodiv','geocat','perfectpgeocat']:
+for rec in ['gc','ld','binomial','pm2','geodiv','geocat','geodiv2020']:
     rr.final_rec = rec
     rr.load_metrics(base=False)
 # rr.final_rec_parameters = {'obj_func': 'og'}

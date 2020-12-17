@@ -4,7 +4,7 @@
 # if module_path not in sys.path:
 #     sys.path.append(module_path)
 #print(sys.path)
-LANG = 'pt'
+LANG = 'en'
 from enum import Enum
 class NameType(Enum):
     SHORT = 1
@@ -302,7 +302,7 @@ def print_dict(dictionary):
         print(f"{key} : {value}")
 
 class RecRunner():
-    PARAMETERS_BY_CITY = False
+    PARAMETERS_BY_CITY = True
     _instance = None
     def save_result(self,results,base=True):
         if base:
@@ -1925,7 +1925,7 @@ class RecRunner():
             #     i+=1
 
             #ax.set_xticks(np.arange(N+1)+barWidth*(np.floor((len(self.metrics))/2)-1)+barWidth/2)
-            ax.set_xticks(np.arange(N+1)+barWidth*(((num_recs_plot)/2)-1)+barWidth/2)
+            ax.set_xticks(np.arange(N)+barWidth*(((num_recs_plot)/2)-1)+barWidth/2)
             # ax.legend((p1[0], p2[0]), self.metrics_name)
             ax.legend(rects,tuple(metrics_mean.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                       mode="expand", borderaxespad=0, ncol=3,fontsize=19,handletextpad=-0.6,
@@ -2703,7 +2703,7 @@ class RecRunner():
 
 
         rects = list(rects.values())
-        ax.set_xticks(np.arange(N+1)+barWidth*(((len(self.metrics))/2)-1)+barWidth/2)
+        ax.set_xticks(np.arange(N)+barWidth*(((len(self.metrics))/2)-1)+barWidth/2)
         # ax.legend((p1[0], p2[0]), self.metrics_name)
         ax.legend(rects,tuple(self.metrics.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
                   mode="expand", borderaxespad=0, ncol=ncol,fontsize=15,handletextpad=-0.6,

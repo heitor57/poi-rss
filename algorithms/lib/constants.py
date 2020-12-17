@@ -36,6 +36,7 @@ METRICS_PRETTY = {'precision':'Prec',
 RECS_PRETTY = {
     "usg": "USG",
     "mostpopular": "MostPopular",
+    "geomf": "GeoMF",
     # "geocat": "DisCovER",
     "geocat": "Geo-Cat",
     "persongeocat": "PersonDisCovER",
@@ -47,6 +48,7 @@ RECS_PRETTY = {
     "pdpgeocat": "PDPGC",
     "geosoca": "GeoSoCa",
     "gc": "GC",
+    "geodiv2020": "Geo-Div",
 }
 
 
