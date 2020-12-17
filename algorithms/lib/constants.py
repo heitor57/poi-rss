@@ -89,7 +89,7 @@ GROUP_ID = {
 }
 
 
-#USG
+#GS
 # CITIES_BEST_PARAMETERS = {
 #     'lasvegas': {
 #         "geocat": {'div_weight':1.0,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
