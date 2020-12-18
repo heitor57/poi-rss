@@ -164,7 +164,7 @@ class GeoDiv2020:
     def objective(self,uid,rec_list,final_scores,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids,old_pr):
         pr=self.pr(uid,rec_list,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids)
         div=max(0,pr-old_pr)
-        return (np.mean(final_scores)**(1-self.div_weight))*(div**self.div_weight), pr
+        return (final_scores[-1])**(1-self.div_weight)*(div**self.div_weight), pr
 
     def pr(self,uid,rec_list,req_u,user_valid_lids,K,ideal_dp_u,closeness_user_log_lids_to_candidates_lids,summed_closeness_candidates_lids):
         sum_quantities_checkins=0
