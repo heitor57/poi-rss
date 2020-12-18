@@ -130,7 +130,7 @@ def gen_line_cycle(num=6):
 # ['#4477AA','#66CCEE','#228833','#CCBB44','#EE6677','#AA3377','#BBBBBB']
 # my color scheme
 # ['#9595ff','#2a913e','#ffb2b2','#b5b355','#11166c','#ecd9c6','#939393']
-MY_COLOR_SCHEME = ['#939393','#9595ff','#2a913e','#b5b355','#11166c','#ffb2b2','#ecd9c6','#000000']
+MY_COLOR_SCHEME = ['#939393','#9595ff','#2a913e','#b5b355','#11166c','#ffb2b2','#ecd9c6','#940000']
 def brightness(color):
     r = int(color[1:3],16)
     b = int(color[3:5],16)
@@ -1937,7 +1937,7 @@ class RecRunner():
             if LANG == 'pt':
                 ax.set_ylabel(f"Diferença relativa ao {RECS_PRETTY[self.base_rec]}",fontsize=23)
             else:
-                ax.set_ylabel(f"Diferença relativa ao {RECS_PRETTY[self.base_rec]}",fontsize=23)
+                ax.set_ylabel(f"Relative diff w.r.t {RECS_PRETTY[self.base_rec]}",fontsize=23)
             ax.set_ylim(-25,100)
             ax.set_xlim(-barWidth,len(self.metrics_name)-1+(num_recs_plot-1)*barWidth+barWidth)
 
