@@ -38,7 +38,7 @@ RECS_PRETTY = {
     "mostpopular": "MostPopular",
     "geomf": "GeoMF",
     # "geocat": "DisCovER",
-    "geocat": "Geo-Cat",
+    "geocat": "DisCovER",
     "persongeocat": "PersonDisCovER",
     "geodiv": "Geo-Div(PR)",
     "ld": "LD",
@@ -87,7 +87,7 @@ GROUP_ID = {
     'no_preference': '3',
     'cat_preference': '4',
 }
-# US
+# USG
 
 # CITIES_BEST_PARAMETERS = {
 #     'lasvegas': {
@@ -101,6 +101,7 @@ GROUP_ID = {
 #                          'geo_div_method': 'walk', 'obj_func': 'cat_weight',
 #                          'div_cat_weight':0.05, 'bins': None,
 #                          'norm_method': 'default','funnel':None},
+        # "geodiv2020": {'div_weight': 0.5},
 #     },
 #     'phoenix': {
 #         "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
@@ -113,12 +114,13 @@ GROUP_ID = {
 #                          'geo_div_method': 'walk', 'obj_func': 'cat_weight',
 #                          'div_cat_weight':0.05, 'bins': None,
 #                          'norm_method': 'default','funnel':None},
+        # "geodiv2020": {'div_weight': 0.25},
 #     },
     
 # }
 
 
-#GS
+# GS
 # CITIES_BEST_PARAMETERS = {
 #     'lasvegas': {
 #         "geocat": {'div_weight':1.0,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
@@ -131,6 +133,7 @@ GROUP_ID = {
 #                          'geo_div_method': 'walk', 'obj_func': 'cat_weight',
 #                          'div_cat_weight':0.05, 'bins': None,
 #                          'norm_method': 'default','funnel':None},
+        # "geodiv2020": {'div_weight': 0.25},
 #     },
 #     'phoenix': {
 #             "geocat": {'div_weight':1.0,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},

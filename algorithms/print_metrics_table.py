@@ -74,7 +74,7 @@ rr=RecRunner(baser,"geocat",city,80,20,"/home/heitor/recsys/data")
 # rr.set_final_rec_parameters({'cat_div_method':'std_norm'})
 # rr.load_metrics(base=False)
 rr.load_metrics(base=True)
-for rec in ['gc','ld','binomial','pm2','geodiv','geocat','geodiv2020']:
+for rec in ['gc','ld','geodiv','geocat']:
     rr.final_rec = rec
     rr.load_metrics(base=False)
 # rr.final_rec_parameters = {'obj_func': 'og'}

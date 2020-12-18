@@ -302,7 +302,7 @@ def print_dict(dictionary):
         print(f"{key} : {value}")
 
 class RecRunner():
-    PARAMETERS_BY_CITY = True
+    PARAMETERS_BY_CITY = False
     _instance = None
     def save_result(self,results,base=True):
         if base:
