@@ -87,6 +87,35 @@ GROUP_ID = {
     'no_preference': '3',
     'cat_preference': '4',
 }
+# US
+
+# CITIES_BEST_PARAMETERS = {
+#     'lasvegas': {
+#         "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+#         "geodiv": {'div_weight':0.5},
+#         "ld": {'div_weight':0.25},
+#         "binomial": {'alpha': 0.5, 'div_weight': 0.75},
+#         "pm2": {'div_weight': 1},
+#         "gc": {'div_weight': 0.8},
+#         "persongeocat": {'div_weight':1.0,'cat_div_method': 'inv_num_cat',
+#                          'geo_div_method': 'walk', 'obj_func': 'cat_weight',
+#                          'div_cat_weight':0.05, 'bins': None,
+#                          'norm_method': 'default','funnel':None},
+#     },
+#     'phoenix': {
+#         "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+#         "geodiv": {'div_weight':0.5},
+#         "ld": {'div_weight':0.25},
+#         "binomial": {'alpha': 0.5, 'div_weight': 0.75},
+#         "pm2": {'div_weight': 1},
+#         "gc": {'div_weight': 0.8},
+#         "persongeocat": {'div_weight':1.0,'cat_div_method': 'inv_num_cat',
+#                          'geo_div_method': 'walk', 'obj_func': 'cat_weight',
+#                          'div_cat_weight':0.05, 'bins': None,
+#                          'norm_method': 'default','funnel':None},
+#     },
+    
+# }
 
 
 #GS
