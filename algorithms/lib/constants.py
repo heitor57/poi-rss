@@ -89,35 +89,35 @@ GROUP_ID = {
 }
 # USG
 
-# CITIES_BEST_PARAMETERS = {
-#     'lasvegas': {
-#         "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
-#         "geodiv": {'div_weight':0.5},
-#         "ld": {'div_weight':0.25},
-#         "binomial": {'alpha': 0.5, 'div_weight': 0.75},
-#         "pm2": {'div_weight': 1},
-#         "gc": {'div_weight': 0.8},
-#         "persongeocat": {'div_weight':1.0,'cat_div_method': 'inv_num_cat',
-#                          'geo_div_method': 'walk', 'obj_func': 'cat_weight',
-#                          'div_cat_weight':0.05, 'bins': None,
-#                          'norm_method': 'default','funnel':None},
-        # "geodiv2020": {'div_weight': 0.5},
-#     },
-#     'phoenix': {
-#         "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
-#         "geodiv": {'div_weight':0.5},
-#         "ld": {'div_weight':0.25},
-#         "binomial": {'alpha': 0.5, 'div_weight': 0.75},
-#         "pm2": {'div_weight': 1},
-#         "gc": {'div_weight': 0.8},
-#         "persongeocat": {'div_weight':1.0,'cat_div_method': 'inv_num_cat',
-#                          'geo_div_method': 'walk', 'obj_func': 'cat_weight',
-#                          'div_cat_weight':0.05, 'bins': None,
-#                          'norm_method': 'default','funnel':None},
-        # "geodiv2020": {'div_weight': 0.25},
-#     },
+CITIES_BEST_PARAMETERS = {
+    'lasvegas': {
+        "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+        "geodiv": {'div_weight':0.5},
+        "ld": {'div_weight':0.25},
+        "binomial": {'alpha': 0.5, 'div_weight': 0.75},
+        "pm2": {'div_weight': 1},
+        "gc": {'div_weight': 0.8},
+        "persongeocat": {'div_weight':1.0,'cat_div_method': 'inv_num_cat',
+                         'geo_div_method': 'walk', 'obj_func': 'cat_weight',
+                         'div_cat_weight':0.05, 'bins': None,
+                         'norm_method': 'default','funnel':None},
+        "geodiv2020": {'div_weight': 0.5},
+    },
+    'phoenix': {
+        "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+        "geodiv": {'div_weight':0.5},
+        "ld": {'div_weight':0.25},
+        "binomial": {'alpha': 0.5, 'div_weight': 0.75},
+        "pm2": {'div_weight': 1},
+        "gc": {'div_weight': 0.8},
+        "persongeocat": {'div_weight':1.0,'cat_div_method': 'inv_num_cat',
+                         'geo_div_method': 'walk', 'obj_func': 'cat_weight',
+                         'div_cat_weight':0.05, 'bins': None,
+                         'norm_method': 'default','funnel':None},
+        "geodiv2020": {'div_weight': 0.25},
+    },
     
-# }
+}
 
 
 # GS
@@ -133,7 +133,7 @@ GROUP_ID = {
 #                          'geo_div_method': 'walk', 'obj_func': 'cat_weight',
 #                          'div_cat_weight':0.05, 'bins': None,
 #                          'norm_method': 'default','funnel':None},
-        # "geodiv2020": {'div_weight': 0.25},
+#         "geodiv2020": {'div_weight': 0.25},
 #     },
 #     'phoenix': {
 #             "geocat": {'div_weight':1.0,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
@@ -142,6 +142,7 @@ GROUP_ID = {
 #             "pm2": {'div_weight':1.0},
 #             "geodiv": {'div_weight':1.0},
 #             "binomial": {'alpha': 1.0, 'div_weight': 1.0},
+#         "geodiv2020": {'div_weight': 0.25},
 #     },
     
 # }
@@ -149,28 +150,28 @@ GROUP_ID = {
 
 
 # GEOMF
-CITIES_BEST_PARAMETERS = {
-    'lasvegas': {
-        "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
-        "geodiv": {'div_weight':0.1},
-        "ld": {'div_weight':0.1},
-        "binomial": {'alpha': 0.5, 'div_weight': 0.75},
-        "pm2": {'div_weight': 0.9},
-        "gc": {'div_weight': 0.6},
-        "geodiv2020": {'div_weight': 0.5},
-        # "persongeocat": {'div_weight':1.0,'cat_div_method': 'inv_num_cat',
-        #                  'geo_div_method': 'walk', 'obj_func': 'cat_weight',
-        #                  'div_cat_weight':0.05, 'bins': None,
-        #                  'norm_method': 'default','funnel':None},
-    },
-    'phoenix': {
-            "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
-            "ld": {'div_weight':0.1},
-            "gc": {'div_weight':0.7},
-            "pm2": {'div_weight':0.9},
-            "geodiv": {'div_weight':0.1},
-            "binomial": {'alpha': 1.0, 'div_weight': 1.0},
-        "geodiv2020": {'div_weight': 0.25},
-    },
+# CITIES_BEST_PARAMETERS = {
+#     'lasvegas': {
+#         "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+#         "geodiv": {'div_weight':0.1},
+#         "ld": {'div_weight':0.1},
+#         "binomial": {'alpha': 0.5, 'div_weight': 0.75},
+#         "pm2": {'div_weight': 0.9},
+#         "gc": {'div_weight': 0.6},
+#         "geodiv2020": {'div_weight': 0.5},
+#         # "persongeocat": {'div_weight':1.0,'cat_div_method': 'inv_num_cat',
+#         #                  'geo_div_method': 'walk', 'obj_func': 'cat_weight',
+#         #                  'div_cat_weight':0.05, 'bins': None,
+#         #                  'norm_method': 'default','funnel':None},
+#     },
+#     'phoenix': {
+#             "geocat": {'div_weight':0.75,'div_geo_cat_weight':0.25, 'heuristic': 'local_max', 'obj_func': 'cat_weight', 'div_cat_weight': 0.05},
+#             "ld": {'div_weight':0.1},
+#             "gc": {'div_weight':0.7},
+#             "pm2": {'div_weight':0.9},
+#             "geodiv": {'div_weight':0.1},
+#             "binomial": {'alpha': 1.0, 'div_weight': 1.0},
+#         "geodiv2020": {'div_weight': 0.25},
+#     },
     
-}
+# }
