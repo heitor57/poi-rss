@@ -30,7 +30,7 @@ baser = answers['baser']
 rr=RecRunner(baser,"geocat",city,80,20,"/home/heitor/recsys/data")
 
 rr.load_metrics(base=True,name_type=NameType.PRETTY)
-for rec in ['gc','ld','binomial','pm2','geodiv','geocat','geodiv2020']:
+for rec in ['gc','ld','binomial','pm2','geodiv2020','geodiv','geocat']:
     rr.final_rec = rec
     rr.load_metrics(base=False,name_type=NameType.PRETTY)
 # rr.plot_bar_exclusive_metrics()

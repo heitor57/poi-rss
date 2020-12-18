@@ -130,7 +130,7 @@ def gen_line_cycle(num=6):
 # ['#4477AA','#66CCEE','#228833','#CCBB44','#EE6677','#AA3377','#BBBBBB']
 # my color scheme
 # ['#9595ff','#2a913e','#ffb2b2','#b5b355','#11166c','#ecd9c6','#939393']
-MY_COLOR_SCHEME = ['#939393','#9595ff','#2a913e','#b5b355','#11166c','#ffb2b2','#ecd9c6']
+MY_COLOR_SCHEME = ['#939393','#9595ff','#2a913e','#b5b355','#11166c','#ffb2b2','#ecd9c6','#000000']
 def brightness(color):
     r = int(color[1:3],16)
     b = int(color[3:5],16)
@@ -302,7 +302,7 @@ def print_dict(dictionary):
         print(f"{key} : {value}")
 
 class RecRunner():
-    PARAMETERS_BY_CITY = False
+    PARAMETERS_BY_CITY = True
     _instance = None
     def save_result(self,results,base=True):
         if base:
@@ -1928,7 +1928,7 @@ class RecRunner():
             ax.set_xticks(np.arange(N)+barWidth*(((num_recs_plot)/2)-1)+barWidth/2)
             # ax.legend((p1[0], p2[0]), self.metrics_name)
             ax.legend(rects,tuple(metrics_mean.keys()),bbox_to_anchor=(0,1.02,1,0.2), loc="lower left",
-                      mode="expand", borderaxespad=0, ncol=3,fontsize=19,handletextpad=-0.6,
+                      mode="expand", borderaxespad=0, ncol=4,fontsize=19,handletextpad=-0.6,
                       handler_map={rect: HandlerSquare() for rect in rects})
             # ax.legend(tuple(map(lambda name: METRICS_PRETTY[name],self.metrics.keys())))
             ax.set_xticklabels(map(lambda x: f'{x}@{k}',list(map(lambda name: METRICS_PRETTY[name],self.metrics_name))),fontsize=17)
