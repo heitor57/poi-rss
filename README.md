@@ -18,3 +18,9 @@ After this you can generate the datasets we use to do evaluations with the follo
 				python datasetgen.py
 
 Python requirements are specified in Pipfile.
+
+# Citation
+
+Please if this code is useful in your research consider citing the following paper:
+
+TODO
