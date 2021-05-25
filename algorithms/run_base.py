@@ -29,7 +29,7 @@ baser = answers['baser']
 
 
 rr = RecRunner.getInstance(baser, "persongeocat", city, 80, 20,
-               "/home/heitor/recsys/data")
+               "../data")
 
 rr.load_base()
 rr.run_base_recommender()

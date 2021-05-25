@@ -241,6 +241,7 @@ from Text import Text
 from Arrow3D import Arrow3D
 from geocat.gc import gc_diversifier
 import geo_utils
+import utils
 from geocat.random import random_diversifier
 from HandlerSquare import HandlerSquare
 CMAP_NAME = 'viridis'
@@ -306,8 +307,10 @@ class RecRunner():
     _instance = None
     def save_result(self,results,base=True):
         if base:
+            utils.create_path_to_file(self.data_directory+RECLIST+ self.get_base_rec_file_name())
             result_out = open(self.data_directory+RECLIST+ self.get_base_rec_file_name(), 'w')
         else:
+            utils.create_path_to_file(self.data_directory+RECLIST+ self.get_final_rec_file_name())
             result_out = open(self.data_directory+RECLIST+ self.get_final_rec_file_name(), 'w')
         for json_string_result in results:
             result_out.write(json_string_result)
@@ -1603,6 +1606,7 @@ class RecRunner():
             base_recommender()
 
         final_time = time.time()-start_time
+        utils.create_path_to_file(self.data_directory+UTIL+f'run_time_{self.get_base_rec_name()}.txt')
         fout = open(self.data_directory+UTIL+f'run_time_{self.get_base_rec_name()}.txt',"w")
         fout.write(str(final_time))
         fout.close()
@@ -1741,6 +1745,7 @@ class RecRunner():
                             groups_epc[k][group] = metrics.old_global_epck(self.training_matrix,self.ground_truth,predictions,all_uids,k)
 
                     # if base:
+                    utils.create_path_to_file(self.get_file_name_metrics(base,k))
                     result_out = open(self.get_file_name_metrics(base,k), 'w')
                     # else:
                     #     result_out = open(self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}", 'w')
@@ -2598,6 +2603,7 @@ class RecRunner():
         result_str += "\\end{table}\n"
         result_str = LATEX_HEADER + result_str
         result_str += LATEX_FOOT
+        utils.create_path_to_file(self.data_directory+UTIL+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex')
         fout = open(self.data_directory+UTIL+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
@@ -3526,6 +3532,7 @@ class RecRunner():
         result_str = result_str.__str__()
         result_str = LATEX_HEADER+result_str
         result_str += LATEX_FOOT
+        utils.create_path_to_file(self.data_directory+UTIL+'_'.join(references)+'_'+'side_'+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex')
         fout = open(self.data_directory+UTIL+'_'.join(references)+'_'+'side_'+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
@@ -4523,6 +4530,7 @@ class RecRunner():
         result_str = result_str.__str__()
         result_str = LATEX_HEADER+result_str
         result_str += LATEX_FOOT
+        utils.create_path_to_file(self.data_directory+UTIL+'_'.join(references)+'_'+'side_'+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex')
         fout = open(self.data_directory+UTIL+'_'.join(references)+'_'+'side_'+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
@@ -4790,6 +4798,7 @@ class RecRunner():
         result_str += "\\end{table}\n"
         result_str = LATEX_HEADER + result_str
         result_str += LATEX_FOOT
+        utils.create_path_to_file(self.data_directory+UTIL+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex')
         fout = open(self.data_directory+UTIL+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
@@ -4916,6 +4925,7 @@ class RecRunner():
         result_str += "\\end{table}\n"
         result_str = LATEX_HEADER + result_str
         result_str += LATEX_FOOT
+        utils.create_path_to_file(self.data_directory+UTIL+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex')
         fout = open(self.data_directory+UTIL+'_'.join(([prefix_name] if len(prefix_name)>0 else [])+cities)+'.tex', 'w')
         fout.write(result_str)
         fout.close()
