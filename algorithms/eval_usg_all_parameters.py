@@ -17,7 +17,7 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 
 rr = RecRunner.getInstance("usg", "geocat", city, 80, 10,
-                           "/home/heitor/recsys/data")
+                           "../data")
 rr.load_base()
 lp = np.around(np.linspace(0, 1, 6),decimals=2)
 for alpha in lp:

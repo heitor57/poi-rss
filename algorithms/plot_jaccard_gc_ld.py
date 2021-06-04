@@ -14,6 +14,6 @@ questions = [
 answers = inquirer.prompt(questions)
 city = answers['city']
 
-rr=RecRunner("usg","xxxx",city,80,20,"/home/heitor/recsys/data")
+rr=RecRunner("usg","xxxx",city,80,20,"../data")
 
 rr.plot_jaccard_ild_gc_correlation('usg','gc','ld',range(1,21))

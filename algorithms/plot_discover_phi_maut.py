@@ -14,7 +14,7 @@ questions = [
 answers = inquirer.prompt(questions)
 city = answers['city']
 
-rr=RecRunner("mostpopular","geocat",city,80,20,"/home/heitor/recsys/data")
+rr=RecRunner("mostpopular","geocat",city,80,20,"../data")
 
 rr.base_rec = "usg"
 rr.load_metrics(base=False,name_type = NameType.SHORT)

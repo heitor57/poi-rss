@@ -22,7 +22,7 @@ city = answers['city']
 baser = answers['baser']
 
 rr = RecRunner.getInstance(baser, "pm2", city, 80, 10,
-                           "/home/heitor/recsys/data")
+                           "../data")
 # print(rr.get_final_rec_name())
 rr.print_div_weight_hyperparameter()
 

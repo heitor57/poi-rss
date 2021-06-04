@@ -22,7 +22,7 @@ city = answers['city']
 baser = answers['baser']
 
 rr = RecRunner.getInstance(baser, "binomial", city, 80, 10,
-                           "/home/heitor/recsys/data")
+                           "../data")
 
 lp = np.around(np.linspace(0, 1, 5),decimals=2)
 rr.print_binomial_hyperparameter(lp)

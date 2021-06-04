@@ -17,6 +17,6 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 
 rr = RecRunner.getInstance("usg", "geocat", city, 80, 10,
-                           "/home/heitor/recsys/data")
+                           "../data")
 
 rr.print_usg_hyperparameter()

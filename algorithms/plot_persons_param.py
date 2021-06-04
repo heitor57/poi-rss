@@ -18,7 +18,7 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 
 rr = RecRunner.getInstance("usg", "persongeocat", city, 80, 20,
-        "/home/heitor/recsys/data",{})
+        "../data",{})
 
 choices=[]
 for cat_div_method in [None]+CatDivPropensity.METHODS:

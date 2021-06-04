@@ -20,7 +20,7 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 basers = answers['baser']
 
-rr=RecRunner.getInstance("xxxx","geocat",city,80,20,"/home/heitor/recsys/data")
+rr=RecRunner.getInstance("xxxx","geocat",city,80,20,"../data")
 rr.load_base()
 for baser in basers:
     rr.base_rec = baser

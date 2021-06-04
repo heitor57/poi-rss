@@ -22,7 +22,7 @@ city = answers['city']
 baser = answers['baser']
 
 rr = RecRunner.getInstance(baser, "geodiv2020", city, 80, 10,
-                           "/home/heitor/recsys/data")
+                           "../data")
 lp = np.around(np.append(np.arange(0.25,1,0.25),1),decimals=2)
 rr.print_div_weight_hyperparameter(lp)
 

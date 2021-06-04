@@ -16,6 +16,6 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 
 rr = RecRunner.getInstance("usg", "geocat", city, 80, 20,
-        "/home/heitor/recsys/data",{})
+        "../data",{})
 rr.load_base()
 rr.plot_geo_cat_methods()

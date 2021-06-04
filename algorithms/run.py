@@ -6,11 +6,11 @@ from lib.constants import experiment_constants
 import inquirer
 
 questions = [
-  inquirer.List('city',
+  inquirer.Checkbox('cities',
                     message="City to use",
                     choices=experiment_constants.CITIES,
                     ),
-  inquirer.List('baser',
+  inquirer.Checkbox('baser',
                     message="Base recommender",
                     choices=list(RecRunner.get_base_parameters().keys()),
                     ),
@@ -21,15 +21,20 @@ questions = [
 ]
 
 answers = inquirer.prompt(questions)
-city = answers['city']
+cities = answers['cities']
 # finalr = answers['finalr']
 baser = answers['baser']
 
 
-rr = RecRunner.getInstance(baser, "geocat", city, 80, 20,
-                           "/home/heitor/recsys/data")
-rr.load_base()
-rr.load_base_predicted()
-for finalr in answers['finalr']:
-    rr.final_rec = finalr
-    rr.run_final_recommender()
+rr = RecRunner.getInstance(baser[0], "geocat", cities[0], 80, 20,
+                           "../data")
+
+for city in answers['cities']:
+  rr.city= city
+  rr.load_base()
+  for base_rec in answers['baser']:
+    rr.base_rec = base_rec
+    rr.load_base_predicted()
+    for finalr in answers['finalr']:
+        rr.final_rec = finalr
+        rr.run_final_recommender()

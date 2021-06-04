@@ -25,6 +25,6 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 
 rr = RecRunner.getInstance("usg", "geocat", city, 80, 20,
-        "/home/heitor/recsys/data",{})
+        "../data",{})
 rr.show_heuristic = True
 rr.plot_heuristics_maut(prefix_name='maut_heuristics')

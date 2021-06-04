@@ -9,7 +9,7 @@ from colorama import Style
 import inquirer
 
 rr = RecRunner.getInstance("usg", "geocat", sys.argv[1], 80, 20,
-        "/home/heitor/recsys/data",{})
+        "../data",{})
 
 rr.persons_plot_special_case = True
 rr.load_metrics(base=False,epc_group=True)

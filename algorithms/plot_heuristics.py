@@ -25,7 +25,7 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 
 rr = RecRunner.getInstance("usg", "geocat", city, 80, 20,
-        "/home/heitor/recsys/data",{})
+        "../data",{})
 rr.show_heuristic = True
 # rr.print_latex_metrics_table(cities=answers['city'],prefix_name='heuristics',heuristic=True)
 # rr.plot_bar_exclusive_metrics(prefix_name='heuristics',ncol=1)

@@ -9,7 +9,7 @@ from colorama import Style
 import inquirer
 
 rr = RecRunner.getInstance("usg", "geocat", sys.argv[1], 80, 20,
-        "/home/heitor/recsys/data",{})
+        "../data",{})
 rr.load_metrics(base=True)
 rr.load_metrics(base=False)
 rr.final_rec="persongeocat"

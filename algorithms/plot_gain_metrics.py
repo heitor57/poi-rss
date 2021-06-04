@@ -2,7 +2,7 @@
 import sys, os
 sys.path.insert(0, os.path.abspath('lib'))
 from lib.RecRunner import RecRunner
-# rr=RecRunner("usg","geocat","madison",80,20,"/home/heitor/recsys/data")
+# rr=RecRunner("usg","geocat","madison",80,20,"../data")
 # print(rr.get_base_rec_file_name())
 # print(rr.get_final_rec_file_name())
 
@@ -22,7 +22,7 @@ from lib.constants import experiment_constants
 # answers = inquirer.prompt(questions)
 # city = answers['city']
 city= 'x'
-rr=RecRunner("mostpopular","persongeocat",city,80,20,"/home/heitor/recsys/data")
+rr=RecRunner("mostpopular","persongeocat",city,80,20,"../data")
 
 # rr.base_rec = "usg"
 # rr.load_metrics(base=True)

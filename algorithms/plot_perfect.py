@@ -21,7 +21,7 @@ city = answers['city']
 finalr = answers['finalr']
 
 rr = RecRunner.getInstance("usg", finalr, city, 80, 20,
-        "/home/heitor/recsys/data",{})
+        "../data",{})
 
 
 rr.plot_perfect_parameters()

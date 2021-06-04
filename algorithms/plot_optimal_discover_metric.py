@@ -5,7 +5,7 @@ import inquirer
 from lib.constants import experiment_constants
 
 city= 'lasvegas'
-rr=RecRunner("usg","geocat",city,80,20,"/home/heitor/recsys/data")
+rr=RecRunner("usg","geocat",city,80,20,"../data")
 
 rr.load_metrics(base=False)
 rr.final_rec="perfectpgeocat"

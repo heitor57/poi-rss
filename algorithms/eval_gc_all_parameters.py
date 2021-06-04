@@ -22,7 +22,7 @@ city = answers['city']
 baser = answers['baser']
 
 rr = RecRunner.getInstance(baser, "gc", city, 80, 10,
-                           "/home/heitor/recsys/data")
+                           "../data")
 rr.load_base()
 
 lp = np.around(np.linspace(0, 1, 11),decimals=2)

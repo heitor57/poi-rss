@@ -22,7 +22,7 @@ city = answers['city']
 baser = answers['baser']
 
 rr = RecRunner.getInstance(baser, "geodiv2020", city, 80, 10,
-                           "/home/heitor/recsys/data")
+                           "../data")
 rr.load_base()
 
 end = 1.0

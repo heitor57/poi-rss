@@ -17,7 +17,7 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 
 rr = RecRunner.getInstance("geosoca", "geocat", city, 80, 10,
-                           "/home/heitor/recsys/data")
+                           "../data")
 rr.load_base()
 
 lp = np.around(np.linspace(0, 1, 11),decimals=2)

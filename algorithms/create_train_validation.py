@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath('lib'))
 from lib.RecRunner import RecRunner
-# rr=RecRunner("usg","geocat","madison",80,20,"/home/heitor/recsys/data")
+# rr=RecRunner("usg","geocat","madison",80,20,"../data")
 # print(rr.get_base_rec_file_name())
 # print(rr.get_final_rec_file_name())
 
@@ -24,7 +24,7 @@ city = answers['city']
 
 
 rr = RecRunner.getInstance('usg', "persongeocat", city, 80, 20,
-               "/home/heitor/recsys/data")
+               "../data")
 rr.train_size = None
 rr.load_base()
 rr.train_size = 0.8

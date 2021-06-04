@@ -25,7 +25,7 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 
 rr = RecRunner.getInstance("usg", "geocat", city, 80, 5,
-        "/home/heitor/recsys/data",{})
+        "../data",{})
 
 
 rr.load_base()

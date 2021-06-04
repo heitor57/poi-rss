@@ -20,7 +20,7 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 
 rr = RecRunner.getInstance("usg", "geocat", city[0], 80, 20,
-        "/home/heitor/recsys/data",{})
+        "../data",{})
 
 rr.show_heuristic = True
 rr.print_latex_cities_metrics_table(city,references=['USG'],prefix_name='heuristics',heuristic=True)

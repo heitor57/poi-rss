@@ -21,7 +21,7 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 baser = answers['baser']
 
-# rr=RecRunner("usg","geocat","madison",80,20,"/home/heitor/recsys/data")
+# rr=RecRunner("usg","geocat","madison",80,20,"../data")
 # print(rr.get_base_rec_file_name())
 # print(rr.get_final_rec_file_name())
 
@@ -30,7 +30,7 @@ baser = answers['baser']
 # rr.run_final_recommender()
 
 rr = RecRunner.getInstance(baser, "geocat", city, 80, 10,
-                           "/home/heitor/recsys/data")
+                           "../data")
 rr.load_base()
 
 l_cat = np.sort(np.append(np.around(np.linspace(0, 1, 6),decimals=2),[0.05,0.1,0.9,0.95]))

@@ -16,5 +16,5 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 
 rr = RecRunner.getInstance("usg", "perfectpersongeocat", city, 80, 20,
-        "/home/heitor/recsys/data",{})
+        "../data",{})
 rr.perfect_analysis()

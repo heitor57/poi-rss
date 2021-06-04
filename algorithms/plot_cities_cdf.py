@@ -6,6 +6,6 @@ from lib.constants import experiment_constants
 import inquirer
 
 rr = RecRunner.getInstance("usg", "persongeocat", 'lasvegas', 80, 20,
-        "/home/heitor/recsys/data",{})
+        "../data",{})
 
 rr.plot_cities_cdf()

@@ -17,6 +17,6 @@ answers = inquirer.prompt(questions)
 city = answers['city']
 
 rr = RecRunner.getInstance("usg", "geocat", city, 80, 20,
-                           "/home/heitor/recsys/data")
+                           "../data")
 
 rr.plot_geocat_div_cat_weights()

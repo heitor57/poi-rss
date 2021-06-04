@@ -16,7 +16,7 @@ questions = [
 answers = inquirer.prompt(questions)
 city = answers['city']
 
-# rr=RecRunner("usg","geocat","madison",80,20,"/home/heitor/recsys/data")
+# rr=RecRunner("usg","geocat","madison",80,20,"../data")
 # print(rr.get_base_rec_file_name())
 # print(rr.get_final_rec_file_name())
 
@@ -25,5 +25,5 @@ city = answers['city']
 # rr.run_final_recommender()
 
 rr = RecRunner.getInstance("usg", "geocat", city, 80, 20,
-                           "/home/heitor/recsys/data")
+                           "../data")
 rr.plot_geocat_parameters()
