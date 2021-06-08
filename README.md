@@ -1,6 +1,6 @@
 # Overview
 
-This is a repository that contains POI (Point of interest) recommendators and diversifiers.
+This is a repository that contains POI (Point of interest) recommenders and diversifiers.
 
 
 # Setup
