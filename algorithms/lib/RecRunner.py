@@ -446,7 +446,7 @@ class RecRunner():
     @final_rec_parameters.setter
     def final_rec_parameters(self, parameters):
         if self.PARAMETERS_BY_CITY:
-            final_parameters = CITIES_BEST_PARAMETERS[self.city][self.final_rec]
+            final_parameters = CITIES_BEST_PARAMETERS[self.base_rec][self.city][self.final_rec]
         else:
             final_parameters = self.get_final_parameters()[self.final_rec]
         # for parameter in parameters.copy():
