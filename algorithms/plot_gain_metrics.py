@@ -21,8 +21,8 @@ from lib.constants import experiment_constants
 
 # answers = inquirer.prompt(questions)
 # city = answers['city']
-city= 'x'
-rr=RecRunner("mostpopular","persongeocat",city,80,20,"../data")
+# city= 'x'
+rr=RecRunner("lasvegas","geocat","lasvegas",80,20,"../data")
 
 # rr.base_rec = "usg"
 # rr.load_metrics(base=True)

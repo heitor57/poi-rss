@@ -12,11 +12,11 @@ import inquirer
 # rr.run_base_recommender()
 # rr.run_final_recommender()
 questions = [
-  inquirer.List('city',
+  inquirer.Checkbox('city',
                     message="City to use",
                     choices=experiment_constants.CITIES,
                     ),
-  inquirer.List('baser',
+  inquirer.Checkbox('baser',
                     message="Base recommender",
                     choices=list(RecRunner.get_base_parameters().keys()),
                     ),
@@ -27,17 +27,20 @@ questions = [
 ]
 
 answers = inquirer.prompt(questions)
-city = answers['city']
-baser = answers['baser']
-finalr = answers['finalr']
+cities = answers['city']
+baserecs = answers['baser']
+finalrecs = answers['finalr']
 
-rr=RecRunner.getInstance(baser,'xxx',city,80,20,"../data")
-rr.load_base()
-
-for fr in finalr:
-    rr.final_rec = fr
-    rr.load_final_predicted()
-    rr.eval_rec_metrics()
+rr=RecRunner.getInstance(baserecs[0],finalrecs[0],cities[0],80,20,"../data")
+for city in cities:
+  rr.city= city
+  rr.load_base()
+  for baserec in baserecs:
+    rr.base_rec = baserec
+    for finalrec in finalrecs:
+        rr.final_rec = finalrec
+        rr.load_final_predicted()
+        rr.eval_rec_metrics()
 # rr.run_base_recommender()
 # rr.run_base_recommender()
 # rr.run_all_final()
