@@ -17,7 +17,7 @@ After this you can generate the datasets we use to do evaluations with the follo
 	cd algorithms/	
 	python datasetgen.py
 
-Python requirements are specified in Pipfile.
+Python requirements are specified in the Pipfile.
 
 # Citation
 
