@@ -29,8 +29,8 @@ class StatisticResult(Enum):
 def statistic_test(x, y, p):
     # try:
     statistic, pvalue = scipy.stats.ttest_ind(x, y)
-    y_mean = np.mean(y)
     x_mean = np.mean(x)
+    y_mean = np.mean(y)
     if pvalue < p:
         if x_mean > y_mean:
             return StatisticResult.GAIN
