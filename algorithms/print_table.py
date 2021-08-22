@@ -53,10 +53,10 @@ LATEX_FOOT = r"""
 # base_recs = answers['baser']
 # final_recs = answers['finalr']
 
-# cities = ['lasvegas', 'phoenix']
-cities = ['lasvegas']
-# base_recs = [ 'usg','geosoca','geomf',]
-base_recs = ['geomf']
+cities = ['lasvegas', 'phoenix']
+# cities = ['lasvegas']
+base_recs = [ 'usg','geosoca','geomf',]
+# base_recs = ['geomf']
 final_recs = ['geodiv']
 final_rec_list_size = 20
 rr=RecRunner(base_recs[0],final_recs[0],cities[0],80,final_rec_list_size,"../data")
@@ -109,7 +109,7 @@ num_metrics = 6
 num_columns= num_metrics+1
 latex_table_header= """
 \\begin{{tabular}}{{{}}}
-""".format('c'*(num_columns))
+""".format('l'*(num_columns))
 latex_table_footer= r"""
 \end{tabular}
 """
@@ -148,9 +148,10 @@ for count1, city in enumerate(cities):
     metrics_og_name = {v: k for k,v in get_metrics_pretty_k(metric_k).items()}
     # print(metrics_og_name)
     names_recs_to_og = {}
-    names_recs_to_og[get_base_name(base_rec)] = base_rec
-    for final_rec in final_recs:
-      names_recs_to_og[get_final_name(base_rec,final_rec)] = (base_rec,final_rec)
+    for base_rec in base_recs:
+        names_recs_to_og[get_base_name(base_rec)] = base_rec
+        for final_rec in final_recs:
+          names_recs_to_og[get_final_name(base_rec,final_rec)] = (base_rec,final_rec)
     for k,v in top_methods.items():
       top1_values = df_reordered[k,v]
       v_top2 = top2_methods[k]
@@ -181,22 +182,33 @@ for count1, city in enumerate(cities):
     latex_table+=table_df_result_latex+'\n'
     # raise SystemError
     
-latex_table = LATEX_HEADER+latex_table_header+latex_table+latex_table_footer+LATEX_FOOT
-with open('../data/result/util/main_benchmark_table.tex','w') as f:
-  f.write(latex_table)
 
 
-table_top_count = pd.DataFrame.from_dict(top_count).fillna(0)
+table_top_count = pd.DataFrame.from_dict(top_count).fillna(0).astype(int)
 table_top_count=table_top_count[main_metrics]
 table_top_count.columns = [METRICS_PRETTY[i] for i in table_top_count.columns]
 recs_order = []
+new_names = {}
 for base_rec in base_recs:
     recs_order.append(base_rec)
+    new_names[base_rec] = get_base_name(base_rec)
     for final_rec in final_recs:
         recs_order.append((base_rec,final_rec))
+        new_names[(base_rec,final_rec)] = get_final_name(base_rec,final_rec)
     
 table_top_count = table_top_count.reindex(recs_order)
+table_top_count=table_top_count.rename(index=new_names)
+table_top_count = pd.concat([table_top_count,table_top_count.sum(axis=1)],axis=1)
+table_top_count = table_top_count.rename(columns={0:'Total'})
+table_top_count_latex = table_top_count.to_latex()
+# print(table_top_count)
+# print(table_top_count)
+# print(table_top_count.sum(axis=1))
+# print()
 # for i in table_top_count.index:
 
+latex_table = LATEX_HEADER+latex_table_header+latex_table+latex_table_footer+ '\n\\\\'+table_top_count_latex+LATEX_FOOT
+with open('../data/result/util/main_benchmark_table.tex','w') as f:
+  f.write(latex_table)
 # table_df_result=table_df_result.reindex(names_recs_in_order)
 # table_df_result=table_df_result.reindex(names_recs_in_order)
