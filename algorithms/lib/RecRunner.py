@@ -1809,6 +1809,7 @@ class RecRunner():
                 print(e)
         if self.metrics[rec_short_name] == {}:
             del self.metrics[rec_short_name]
+        return self.metrics[rec_short_name]
 
 
     def plot_acc_metrics(self,prefix_name='acc_met'):
