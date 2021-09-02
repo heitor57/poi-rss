@@ -21,13 +21,22 @@ Python requirements are specified in the Pipfile.
 
 # Citation
 
-Please if this code is useful in your research consider citing the following paper:
+Please if this code is useful in your research consider citing the following papers:
 
 	@article{werneck2021systematic,
 	  title={A systematic mapping on POI recommendation: Directions, contributions and limitations of recent studies},
 	  author={Werneck, Heitor and Silva, N{\'\i}collas and Carvalho, Matheus and Pereira, Adriano CM and Mour{\~a}o, Fernando and Rocha, Leonardo},
 	  journal={Information Systems},
 	  pages={101789},
+	  year={2021},
+	  publisher={Elsevier}
+	}
+	@article{werneck2021effective,
+	  title={Effective and diverse POI recommendations through complementary diversification models},
+	  author={Werneck, Heitor and Santos, Rodrigo and Silva, N{\'\i}collas and Pereira, Adriano CM and Mour{\~a}o, Fernando and Rocha, Leonardo},
+	  journal={Expert Systems with Applications},
+	  volume={175},
+	  pages={114775},
 	  year={2021},
 	  publisher={Elsevier}
 	}
