@@ -1,6 +1,6 @@
 # Objective functions of the DivGeoCat
 import networkx as nx
-import lib.heuristics as heuristics
+from . import heuristics
 
 HEURISTICS = ['local_max', 'tabu_search', 'particle_swarm']
 

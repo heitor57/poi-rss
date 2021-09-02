@@ -44,7 +44,7 @@ def ndcgk(actual, predicted, k):
 
 def ildk(pois,poi_cats,undirected_category_tree):
     
-    min_dissim=1.0
+    # min_dissim=1.0
     num_pois=len(pois)
     local_ild=0
     count=0

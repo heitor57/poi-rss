@@ -1,4 +1,4 @@
-from geocat.objfunc import gc
+from .objfunc import gc
 
 def gc_objective_function(poi_id, score, rec_list, relevant_cats, poi_cats, div_weight):
     div = gc(poi_id,rec_list,relevant_cats,poi_cats)
