@@ -1,7 +1,6 @@
-from geocat import objfunc
-import metrics
+from . import objfunc
 from RecList import RecList
-from Swarm import Swarm
+from .Swarm import Swarm
 from Particle import Particle
 from random import randint
 from sys import exit
