@@ -1,18 +1,12 @@
-
+import sys, os
+sys.path.insert(0, os.path.abspath('..'))
 import re
-from numpy.core import numeric
-from numpy.core.arrayprint import printoptions
-from lib.utils import StatisticResult, statistic_test
-import scipy.stats
-# import argparse
+from library.utils import StatisticResult, statistic_test
 from collections import defaultdict
 import pandas as pd
-import sys, os
 from typing import final
-sys.path.insert(0, os.path.abspath('lib'))
-from lib.RecRunner import NameType, RecRunner
-import inquirer
-from lib.constants import METRICS_PRETTY, RECS_PRETTY, experiment_constants, CITIES_PRETTY
+from library.RecRunner import NameType, RecRunner
+from library.constants import METRICS_PRETTY, RECS_PRETTY, experiment_constants, CITIES_PRETTY,DATA,UTIL
 
 LATEX_HEADER = r"""\documentclass{article}
 \usepackage{graphicx}
@@ -33,33 +27,31 @@ LATEX_FOOT = r"""
 # argparser.add_argument('-f')
 # args= argparser.parse_args()
 
-# questions = [
-#   inquirer.Checkbox('city',
-#                     message="City to use",
-#                     choices=experiment_constants.CITIES,
-#                     ),
-#   inquirer.Checkbox('baser',
-#                     message="Base recommender",
-#                     choices=list(RecRunner.get_base_parameters().keys()),
-#                     ),
-#   inquirer.Checkbox('finalr',
-#                     message="Final recommender",
-#                     choices=list(RecRunner.get_final_parameters().keys()),
-#                     ),
-# ]
+questions = [
+  inquirer.Checkbox('city',
+                    message="City to use",
+                    choices=experiment_constants.CITIES,
+                    ),
+  inquirer.Checkbox('baser',
+                    message="Base recommender",
+                    choices=list(RecRunner.get_base_parameters().keys()),
+                    ),
+  inquirer.Checkbox('finalr',
+                    message="Final recommender",
+                    choices=list(RecRunner.get_final_parameters().keys()),
+                    ),
+]
 
-# answers = inquirer.prompt(questions)
-# cities = answers['city']
-# base_recs = answers['baser']
-# final_recs = answers['finalr']
+answers = inquirer.prompt(questions)
+cities = answers['city']
+base_recs = answers['baser']
+final_recs = answers['finalr']
 
-cities = ['lasvegas', 'phoenix']
-# cities = ['lasvegas']
-base_recs = [ 'usg','geosoca','geomf',]
-# base_recs = ['geomf']
-final_recs = ['geodiv']
+# cities = ['lasvegas', 'phoenix']
+# base_recs = [ 'usg','geosoca','geomf',]
+# final_recs = ['geodiv']
 final_rec_list_size = 20
-rr=RecRunner(base_recs[0],final_recs[0],cities[0],80,final_rec_list_size,"../data")
+rr=RecRunner(base_recs[0],final_recs[0],cities[0],80,final_rec_list_size,DATA)
 
 metrics_k = experiment_constants.METRICS_K
 final_recs_metrics= defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict())))
@@ -201,14 +193,11 @@ table_top_count=table_top_count.rename(index=new_names)
 table_top_count = pd.concat([table_top_count,table_top_count.sum(axis=1)],axis=1)
 table_top_count = table_top_count.rename(columns={0:'Total'})
 table_top_count_latex = table_top_count.to_latex()
-# print(table_top_count)
-# print(table_top_count)
-# print(table_top_count.sum(axis=1))
-# print()
-# for i in table_top_count.index:
 
-latex_table = LATEX_HEADER+latex_table_header+latex_table+latex_table_footer+ '\n\\\\'+table_top_count_latex+LATEX_FOOT
-with open('../data/result/util/main_benchmark_table.tex','w') as f:
+latex_table = LATEX_HEADER+latex_table_header+latex_table+latex_table_footer+ '\n'+table_top_count_latex+LATEX_FOOT
+with open(DATA+'/'+UTIL+'benchmark_table.tex','w') as f:
   f.write(latex_table)
-# table_df_result=table_df_result.reindex(names_recs_in_order)
-# table_df_result=table_df_result.reindex(names_recs_in_order)
+  os.system(
+      f"cd {DATA+'/'+UTIL} && latexmk -pdf -interaction=nonstopmode benchmark_table.tex"
+  )
+

@@ -1,9 +1,9 @@
 
 import sys, os
-sys.path.insert(0, os.path.abspath('lib'))
-from lib.RecRunner import RecRunner
+sys.path.insert(0, os.path.abspath('..'))
+from library.RecRunner import RecRunner
 import inquirer
-from lib.constants import experiment_constants
+from library.constants import experiment_constants,DATA
 
 questions = [
   inquirer.Checkbox('city',
@@ -20,7 +20,7 @@ answers = inquirer.prompt(questions)
 city = answers['city'][0]
 basers = answers['baser']
 
-rr=RecRunner.getInstance("xxxx","geocat",city,80,20,"../data")
+rr=RecRunner.getInstance("xxxx","geocat",city,80,20,DATA)
 
 for city in answers['city']:
   rr.city = city

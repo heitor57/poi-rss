@@ -40,7 +40,6 @@ class AdaptiveKernelDensityEstimation(object):
             mean_coo = np.sum([check_in_matrix[uid, lid] * coo
                                for lid, coo in R[uid]], axis=0, dtype=np.float128) / N[uid]
 
-            # The equation (5) in the paper is not correct.
             mean_coo_sq_diff = np.sum([check_in_matrix[uid, lid] * (coo - mean_coo) ** 2
                                        for lid, coo in R[uid]], axis=0, dtype=np.float128) / N[uid]
             H1[uid], H2[uid] = 1.06 / (len(R[uid])**0.2) * np.sqrt(mean_coo_sq_diff)
@@ -80,6 +79,7 @@ class AdaptiveKernelDensityEstimation(object):
     def predict(self, u, l):
         if not self.H1[u] == 0 and not self.H2[u] == 0 and not sum(self.h[u].values()) == 0:
             l = [l, self.poi_coos[l]]
+
             return self.f_geo_with_local_bandwidth(u, l, self.R)
         return 1.0
 

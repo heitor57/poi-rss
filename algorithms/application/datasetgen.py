@@ -4,17 +4,17 @@
 # In[1]:
 
 
-import lib.areamanager as areamanager
+import library.areamanager as areamanager
 import pandas as pd
 import json
 import time
 import collections
 import numpy as np
 import pickle
-import lib.cat_utils as cat_utils
-import lib.geo_utils as geo_utils
-from lib.parallel_util import run_parallel
-from lib.constants import geocat_constants,experiment_constants
+import library.cat_utils as cat_utils
+import library.geo_utils as geo_utils
+from library.parallel_util import run_parallel
+from library.constants import geocat_constants,experiment_constants
 from tqdm import tqdm
 import math
 import sklearn

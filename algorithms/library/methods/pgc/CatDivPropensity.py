@@ -6,8 +6,8 @@ from tqdm import tqdm
 from parallel_util import run_parallel
 
 import cat_utils
-import geocat.objfunc as geocat
-from geocat.Binomial import Binomial
+import objfunc as geocat
+from Binomial import Binomial
 import metrics
 import cat_utils
 

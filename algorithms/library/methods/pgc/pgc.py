@@ -5,11 +5,11 @@ import numpy as np
 # if module_path not in sys.path:
 #     sys.path.append(module_path)
 
-import lib.geo_utils as geo_utils
+import library.geo_utils as geo_utils
 import collections
 import scipy
-import lib.geocat.objfunc as geocat
-import lib.cat_utils as cat_utils
+import library.geocat.objfunc as geocat
+import library.cat_utils as cat_utils
 from concurrent.futures import ProcessPoolExecutor
 
 class PgcRunner():

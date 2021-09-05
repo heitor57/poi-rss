@@ -1,22 +1,22 @@
 from methods.random import random_diversifier
 import utils
+from constants import *
 import geo_utils
 from methods.gc import gc_diversifier
-from Arrow3D import Arrow3D
 from Text import Text
 from geosoca.CategoricalCorrelation import CategoricalCorrelation
 from geosoca.SocialCorrelation import SocialCorrelation
 from geosoca.AdaptiveKernelDensityEstimation import AdaptiveKernelDensityEstimation
 from parallel_util import run_parallel
-from geocat.Pm2 import Pm2
-from geocat.Binomial import Binomial
+from Pm2 import Pm2
+from Binomial import Binomial
 import metrics
-from constants import experiment_constants, METRICS_PRETTY, RECS_PRETTY, CITIES_PRETTY, HEURISTICS_PRETTY, GROUP_ID, CITIES_BEST_PARAMETERS
+from constants import experiment_constants, RECS_PRETTY, CITIES_PRETTY, HEURISTICS_PRETTY, CITIES_BEST_PARAMETERS
 from GeoDiv2020 import GeoDiv2020
 from GeoMF import GeoMF
 from pgc.CatDivPropensity import CatDivPropensity
 from pgc.GeoDivPropensity import GeoDivPropensity
-import geocat.objfunc as gcobjfunc
+import objfunc as gcobjfunc
 from usg.PowerLaw import PowerLaw
 from usg.FriendBasedCF import FriendBasedCF
 from usg.UserBasedCF import UserBasedCF
@@ -84,23 +84,7 @@ MPL_ALPHA = 0.5
 
 CMAP_NAME = 'viridis'
 
-DATA_DIRECTORY = '../data'  # directory with all data
-
-R_FORMAT = '.json'  # Results format is json, metrics, rec lists, etc
-D_FORMAT = '.pickle'  # data set format is pickle
-
-TRAIN = 'checkin/train/'  # train data sets
-TEST = 'checkin/test/'  # test data sets
-POI = 'poi/'  # poi data sets with cats and coos
-POI_FULL = 'poi_full/'  # poi data sets with cats full without preprocessing
-USER_FRIEND = 'user/friend/'  # users and friends
-USER = 'user/'  # user general data
-NEIGHBOR = 'neighbor/'  # neighbors of pois
-
-METRICS = 'result/metrics/'
-RECLIST = 'result/reclist/'
-IMG = 'result/img/'
-UTIL = 'result/util/'
+# DATA_DIRECTORY = '../data'  # directory with all data
 
 # CHKS = 40 # chunk size for process pool executor
 # CHKSL = 200 # chunk size for process pool executor largest
@@ -475,7 +459,7 @@ class RecRunner():
         self.poi_num = poi_num
         # Cat Hierarchy load
         self.dict_alias_title, self.category_tree, self.dict_alias_depth = cat_utils.cat_structs_igraph(
-            self.data_directory+"categories.json")
+            self.data_directory+DATASET_DIRECTORY+"categories.json")
         # self.undirected_category_tree = self.category_tree.to_undirected()
         self.undirected_category_tree = self.category_tree.shortest_paths()
 
@@ -941,7 +925,9 @@ class RecRunner():
         self.CC.compute_gamma(self.training_matrix, poi_cat_matrix)
 
         args = [(uid,) for uid in self.all_uids]
-        results = run_parallel(self.run_geosoca, args, self.CHKS)
+
+        with np.errstate(under='ignore'):
+            results = run_parallel(self.run_geosoca, args, self.CHKS)
         self.save_result(results, base=True)
 
     @classmethod
@@ -1248,7 +1234,7 @@ class RecRunner():
         for self.fold in folds:
 
             result_file = open(
-                self.data_directory+"result/reclist/"+self.get_base_rec_file_name(), 'r')
+                self.data_directory+RECLIST+self.get_base_rec_file_name(), 'r')
             for i, line in enumerate(result_file):
                 obj = json.loads(line)
                 self.user_base_predicted_lid[obj['user_id']] = obj['predicted']
@@ -1266,7 +1252,7 @@ class RecRunner():
 
         for self.fold in folds:
             result_file = open(
-                self.data_directory+"result/reclist/"+self.get_final_rec_file_name(), 'r')
+                self.data_directory+RECLIST+self.get_final_rec_file_name(), 'r')
             self.user_final_predicted_lid = dict()
             self.user_final_predicted_score = dict()
             for i, line in enumerate(result_file):
@@ -1370,9 +1356,9 @@ class RecRunner():
 
     def get_file_name_metrics(self, base, k):
         if base:
-            return self.data_directory+"result/metrics/"+self.get_base_rec_name()+f"_{str(k)}{R_FORMAT}"
+            return self.data_directory+METRICS+self.get_base_rec_name()+f"_{str(k)}{R_FORMAT}"
         else:
-            return self.data_directory+"result/metrics/"+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}"
+            return self.data_directory+METRICS+self.get_final_rec_name()+f"_{str(k)}{R_FORMAT}"
 
     def eval_rec_metrics(self, *, base=False, METRICS_KS=experiment_constants.METRICS_K):
 

@@ -83,6 +83,6 @@ class PowerLaw():
 
     def predict(self, uid, lj):
         lj = self.poi_coos[lj]
-        # res = [self.pr_d(dist(self.poi_coos[li], lj)) for li in self.visited_lids[uid]]
-        # return np.prod(res,dtype=np.float128)
-        return np.prod([self.pr_d(dist(self.poi_coos[li], lj)) for li in self.visited_lids[uid]])
+        res = [self.pr_d(dist(self.poi_coos[li], lj)) for li in self.visited_lids[uid]]
+        return np.prod(res,dtype=np.float128)
+        # return np.prod([self.pr_d(dist(self.poi_coos[li], lj)) for li in self.visited_lids[uid]])

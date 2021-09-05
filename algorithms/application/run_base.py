@@ -1,42 +1,42 @@
 import sys
 import os
-sys.path.insert(0, os.path.abspath('lib'))
-from lib.RecRunner import RecRunner
-# rr=RecRunner("usg","geocat","madison",80,20,"../data")
-# print(rr.get_base_rec_file_name())
-# print(rr.get_final_rec_file_name())
 
-# rr.load_base()
-# rr.run_base_recommender()
-# rr.run_final_recommender()
-import inquirer
-from lib.constants import experiment_constants
+from numpy.core.fromnumeric import argpartition
+sys.path.insert(0, os.path.abspath('..'))
+from library.RecRunner import RecRunner
 
-questions = [
-  inquirer.List('city',
-                    message="City to use",
-                    choices=experiment_constants.CITIES,
-                    ),
-  inquirer.Checkbox('baser',
-                    message="Base recommender",
-                    choices=list(RecRunner.get_base_parameters().keys()),
-                    ),
-]
+from library.constants import DATA
+import app_utils
+import argparse
+argparser =argparse.ArgumentParser()
+argparser.add_argument(app_utils.ARG_CITIES)
+argparser.add_argument(app_utils.ARG_BASE_RECS)
+args = argparser.parse_args()
+# questions = [
+  # inquirer.Checkbox('cities',
+                    # message="City to use",
+                    # choices=experiment_constants.CITIES,
+                    # ),
+  # inquirer.Checkbox('baser',
+                    # message="Base recommender",
+                    # choices=list(RecRunner.get_base_parameters().keys()),
+                    # ),
+# ]
 
-answers = inquirer.prompt(questions)
-city = answers['city']
-# baser = answers['baser']
-base_recommenders = answers['baser']
+# answers = inquirer.prompt(questions)
+# # baser = answers['baser']
+# base_recommenders = answers['baser']
 
 
-rr = RecRunner.getInstance(base_recommenders[0], "persongeocat", city, 80, 20,
-               "../data")
+rr = RecRunner.getInstance(base_recommenders[0], "persongeocat", "madison", 80, 20,
+              DATA)
 
-rr.load_base()
-
-for baser in base_recommenders:
-  rr.base_rec = baser
-  rr.run_base_recommender()
+for city in answers['cities']:
+  rr.city= city
+  rr.load_base()
+  for baser in base_recommenders:
+      rr.base_rec = baser
+      rr.run_base_recommender()
 
 
 # rr.city = "charlotte"

@@ -6,15 +6,15 @@ from sklearn.cluster import DBSCAN
 # if module_path not in sys.path:
 #     sys.path.append(module_path)
 
-import lib.geo_utils as geo_utils
+import library.geo_utils as geo_utils
 import collections
 import scipy
 from concurrent.futures import ProcessPoolExecutor
 
 from parallel_util import run_parallel
 
-import lib.cat_utils as cat_utils
-import lib.geo_utils as geo_utils
+import library.cat_utils as cat_utils
+import library.geo_utils as geo_utils
 import metrics
 # (0.6118019290456039, 3.8000000000000003, 5), DBSCAN SILHOUETTE
 

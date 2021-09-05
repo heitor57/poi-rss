@@ -1,8 +1,8 @@
 import sys
 import os
-sys.path.insert(0, os.path.abspath('lib'))
-from lib.RecRunner import RecRunner
-from lib.constants import experiment_constants
+sys.path.insert(0, os.path.abspath('..'))
+from library.RecRunner import RecRunner
+from library.constants import experiment_constants,DATA
 import inquirer
 
 questions = [
@@ -27,7 +27,7 @@ baser = answers['baser']
 
 
 rr = RecRunner.getInstance(baser[0], "geocat", cities[0], 80, 20,
-                           "../data")
+                           DATA)
 
 for city in answers['cities']:
   rr.city= city

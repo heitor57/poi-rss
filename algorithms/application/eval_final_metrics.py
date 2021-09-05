@@ -1,9 +1,10 @@
-import inquirer
-from lib.constants import experiment_constants
-from lib.RecRunner import RecRunner
-import sys
 import os
-sys.path.insert(0, os.path.abspath('lib'))
+import sys
+sys.path.insert(0, os.path.abspath('..'))
+import inquirer
+from library.constants import experiment_constants,DATA
+from library.RecRunner import RecRunner
+import sys
 
 questions = [
     inquirer.Checkbox('city',
@@ -26,7 +27,7 @@ baserecs = answers['baser']
 finalrecs = answers['finalr']
 
 rr = RecRunner.getInstance(
-    baserecs[0], finalrecs[0], cities[0], 80, 20, "../data")
+    baserecs[0], finalrecs[0], cities[0], 80, 20, DATA)
 for city in cities:
     rr.city = city
     rr.load_base()
