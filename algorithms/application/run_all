@@ -8,16 +8,17 @@ def print_dict(dictionary):
     for key, value in dictionary.items():
         print(f"{key} : {value}")
 
-base_recs=["usg"]
+base_recs=["usg","geomf"]
 final_recs=["geodiv"]
-cities=["madison"]
+cities=["madison","charlotte"]
 base_recs = ' '.join(base_recs)
 final_recs = ' '.join(final_recs)
 cities = ' '.join(cities)
 PYTHONCMD= "python3"
-WORKINGDIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),'application')
+WORKINGDIR = os.path.dirname(os.path.realpath(__file__))
 
 data = {}
+starttotal = time.time()
 
 start = time.time()
 subprocess.run(f"{PYTHONCMD} ./run_base.py --cities {cities} --base_recs {base_recs}",cwd=WORKINGDIR,shell=True)
@@ -26,13 +27,23 @@ data['run_base run time']=str(datetime.timedelta(seconds=end - start))
 print_dict(data)
 start = time.time()
 subprocess.run(f"{PYTHONCMD} ./eval_base_metrics.py --cities {cities} --base_recs {base_recs}",cwd=WORKINGDIR,shell=True)
+end = time.time()
 data['eval_base_metrics run time']=str(datetime.timedelta(seconds=end - start))
 print_dict(data)
 start = time.time()
 subprocess.run(f"{PYTHONCMD} ./run_final.py --cities {cities} --base_recs {base_recs} --final_recs {final_recs}",cwd=WORKINGDIR,shell=True)
+end = time.time()
 data['run_final run time']=str(datetime.timedelta(seconds=end - start))
 print_dict(data)
 start = time.time()
 subprocess.run(f"{PYTHONCMD} ./eval_final_metrics.py --cities {cities} --base_recs {base_recs} --final_recs {final_recs}",cwd=WORKINGDIR,shell=True)
+end = time.time()
 data['eval_final_metrics run time']=str(datetime.timedelta(seconds=end - start))
+print_dict(data)
+start = time.time()
+subprocess.run(f"{PYTHONCMD} ./print_table.py --cities {cities} --base_recs {base_recs} --final_recs {final_recs}",cwd=WORKINGDIR,shell=True)
+end = time.time()
+data['print_table run time']=str(datetime.timedelta(seconds=end - start))
+endtotal = time.time()
+data['total run time']=str(datetime.timedelta(seconds=endtotal - starttotal))
 print_dict(data)
