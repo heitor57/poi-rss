@@ -8,9 +8,9 @@ def print_dict(dictionary):
     for key, value in dictionary.items():
         print(f"{key} : {value}")
 
-base_recs=["usg","geomf"]
+base_recs=["usg","geosoca","geomf"]
 final_recs=["geodiv"]
-cities=["madison","charlotte"]
+cities=["lasvegas","phoenix"]
 base_recs = ' '.join(base_recs)
 final_recs = ' '.join(final_recs)
 cities = ' '.join(cities)
