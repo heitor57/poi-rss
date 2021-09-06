@@ -3,38 +3,26 @@ import os
 sys.path.insert(0, os.path.abspath('..'))
 from library.RecRunner import RecRunner
 from library.constants import experiment_constants,DATA
-import inquirer
 
-questions = [
-  inquirer.Checkbox('cities',
-                    message="City to use",
-                    choices=experiment_constants.CITIES,
-                    ),
-  inquirer.Checkbox('baser',
-                    message="Base recommender",
-                    choices=list(RecRunner.get_base_parameters().keys()),
-                    ),
-  inquirer.Checkbox('finalr',
-                    message="Final recommender",
-                    choices=list(RecRunner.get_final_parameters().keys()),
-                    ),
-]
+import app_utils
+import argparse
 
-answers = inquirer.prompt(questions)
-cities = answers['cities']
-# finalr = answers['finalr']
-baser = answers['baser']
+argparser =argparse.ArgumentParser()
+app_utils.add_cities_arg(argparser)
+app_utils.add_base_recs_arg(argparser)
+app_utils.add_final_recs_arg(argparser)
+args = argparser.parse_args()
 
 
-rr = RecRunner.getInstance(baser[0], "geocat", cities[0], 80, 20,
+rr = RecRunner.getInstance(args.base_recs[0], args.final_recs[0], args.cities[0], experiment_constants.N, experiment_constants.K,
                            DATA)
 
-for city in answers['cities']:
+for city in args.cities:
   rr.city= city
   rr.load_base()
-  for base_rec in answers['baser']:
+  for base_rec in args.base_recs:
     rr.base_rec = base_rec
     rr.load_base_predicted()
-    for finalr in answers['finalr']:
+    for finalr in args.final_recs:
         rr.final_rec = finalr
         rr.run_final_recommender()

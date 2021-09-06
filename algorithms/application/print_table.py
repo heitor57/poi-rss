@@ -7,6 +7,8 @@ import pandas as pd
 from typing import final
 from library.RecRunner import NameType, RecRunner
 from library.constants import METRICS_PRETTY, RECS_PRETTY, experiment_constants, CITIES_PRETTY,DATA,UTIL
+import argparse
+import app_utils
 
 LATEX_HEADER = r"""\documentclass{article}
 \usepackage{graphicx}
@@ -23,35 +25,16 @@ LATEX_HEADER = r"""\documentclass{article}
 LATEX_FOOT = r"""
 \end{document}"""
 
-# argparser = argparse.ArgumentParser()
-# argparser.add_argument('-f')
-# args= argparser.parse_args()
-
-questions = [
-  inquirer.Checkbox('city',
-                    message="City to use",
-                    choices=experiment_constants.CITIES,
-                    ),
-  inquirer.Checkbox('baser',
-                    message="Base recommender",
-                    choices=list(RecRunner.get_base_parameters().keys()),
-                    ),
-  inquirer.Checkbox('finalr',
-                    message="Final recommender",
-                    choices=list(RecRunner.get_final_parameters().keys()),
-                    ),
-]
-
-answers = inquirer.prompt(questions)
-cities = answers['city']
-base_recs = answers['baser']
-final_recs = answers['finalr']
-
+argparser =argparse.ArgumentParser()
+app_utils.add_cities_arg(argparser)
+app_utils.add_base_recs_arg(argparser)
+app_utils.add_final_recs_arg(argparser)
+args = argparser.parse_args()
 # cities = ['lasvegas', 'phoenix']
 # base_recs = [ 'usg','geosoca','geomf',]
 # final_recs = ['geodiv']
-final_rec_list_size = 20
-rr=RecRunner(base_recs[0],final_recs[0],cities[0],80,final_rec_list_size,DATA)
+final_rec_list_size = experiment_constants.K
+rr=RecRunner(args.base_recs[0],args.final_recs[0],args.cities[0],experiment_constants.N,final_rec_list_size,DATA)
 
 metrics_k = experiment_constants.METRICS_K
 final_recs_metrics= defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict())))
@@ -76,8 +59,8 @@ def get_base_name(base_name):
 def get_final_name(base_name,final_name):
   return get_base_name(base_name)+'+'+RECS_PRETTY[final_name]
   
-for city in cities:
-  for base_rec in base_recs:
+for city in args.cities:
+  for base_rec in args.base_recs:
     rr.city = city
     rr.base_rec = base_rec
     metrics = rr.load_metrics(
@@ -86,10 +69,8 @@ for city in cities:
       base_recs_metrics[city][base_rec][metric_k] = pd.DataFrame(
           metrics[metric_k])
       base_recs_metrics[city][base_rec][metric_k]=df_format(base_recs_metrics[city][base_rec][metric_k],metric_k)
-      # base_recs_metrics[city][base_rec][metric_k]=base_recs_metrics[city][base_rec][metric_k].rename(columns=METRICS_PRETTY_k)
-  # rr.final_rec_list_size = final_rec_list_size
     
-    for final_rec in final_recs:
+    for final_rec in args.final_recs:
       rr.final_rec = final_rec
       metrics = rr.load_metrics(
           base=False, name_type=NameType.PRETTY, METRICS_KS=metrics_k)
@@ -107,7 +88,7 @@ latex_table_footer= r"""
 """
 
 top_count = defaultdict(lambda:defaultdict(int))
-for count1, city in enumerate(cities):
+for count1, city in enumerate(args.cities):
   if count1 == 0:
     latex_table += '\\toprule\n'
   latex_table += '\\multicolumn{{{}}}{{l}}{{{}}}\\\\\n'.format((num_columns),CITIES_PRETTY[city])
@@ -115,11 +96,11 @@ for count1, city in enumerate(cities):
   for metric_k in metrics_k:
     dfs = []
     names_recs_in_order = []
-    for base_rec in base_recs:
+    for base_rec in args.base_recs:
       current_metrics = {}
       current_metrics[get_base_name(base_rec)] = base_recs_metrics[city][base_rec][metric_k]
       names_recs_in_order.append(get_base_name(base_rec))
-      for final_rec in final_recs:
+      for final_rec in args.final_recs:
         current_metrics[get_final_name(base_rec,final_rec)] = final_recs_metrics[city][base_rec][final_rec][metric_k]
         names_recs_in_order.append(get_final_name(base_rec,final_rec))
       df = pd.concat(current_metrics, axis=1)
@@ -140,9 +121,9 @@ for count1, city in enumerate(cities):
     metrics_og_name = {v: k for k,v in get_metrics_pretty_k(metric_k).items()}
     # print(metrics_og_name)
     names_recs_to_og = {}
-    for base_rec in base_recs:
+    for base_rec in args.base_recs:
         names_recs_to_og[get_base_name(base_rec)] = base_rec
-        for final_rec in final_recs:
+        for final_rec in args.final_recs:
           names_recs_to_og[get_final_name(base_rec,final_rec)] = (base_rec,final_rec)
     for k,v in top_methods.items():
       top1_values = df_reordered[k,v]
@@ -181,10 +162,10 @@ table_top_count=table_top_count[main_metrics]
 table_top_count.columns = [METRICS_PRETTY[i] for i in table_top_count.columns]
 recs_order = []
 new_names = {}
-for base_rec in base_recs:
+for base_rec in args.base_recs:
     recs_order.append(base_rec)
     new_names[base_rec] = get_base_name(base_rec)
-    for final_rec in final_recs:
+    for final_rec in args.final_recs:
         recs_order.append((base_rec,final_rec))
         new_names[(base_rec,final_rec)] = get_final_name(base_rec,final_rec)
     
@@ -197,7 +178,7 @@ table_top_count_latex = table_top_count.to_latex()
 latex_table = LATEX_HEADER+latex_table_header+latex_table+latex_table_footer+ '\n'+table_top_count_latex+LATEX_FOOT
 with open(DATA+'/'+UTIL+'benchmark_table.tex','w') as f:
   f.write(latex_table)
-  os.system(
-      f"cd {DATA+'/'+UTIL} && latexmk -pdf -interaction=nonstopmode benchmark_table.tex"
-  )
+os.system(
+  f"cd {DATA+'/'+UTIL} && latexmk -pdf -interaction=nonstopmode benchmark_table.tex"
+)
 

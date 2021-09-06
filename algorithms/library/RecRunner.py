@@ -252,9 +252,10 @@ class RecRunner():
     @final_rec.setter
     def final_rec(self, final_rec):
         if final_rec not in self.FINAL_RECOMMENDERS:
-            self._final_rec = next(iter(self.FINAL_RECOMMENDERS))
-            print(
-                f"Base recommender not detected, using default:{self._final_rec}")
+            # self._final_rec = next(iter(self.FINAL_RECOMMENDERS))
+            self._final_rec= None
+            # print(
+                # f"Base recommender not detected, using default:{self._final_rec}")
         else:
             self._final_rec = final_rec
         self.final_rec_parameters = {}
@@ -266,7 +267,10 @@ class RecRunner():
     @final_rec_parameters.setter
     def final_rec_parameters(self, parameters):
         if self.PARAMETERS_BY_CITY:
-            final_parameters = CITIES_BEST_PARAMETERS[self.base_rec][self.city][self.final_rec]
+            if self.final_rec != None:
+                final_parameters = CITIES_BEST_PARAMETERS[self.base_rec][self.city][self.final_rec]
+            else:
+                final_parameters = {}
         else:
             final_parameters = self.get_final_parameters()[self.final_rec]
         parameters_result = dict()

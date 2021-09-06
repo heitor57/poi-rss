@@ -3,29 +3,22 @@ import sys, os
 sys.path.insert(0, os.path.abspath('..'))
 from library.RecRunner import RecRunner
 import inquirer
-from library.constants import experiment_constants,DATA
+from library.constants import DATA,experiment_constants
+import app_utils
+import argparse
 
-questions = [
-  inquirer.Checkbox('city',
-                    message="City to use",
-                    choices=experiment_constants.CITIES,
-                    ),
-  inquirer.Checkbox('baser',
-                    message="Base recommender",
-                    choices=list(RecRunner.get_base_parameters().keys()),
-                    ),
-]
+argparser =argparse.ArgumentParser()
+app_utils.add_cities_arg(argparser)
+app_utils.add_base_recs_arg(argparser)
+args = argparser.parse_args()
 
-answers = inquirer.prompt(questions)
-city = answers['city'][0]
-basers = answers['baser']
 
-rr=RecRunner.getInstance("xxxx","geocat",city,80,20,DATA)
+rr=RecRunner.getInstance(args.base_recs[0],"none",args.cities[0],experiment_constants.N,experiment_constants.K,DATA)
 
-for city in answers['city']:
+for city in args.cities:
   rr.city = city
   rr.load_base()
-  for baser in basers:
+  for baser in args.base_recs:
       rr.base_rec = baser
       rr.load_base_predicted()
       rr.eval_rec_metrics(base=True)
