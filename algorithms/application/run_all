@@ -11,6 +11,7 @@ def print_dict(dictionary):
 base_recs=["usg","geosoca","geomf"]
 final_recs=["geodiv"]
 cities=["lasvegas","phoenix"]
+# cities=["madison"]
 base_recs = ' '.join(base_recs)
 final_recs = ' '.join(final_recs)
 cities = ' '.join(cities)

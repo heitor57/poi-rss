@@ -948,6 +948,7 @@ class RecRunner():
         self.not_in_ground_truth_message(uid)
         return ""
 
+    @staticmethod
     def run_mostpopular(recrunner_id, uid):
         self =ctypes.cast(recrunner_id,ctypes.py_object).value
         if uid in self.ground_truth:
@@ -1402,9 +1403,9 @@ class RecRunner():
         results = run_parallel(self.run_gc, args, self.CHKS)
         self.save_result(results, base=False)
 
-    @classmethod
-    def run_gc(cls, uid):
-        self = cls.getInstance()
+    @staticmethod
+    def run_gc(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
@@ -1427,9 +1428,9 @@ class RecRunner():
         results = run_parallel(self.run_random, args, self.CHKS)
         self.save_result(results, base=False)
 
-    @classmethod
-    def run_random(cls, uid):
-        self = cls.getInstance()
+    @staticmethod
+    def run_random(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
