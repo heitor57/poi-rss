@@ -1,4 +1,5 @@
 from methods.random import random_diversifier
+import ctypes
 import utils
 from constants import *
 import geo_utils
@@ -130,7 +131,6 @@ def print_dict(dictionary):
 
 class RecRunner():
     PARAMETERS_BY_CITY = True
-    _instance = None
 
     def save_result(self, results, base=True):
         if base:
@@ -146,12 +146,6 @@ class RecRunner():
         for json_string_result in results:
             result_out.write(json_string_result)
         result_out.close()
-
-    @classmethod
-    def getInstance(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = cls(*args, **kwargs)
-        return cls._instance
 
     def __init__(self, base_rec, final_rec, city,
                  base_rec_list_size, final_rec_list_size, data_directory,
@@ -170,7 +164,6 @@ class RecRunner():
             "ld": self.ld,
             "binomial": self.binomial,
             "pm2": self.pm2,
-            "perfectpgeocat": self.perfectpersongeocat,
             "pdpgeocat": self.pdpgeocat,
             "gc": self.gc,
             "random": self.random,
@@ -205,8 +198,6 @@ class RecRunner():
 
         self.show_heuristic = False
         self.persons_plot_special_case = False
-        self.k_fold = None
-        self.fold = None
         self.train_size = None
         self.recs_user_final_predicted_lid = {}
         self.recs_user_final_predicted_score = {}
@@ -334,7 +325,6 @@ class RecRunner():
             "ld": {'div_weight': 0.25},
             "binomial": {'alpha': 0.5, 'div_weight': 0.75},
             "pm2": {'div_weight': 1},
-            "perfectpgeocat": {'k': 10, 'interval': 2, 'div_weight': 0.75, 'div_cat_weight': 0.05, 'train_size': None},
             "pdpgeocat": {'k': 10, 'interval': 2, 'div_geo_cat_weight': 0.75},
             "gc": {'div_weight': 0.8},
             "random": {'div_weight': 1},
@@ -345,10 +335,7 @@ class RecRunner():
             map(str, dict_to_list(self.base_rec_parameters)))
         string = "_" if len(list_parameters) > 0 else ""
 
-        if self.k_fold != None:
-            k_fold = f'{self.k_fold}_{self.fold}_'
-        else:
-            k_fold = ''
+        k_fold = ''
 
         if self.train_size != None:
             train_size = f'{self.train_size}_'
@@ -576,23 +563,22 @@ class RecRunner():
         self.cache[self.base_rec]['G'] = G
 
         print("Running usg")
-        args = [(uid, alpha, beta) for uid in self.all_uids]
+        args = [(id(self),uid, alpha, beta) for uid in self.all_uids]
         print("args memory usage:", asizeof.asizeof(args)/1024**2, "MB")
         print("U memory usage:", asizeof.asizeof(U)/1024**2, "MB")
         print("S memory usage:", asizeof.asizeof(S)/1024**2, "MB")
         print("G memory usage:", asizeof.asizeof(G)/1024**2, "MB")
         results = run_parallel(self.run_usg, args, self.CHKS)
         print("usg terminated")
-
         self.save_result(results, base=True)
 
     def mostpopular(self):
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_mostpopular, args, self.CHKS)
         self.save_result(results, base=True)
 
     def geocat(self):
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_geocat, args, self.CHKS)
         self.save_result(results, base=False)
 
@@ -752,17 +738,17 @@ class RecRunner():
 
     def persongeocat(self):
         self.persongeocat_preprocess()
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_persongeocat, args, self.CHKS)
         self.save_result(results, base=False)
 
     def geodiv(self):
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_geodiv, args, self.CHKS)
         self.save_result(results, base=False)
 
     def ld(self):
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_ld, args, self.CHKS)
         self.save_result(results, base=False)
 
@@ -770,7 +756,7 @@ class RecRunner():
         self.binomial = Binomial.getInstance(self.training_matrix, self.poi_cats, self.cat_num,
                                              self.final_rec_parameters['div_weight'], self.final_rec_parameters['alpha'])
         self.binomial.compute_all_probabilities()
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_binomial, args, self.CHKS)
         self.save_result(results, base=False)
         del self.binomial
@@ -778,95 +764,13 @@ class RecRunner():
     def pm2(self):
         self.pm2 = Pm2(self.training_matrix, self.poi_cats,
                        self.final_rec_parameters['div_weight'])
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_pm2, args, self.CHKS)
         self.save_result(results, base=False)
         del self.pm2
 
-    def perfectpersongeocat(self):
-        if self.final_rec_parameters['train_size'] != None:
-            user_checkin_data = dict()
-            for uid, nuid in self.uid_to_int.items():
-                user_checkin_data[nuid] = []
-            for checkin in self.data_checkin_train:
-                try:
-                    user_checkin_data[self.uid_to_int[checkin['user_id']]].append(
-                        {'poi_id': checkin['poi_id'], 'date': checkin['date']})
-                except:
-                    pass
-
-            tr_checkin_data = []
-            te_checkin_data = []
-            TRAIN_SIZE = self.final_rec_parameters['train_size']
-            for i in tqdm(range(len(self.all_uids)), desc='train/test'):
-                user_id = i
-                checkin_list = user_checkin_data[user_id]
-                checkin_list = sorted(checkin_list, key=lambda i: i['date'])
-                train_size = math.ceil(len(checkin_list)*TRAIN_SIZE)
-                count = 1
-                te_pois = set()
-                tr_pois = set()
-                initial_te_size = len(te_checkin_data)
-                final_te_size = len(te_checkin_data)
-                for checkin in checkin_list:
-                    if count <= train_size:
-                        tr_pois.add(checkin['poi_id'])
-                        tr_checkin_data.append(
-                            {'user_id': user_id, 'poi_id': checkin['poi_id'], 'date': checkin['date']})
-                    else:
-                        te_pois.add(checkin['poi_id'])
-                        te_checkin_data.append(
-                            {'user_id': user_id, 'poi_id': checkin['poi_id'], 'date': checkin['date']})
-                        final_te_size += 1
-                    count += 1
-                int_pois = te_pois & tr_pois
-                rel_index = 0
-                for i in range(initial_te_size, final_te_size):
-                    i += rel_index
-                    if te_checkin_data[i]['poi_id'] in int_pois:
-                        te_checkin_data.pop(i)
-                        rel_index -= 1
-
-            train_ground_truth = defaultdict(set)
-            for checkin in te_checkin_data:
-                train_ground_truth[checkin['user_id']].add(checkin['poi_id'])
-            train_ground_truth = dict(train_ground_truth)
-
-            train_training_matrix = np.zeros((self.user_num, self.poi_num))
-            for checkin in tr_checkin_data:
-                train_training_matrix[checkin['user_id'],
-                                      checkin['poi_id']] += 1
-
-            tmp_gt = self.ground_truth
-            tmp_tm = self.training_matrix
-            tmp_au = self.all_uids
-            self.ground_truth = train_ground_truth
-            self.training_matrix = train_training_matrix
-            self.all_uids = list(train_ground_truth.keys())
-
-        args = [(uid,) for uid in self.all_uids]
-        results = run_parallel(self.run_perfectpersongeocat, args, self.CHKS)
-
-        uids = [r[1] for r in results]
-        div_geo_cat_weights = [r[2] for r in results]
-        self.perfect_parameter = dict()
-        for uid, div_geo_cat_weight in zip(uids, div_geo_cat_weights):
-            self.perfect_parameter[uid] = div_geo_cat_weight
-        print(list(self.perfect_parameter.keys()))
-        results = [r[0] for r in results]
-
-        fout = open(self.data_directory+UTIL +
-                    f'parameter_{self.get_final_rec_name()}.pickle', "wb")
-        pickle.dump(self.perfect_parameter, fout)
-        self.save_result(results, base=False)
-
-        if self.final_rec_parameters['train_size'] != None:
-            self.ground_truth = tmp_gt
-            self.training_matrix = tmp_tm
-            self.all_uids = tmp_au
-
     def pdpgeocat(self):
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_pdpgeocat, args, self.CHKS)
 
         uids = [r[1] for r in results]
@@ -882,7 +786,7 @@ class RecRunner():
         self.save_result(results, base=False)
 
     def pdpgeocat(self):
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_pdpgeocat, args, self.CHKS)
 
         uids = [r[1] for r in results]
@@ -919,27 +823,27 @@ class RecRunner():
                 # little different from the original
                 # in the original its not sum 1 but simple set to 1 always
                 poi_cat_matrix[lid, cat_to_int_id[cat]] += 1.0
-        self.AKDE = AdaptiveKernelDensityEstimation(
+        self.cache[self.base_rec]['AKDE'] = AdaptiveKernelDensityEstimation(
             alpha=self.base_rec_parameters['alpha'])
-        self.SC = SocialCorrelation()
-        self.CC = CategoricalCorrelation()
-        self.AKDE.precompute_kernel_parameters(
+        self.cache[self.base_rec]['SC'] = SocialCorrelation()
+        self.cache[self.base_rec]['CC'] = CategoricalCorrelation()
+        self.cache[self.base_rec]['AKDE'].precompute_kernel_parameters(
             self.training_matrix, self.poi_coos)
-        self.SC.compute_beta(self.training_matrix, social_matrix)
-        self.CC.compute_gamma(self.training_matrix, poi_cat_matrix)
+        self.cache[self.base_rec]['SC'].compute_beta(self.training_matrix, social_matrix)
+        self.cache[self.base_rec]['CC'].compute_gamma(self.training_matrix, poi_cat_matrix)
 
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
 
         with np.errstate(under='ignore'):
             results = run_parallel(self.run_geosoca, args, self.CHKS)
         self.save_result(results, base=True)
 
-    @classmethod
-    def run_geosoca(cls, uid):
-        self = cls.getInstance()
-        AKDE = self.AKDE
-        SC = self.SC
-        CC = self.CC
+    @staticmethod
+    def run_geosoca(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
+        AKDE = self.cache[self.base_rec]['AKDE']
+        SC = self.cache[self.base_rec]['SC']
+        CC = self.cache[self.base_rec]['CC']
 
         if uid in self.ground_truth:
 
@@ -956,9 +860,9 @@ class RecRunner():
         self.not_in_ground_truth_message(uid)
         return ""
 
-    @classmethod
-    def run_pdpgeocat(cls, uid):
-        self = cls.getInstance()
+    @staticmethod
+    def run_pdpgeocat(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         actual = self.ground_truth[uid]
         max_predicted_val = -1
         max_predicted = None
@@ -993,50 +897,10 @@ class RecRunner():
         self.not_in_ground_truth_message(uid)
         return ""
 
-    @classmethod
-    def run_perfectpersongeocat(cls, uid):
-        self = cls.getInstance()
-        actual = self.ground_truth[uid]
-        max_predicted_val = -1
-        max_predicted = None
-        max_overall_scores = None
-        if uid in self.ground_truth:
-            x = 1
-            r = 1/self.final_rec_parameters['interval']
-            # for div_weight in np.append(np.arange(0, x, r),x):
-            for div_geo_cat_weight in np.append(np.arange(0, x, r), x):
-                # if not(div_weight==0 and div_weight!=div_geo_cat_weight):
-                predicted = self.user_base_predicted_lid[uid][
-                    0:self.base_rec_list_size]
-                overall_scores = self.user_base_predicted_score[uid][
-                    0:self.base_rec_list_size]
 
-                predicted, overall_scores = gcobjfunc.geocat(uid, self.training_matrix, predicted, overall_scores,
-                                                             self.poi_cats, self.poi_neighbors, self.final_rec_list_size, self.undirected_category_tree,
-                                                             div_geo_cat_weight, self.final_rec_parameters[
-                                                                 'div_weight'],
-                                                             'local_max',
-                                                             gcobjfunc.OBJECTIVE_FUNCTIONS.get(
-                                                                 'cat_weight'),
-                                                             self.final_rec_parameters['div_cat_weight'])
-
-                precision_val = metrics.recallk(
-                    actual, predicted[:self.final_rec_parameters['k']])
-                if precision_val > max_predicted_val:
-                    max_predicted_val = precision_val
-                    max_predicted = predicted
-                    max_overall_scores = overall_scores
-                    max_div_geo_cat_weight = div_geo_cat_weight
-                    # print("%d uid with geocatweight %f" % (uid,div_geo_cat_weight))
-                    # print(self.perfect_parameter)
-            predicted, overall_scores = max_predicted, max_overall_scores
-            return json.dumps({'user_id': uid, 'predicted': list(map(int, predicted)), 'score': list(map(float, overall_scores))})+"\n", uid, max_div_geo_cat_weight
-        self.not_in_ground_truth_message(uid)
-        return ""
-
-    @classmethod
-    def run_pm2(cls, uid):
-        self = cls.getInstance()
+    @staticmethod
+    def run_pm2(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
@@ -1048,9 +912,9 @@ class RecRunner():
         self.not_in_ground_truth_message(uid)
         return ""
 
-    @classmethod
-    def run_usg(cls, uid, alpha, beta):
-        self = cls.getInstance()
+    @staticmethod
+    def run_usg(recrunner_id, uid, alpha, beta):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         U = self.cache[self.base_rec]['U']
         S = self.cache[self.base_rec]['S']
         G = self.cache[self.base_rec]['G']
@@ -1084,9 +948,8 @@ class RecRunner():
         self.not_in_ground_truth_message(uid)
         return ""
 
-    @classmethod
-    def run_mostpopular(cls, uid):
-        self = cls.getInstance()
+    def run_mostpopular(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         if uid in self.ground_truth:
             poi_indexes = set(list(range(self.poi_num)))
             visited_indexes = set(self.training_matrix[uid].nonzero()[0])
@@ -1107,9 +970,9 @@ class RecRunner():
         self.not_in_ground_truth_message(uid)
         return ""
 
-    @classmethod
-    def run_geocat(cls, uid):
-        self = cls.getInstance()
+    @staticmethod
+    def run_geocat(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
@@ -1129,9 +992,9 @@ class RecRunner():
         self.not_in_ground_truth_message(uid)
         return ""
 
-    @classmethod
-    def run_persongeocat(cls, uid):
-        self = cls.getInstance()
+    @staticmethod
+    def run_persongeocat(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
@@ -1161,9 +1024,9 @@ class RecRunner():
         self.not_in_ground_truth_message(uid)
         return ""
 
-    @classmethod
-    def run_geodiv(cls, uid):
-        self = cls.getInstance()
+    @staticmethod
+    def run_geodiv(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
@@ -1186,9 +1049,9 @@ class RecRunner():
         self.not_in_ground_truth_message(uid)
         return ""
 
-    @classmethod
-    def run_ld(cls, uid):
-        self = cls.getInstance()
+    @staticmethod
+    def run_ld(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
@@ -1207,9 +1070,9 @@ class RecRunner():
         self.not_in_ground_truth_message(uid)
         return ""
 
-    @classmethod
-    def run_binomial(cls, uid):
-        self = cls.getInstance()
+    @staticmethod
+    def run_binomial(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
                 0:self.base_rec_list_size]
@@ -1230,10 +1093,7 @@ class RecRunner():
         return ""
 
     def load_base_predicted(self):
-        if self.k_fold == None:
-            folds = [None]
-        else:
-            folds = range(self.k_fold)
+        folds = [None]
 
         for self.fold in folds:
 
@@ -1249,10 +1109,7 @@ class RecRunner():
             )] = self.user_base_predicted_score
 
     def load_final_predicted(self):
-        if self.k_fold == None:
-            folds = [None]
-        else:
-            folds = range(self.k_fold)
+        folds = [None]
 
         for self.fold in folds:
             result_file = open(
@@ -1288,12 +1145,8 @@ class RecRunner():
 
         self.message_recommender(base=True)
         start_time = time.time()
-        if self.k_fold != None:
-            for self.fold in range(self.k_fold):
-                self.load_fold()
-                base_recommender()
-        else:
-            base_recommender()
+        base_recommender()
+        self.cache.clear()
 
         final_time = time.time()-start_time
         utils.create_path_to_file(
@@ -1313,12 +1166,8 @@ class RecRunner():
             self.message_recommender(base=False)
             start_time = time.time()
 
-            if self.k_fold != None:
-                for self.fold in range(self.k_fold):
-                    self.load_fold()
-                    final_recommender()
-            else:
-                final_recommender()
+            final_recommender()
+            self.cache.clear()
             final_time = time.time()-start_time
             fout = open(self.data_directory+UTIL +
                         f'run_time_{self.get_final_rec_name()}.txt', "w")
@@ -1366,10 +1215,7 @@ class RecRunner():
 
     def eval_rec_metrics(self, *, base=False, METRICS_KS=experiment_constants.METRICS_K):
 
-        if self.k_fold == None:
-            folds = [None]
-        else:
-            folds = range(self.k_fold)
+        folds = [None]
         for self.fold in folds:
             if base:
                 predictions = self.recs_user_base_predicted_lid[self.get_base_rec_name(
@@ -1379,10 +1225,7 @@ class RecRunner():
                 predictions = self.recs_user_final_predicted_lid[self.get_final_rec_name(
                 )]
                 self.user_final_predicted_lid = predictions
-            if self.k_fold == None:
-                all_uids = self.all_uids
-            else:
-                all_uids = predictions.keys()
+            all_uids = self.all_uids
             for i, k in enumerate(METRICS_KS):
                 if (k <= self.final_rec_list_size and not base) or (k <= self.base_rec_list_size and base):
                     print(f"running metrics at @{k}")
@@ -1554,21 +1397,8 @@ class RecRunner():
         self.final_rec = final_rec
         return df_poly
 
-    def load_perfect(self):
-        final_rec = self.final_rec
-        # self.final_rec = 'perfectpgeocat'
-        fin = open(self.data_directory+UTIL +
-                   f'parameter_{self.get_final_rec_name()}.pickle', "rb")
-        self.perfect_parameter = pickle.load(fin)
-        # vals = np.array([])
-        # for uid, val in self.perfect_parameter.items():
-        #     vals = np.append(vals,val)
-        # self.perfect_parameter = vals
-        # self.perfect_parameter = pd.Series(self.perfect_parameter)
-        self.final_rec = final_rec
-
     def gc(self):
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_gc, args, self.CHKS)
         self.save_result(results, base=False)
 
@@ -1593,7 +1423,7 @@ class RecRunner():
         return ""
 
     def random(self):
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_random, args, self.CHKS)
         self.save_result(results, base=False)
 
@@ -1634,13 +1464,13 @@ class RecRunner():
         geomf = GeoMF(**self.base_rec_parameters)
         geomf.train(self.training_matrix, self.poi_coos)
         self.cache['geomf'] = geomf
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_geomf, args, self.CHKS)
         self.save_result(results, base=True)
 
-    @classmethod
-    def run_geomf(cls, uid):
-        self = cls.getInstance()
+    @staticmethod
+    def run_geomf(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         geomf = self.cache['geomf']
         if uid in self.ground_truth:
 
@@ -1669,13 +1499,13 @@ class RecRunner():
         geodiv2020 = GeoDiv2020(**self.final_rec_parameters)
         geodiv2020.train(self.training_matrix, self.poi_coos)
         self.cache['geodiv2020'] = geodiv2020
-        args = [(uid,) for uid in self.all_uids]
+        args = [(id(self),uid,) for uid in self.all_uids]
         results = run_parallel(self.run_geodiv2020, args, self.CHKS)
         self.save_result(results, base=False)
 
-    @classmethod
-    def run_geodiv2020(cls, uid):
-        self = cls.getInstance()
+    @staticmethod
+    def run_geodiv2020(recrunner_id, uid):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         geodiv2020 = self.cache['geodiv2020']
         if uid in self.ground_truth:
             predicted = self.user_base_predicted_lid[uid][
