@@ -13,7 +13,7 @@ app_utils.add_base_recs_arg(argparser)
 app_utils.add_final_recs_arg(argparser)
 args = argparser.parse_args()
 
-rr = RecRunner.getInstance(
+rr = RecRunner(
    args.base_recs[0], args.final_recs[0], args.cities[0], experiment_constants.N, experiment_constants.K, DATA)
 for city in args.cities:
     rr.city = city

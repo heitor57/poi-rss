@@ -1178,9 +1178,9 @@ class RecRunner():
             print("User base predicted list is empty")
         pass
 
-    @classmethod
-    def eval(cls, uid, base, k):
-        self = cls.getInstance()
+    @staticmethod
+    def eval(recrunner_id, uid, base, k):
+        self =ctypes.cast(recrunner_id,ctypes.py_object).value
         if base:
             predictions = self.user_base_predicted_lid
             predicted = self.user_base_predicted_lid[uid]
@@ -1239,7 +1239,7 @@ class RecRunner():
 
                     self.message_recommender(base=base)
 
-                    args = [(uid, base, k) for uid in all_uids]
+                    args = [(id(self),uid, base, k) for uid in all_uids]
                     results = run_parallel(self.eval, args, self.CHKSL)
                     print(pd.DataFrame([json.loads(result)
                           for result in results]).mean().T)

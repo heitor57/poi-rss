@@ -9,12 +9,13 @@ def print_dict(dictionary):
         print(f"{key} : {value}")
 
 base_recs=["usg","geosoca","geomf"]
+# base_recs=["geomf","usg"]
 final_recs=["geodiv"]
 cities=["lasvegas","phoenix"]
 # cities=["madison"]
-base_recs = ' '.join(base_recs)
-final_recs = ' '.join(final_recs)
-cities = ' '.join(cities)
+base_recs_str = ' '.join(base_recs)
+final_recs_str = ' '.join(final_recs)
+cities_str = ' '.join(cities)
 PYTHONCMD= "python3"
 WORKINGDIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -22,27 +23,31 @@ data = {}
 starttotal = time.time()
 
 start = time.time()
-subprocess.run(f"{PYTHONCMD} ./run_base.py --cities {cities} --base_recs {base_recs}",cwd=WORKINGDIR,shell=True)
+for city in cities:
+    for base_rec in base_recs:
+        print(city,base_rec)
+        subprocess.run(f"{PYTHONCMD} ./run_base.py --cities {city} --base_recs {base_rec}",cwd=WORKINGDIR,shell=True)
+
 end = time.time()
 data['run_base run time']=str(datetime.timedelta(seconds=end - start))
 print_dict(data)
 start = time.time()
-subprocess.run(f"{PYTHONCMD} ./eval_base_metrics.py --cities {cities} --base_recs {base_recs}",cwd=WORKINGDIR,shell=True)
+subprocess.run(f"{PYTHONCMD} ./eval_base_metrics.py --cities {cities_str} --base_recs {base_recs_str}",cwd=WORKINGDIR,shell=True)
 end = time.time()
 data['eval_base_metrics run time']=str(datetime.timedelta(seconds=end - start))
 print_dict(data)
 start = time.time()
-subprocess.run(f"{PYTHONCMD} ./run_final.py --cities {cities} --base_recs {base_recs} --final_recs {final_recs}",cwd=WORKINGDIR,shell=True)
+subprocess.run(f"{PYTHONCMD} ./run_final.py --cities {cities_str} --base_recs {base_recs_str} --final_recs {final_recs_str}",cwd=WORKINGDIR,shell=True)
 end = time.time()
 data['run_final run time']=str(datetime.timedelta(seconds=end - start))
 print_dict(data)
 start = time.time()
-subprocess.run(f"{PYTHONCMD} ./eval_final_metrics.py --cities {cities} --base_recs {base_recs} --final_recs {final_recs}",cwd=WORKINGDIR,shell=True)
+subprocess.run(f"{PYTHONCMD} ./eval_final_metrics.py --cities {cities_str} --base_recs {base_recs_str} --final_recs {final_recs_str}",cwd=WORKINGDIR,shell=True)
 end = time.time()
 data['eval_final_metrics run time']=str(datetime.timedelta(seconds=end - start))
 print_dict(data)
 start = time.time()
-subprocess.run(f"{PYTHONCMD} ./print_table.py --cities {cities} --base_recs {base_recs} --final_recs {final_recs}",cwd=WORKINGDIR,shell=True)
+subprocess.run(f"{PYTHONCMD} ./print_table.py --cities {cities_str} --base_recs {base_recs_str} --final_recs {final_recs_str}",cwd=WORKINGDIR,shell=True)
 end = time.time()
 data['print_table run time']=str(datetime.timedelta(seconds=end - start))
 endtotal = time.time()
