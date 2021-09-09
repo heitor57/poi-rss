@@ -17,8 +17,6 @@ After that, it's possible to generate the pre-processed datasets that we use to 
 	cd algorithms/application
 	python datasetgen.py
 
-Python requirements are specified in the Pipfile.
-
 # Citation
 
 Please if this code is useful in your research consider citing the following papers:
