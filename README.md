@@ -14,7 +14,7 @@ Download Yelp Open Dataset (https://www.yelp.com/dataset) and put it files in da
 
 After that, it's possible to generate the pre-processed datasets that we use to do evaluations with the following command:
 
-	cd algorithms/	
+	cd algorithms/application
 	python datasetgen.py
 
 Python requirements are specified in the Pipfile.
