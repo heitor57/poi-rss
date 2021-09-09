@@ -26,7 +26,7 @@ cities=['lasvegas','phoenix','charlotte','madison']
 # cities=experiment_constants.CITIES
 #cities=['madison']
 
-dict_alias_title,category_tree,dict_alias_depth=cat_utils.cat_structs("../data/categories.json")
+dict_alias_title,category_tree,dict_alias_depth=cat_utils.cat_structs("../../data/categories.json")
 undirected_category_tree=category_tree.to_undirected()
 def category_filter(categories):
     tmp_cat_list=list()
@@ -53,7 +53,7 @@ TEST_SIZE=1-TRAIN_SIZE
 # In[2]:
 
 
-fbusiness=open("../data/business.json")
+fbusiness=open("../../data/business.json")
 poi_data = dict()
 start_time=time.time()
 for i, line in enumerate(fbusiness):  
@@ -101,7 +101,7 @@ print(time.time()-start_time)
 # In[5]:
 
 
-fuser=open("../data/user.json")
+fuser=open("../../data/user.json")
 user_friend = dict()
 user_data = dict()
 start_time=time.time()
@@ -123,7 +123,7 @@ print(time.time()-start_time)
 # In[6]:
 
 
-freview=open("../data/review.json")
+freview=open("../../data/review.json")
 
 cities_checkin_data=dict()
 for city in cities:
@@ -145,7 +145,7 @@ for i, line in enumerate(freview):
         print(i)
 print(time.time()-start_time)
 
-ftip=open("../data/tip.json")
+ftip=open("../../data/tip.json")
 start_time=time.time()
 for i, line in enumerate(ftip):  
     # json to dict
@@ -165,7 +165,7 @@ print(time.time()-start_time)
 # In[ ]:
 
 
-# df_checkin=pd.read_csv("../data/checkin.csv")
+# df_checkin=pd.read_csv("../../data/checkin.csv")
 
 # df_checkin=df_checkin.set_index("user_id")
 
@@ -260,7 +260,7 @@ for city in cities:
     for i,user_id in enumerate(users_id):
         users_id_to_int[user_id]=i
 
-    fuid=open('../data/user/id/'+city+'.pickle','wb')
+    fuid=open('../../data/user/id/'+city+'.pickle','wb')
     pickle.dump(users_id_to_int,fuid)
     fuid.close()
 
@@ -269,7 +269,7 @@ for city in cities:
     for i,poi_id in enumerate(pois_id):
         pois_id_to_int[poi_id]=i
 
-    fpid=open('../data/poi/id/'+city+'.pickle','wb')
+    fpid=open('../../data/poi/id/'+city+'.pickle','wb')
     pickle.dump(pois_id_to_int,fpid)
     fpid.close()
 
@@ -283,7 +283,7 @@ for city in cities:
         for poi_id in pois_id:
             city_poi_data[pois_id_to_int[poi_id]]=poi_data[poi_id].copy()
             city_poi_data[pois_id_to_int[poi_id]] = {'categories':category_normalization(city_poi_data[pois_id_to_int[poi_id]]['categories'])}
-        fpoi=open('../data/poi_full/'+city+'.pickle','wb')
+        fpoi=open('../../data/poi_full/'+city+'.pickle','wb')
         pickle.dump(city_poi_data,fpoi)
         fpoi.close()
 
@@ -292,7 +292,7 @@ for city in cities:
         for poi_id in pois_id:
             city_poi_data[pois_id_to_int[poi_id]]=poi_data[poi_id].copy()
             city_poi_data[pois_id_to_int[poi_id]]['categories']=category_filter(poi_data[poi_id]['categories'])
-        fpoi=open('../data/poi/'+city+'.pickle','wb')
+        fpoi=open('../../data/poi/'+city+'.pickle','wb')
         pickle.dump(city_poi_data,fpoi)
         fpoi.close()
 
@@ -318,7 +318,7 @@ for city in cities:
         # list to dict
         # poi_neighbors = {i: poi_neighbors[i] for i in range(len(poi_neighbors))}
         print("Terminou vizinhos...")
-        fneighbors=open('../data/neighbor/'+city+'.pickle','wb')
+        fneighbors=open('../../data/neighbor/'+city+'.pickle','wb')
         pickle.dump(poi_neighbors,fneighbors)
         fneighbors.close()
     
@@ -338,7 +338,7 @@ for city in cities:
                     pass
 
             city_user_friend[users_id_to_int[user_id]]=ucity_friends
-        fuser=open('../data/user/friend/'+city+'.pickle','wb')
+        fuser=open('../../data/user/friend/'+city+'.pickle','wb')
         pickle.dump(city_user_friend,fuser)
         fuser.close()
     
@@ -350,7 +350,7 @@ for city in cities:
         for i in tqdm(range(len(users_id))):
             user_id=users_id[i]
             city_user_data[users_id_to_int[user_id]]=user_data[user_id].copy()
-        fuser=open('../data/user/'+city+'.pickle','wb')
+        fuser=open('../../data/user/'+city+'.pickle','wb')
         pickle.dump(city_user_data,fuser)
         fuser.close()
 
@@ -359,7 +359,7 @@ for city in cities:
             checkin['user_id'] = users_id_to_int[checkin['user_id']]
             checkin['poi_id'] = pois_id_to_int[checkin['poi_id']]
             checkin['date'] = pd.to_datetime(checkin['date'])
-        fcheckin=open('../data/checkin/'+city+'.pickle','wb')
+        fcheckin=open('../../data/checkin/'+city+'.pickle','wb')
         pickle.dump(checkin_data,fcheckin)
         fcheckin.close()
     #### Treino e teste por ano
@@ -418,10 +418,10 @@ for city in cities:
     #### Treino e teste com porcentagem
 
 
-    ftecheckin=open('../data/checkin/test/'+city+'.pickle','wb')
+    ftecheckin=open('../../data/checkin/test/'+city+'.pickle','wb')
     pickle.dump(te_checkin_data,ftecheckin)
     ftecheckin.close()
-    ftrcheckin=open('../data/checkin/train/'+city+'.pickle','wb')
+    ftrcheckin=open('../../data/checkin/train/'+city+'.pickle','wb')
     pickle.dump(tr_checkin_data,ftrcheckin)
     ftrcheckin.close()
     
@@ -430,13 +430,13 @@ for city in cities:
 # In[ ]:
 
 
-# pd.read_csv('../data/user/madison.csv')
+# pd.read_csv('../../data/user/madison.csv')
 
 
 # In[ ]:
 
 
-# charl=pickle.load(open('../data/user/charlotte.pickle','rb'))
+# charl=pickle.load(open('../../data/user/charlotte.pickle','rb'))
 
 # a=0
 # for i in charl:
