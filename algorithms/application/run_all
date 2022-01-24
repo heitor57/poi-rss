@@ -9,10 +9,10 @@ def print_dict(dictionary):
         print(f"{key} : {value}")
 
 base_recs=["usg","geosoca","geomf"]
-# base_recs=["geomf","usg"]
+#base_recs=["geomf","usg"]
 final_recs=["geodiv"]
 cities=["lasvegas","phoenix"]
-# cities=["madison"]
+#cities=["madison"]
 base_recs_str = ' '.join(base_recs)
 final_recs_str = ' '.join(final_recs)
 cities_str = ' '.join(cities)

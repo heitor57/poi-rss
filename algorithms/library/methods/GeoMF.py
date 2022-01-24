@@ -109,7 +109,7 @@ class GeoMF:
         dist_lat = geo_utils.haversine(min_lat,min_lon,max_lat,min_lon)
         dist_lon = geo_utils.haversine(min_lat,min_lon,min_lat,max_lon)
 
-        # print(dist_lat,dist_lon)
+        # print(dist_lat,dist_lon:{},
         num_grids_lat = int(np.ceil(dist_lat/self.grid_distance))
         num_grids_lon = int(np.ceil(dist_lon/self.grid_distance))
         print(f"num grids in lat: {num_grids_lat}, num grids in lon: {num_grids_lon}")

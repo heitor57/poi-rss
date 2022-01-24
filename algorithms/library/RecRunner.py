@@ -305,6 +305,16 @@ class RecRunner():
         self._base_rec_parameters = parameters_result
 
     @staticmethod
+    def get_base_parameters_descriptions():
+        return {
+            "geomf": {'K': 'number of latent factors', 'delta': 'distance threshold', 'gamma': 'regularization coefficient', 'epsilon': 'l_1 regularization coefficient', 'lambda_': 'l_1 regularization coefficient', 'max_iters': 'max number of iterations', 'grid_distance': 'grid distance or area width and height'},
+            "mostpopular": {},
+            "usg": {'alpha': 'social influence', 'beta': 'geographical influence', 'eta': 'social influence weight between social connections and check-ins'},
+            "geosoca": {'alpha': 'sensitivity parameter to local bandwith'},
+        }
+
+
+    @staticmethod
     def get_base_parameters():
         return {
             "geomf": {'K': 100, 'delta': 50, 'gamma': 0.01, 'epsilon': 10, 'lambda_': 10, 'max_iters': 7, 'grid_distance': 3.0},
@@ -562,12 +572,12 @@ class RecRunner():
         self.cache[self.base_rec]['S'] = S
         self.cache[self.base_rec]['G'] = G
 
-        print("Running usg")
+        print("Running USG")
         args = [(id(self),uid, alpha, beta) for uid in self.all_uids]
         print("args memory usage:", asizeof.asizeof(args)/1024**2, "MB")
-        print("U memory usage:", asizeof.asizeof(U)/1024**2, "MB")
-        print("S memory usage:", asizeof.asizeof(S)/1024**2, "MB")
-        print("G memory usage:", asizeof.asizeof(G)/1024**2, "MB")
+        print("(U) User collaborative filtering module memory usage:", asizeof.asizeof(U)/1024**2, "MB")
+        print("(S) Friend-based collaborative filtering module memory usage:", asizeof.asizeof(S)/1024**2, "MB")
+        print("(G) Geographical influence module memory usage:", asizeof.asizeof(G)/1024**2, "MB")
         results = run_parallel(self.run_usg, args, self.CHKS)
         print("usg terminated")
         self.save_result(results, base=True)
@@ -1325,6 +1335,7 @@ class RecRunner():
             print("No error encountered in base")
 
     def print_parameters(self, base):
+        print_dict(self.get_base_parameters_descriptions()[self.base_rec])
         print_dict(self.base_rec_parameters)
         if base == False:
             print()

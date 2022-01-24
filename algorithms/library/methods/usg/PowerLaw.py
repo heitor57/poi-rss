@@ -75,7 +75,7 @@ class PowerLaw():
             ew += 0.5 * lambda_w * (w0**2 + w1**2)
         print("done. elapsed time:", time.time() - ctime, "s")
         self.a, self.b = 10**w0, w1
-        print('a:',self.a,'b:',self.b)
+        print('PowerLaw parameters from training','a:',self.a,'b:',self.b)
 
     def pr_d(self, d):
         d = max(0.01, d)
